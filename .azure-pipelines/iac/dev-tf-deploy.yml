@@ -1,0 +1,74 @@
+# =============================================================================
+# Deploy pipeline for iac/environments/dev
+# =============================================================================
+# Repo lives in GitHub; pipeline runs in Azure DevOps.
+#
+# Triggers ONLY on push to `main` when the push touches
+# iac/environments/dev/**. This repo also holds application code, so the
+# path filter keeps app-only merges from triggering a terraform apply.
+#
+# Safety net: dev-pr-review.yml is wired up as a required GitHub status
+# check on `main` (branch protection), so nothing lands on main under
+# iac/environments/dev/** without having passed fmt/lint/Trivy/Checkov/plan
+# review first. This pipeline trusts that gate and applies automatically —
+# no manual approval step.
+# =============================================================================
+
+trigger:
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - iac/environments/dev/*
+
+# Not a PR pipeline — deploy only runs after merge.
+pr: none
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+  # Checkout repository
+  - checkout: self
+
+  # Install Terraform CLI
+  - task: TerraformInstaller@1
+    displayName: 'Install Terraform'
+    inputs:
+      terraformVersion: '1.12.2'
+
+  # Terraform Plan + Apply — authenticates via Workload Identity Federation
+  # using the 'azure-cloud' Azure DevOps service connection (no client
+  # secret / storage account key). Same identity used by dev-pr-review.yml's
+  # plan step, already granted the required storage role.
+  - task: AzureCLI@2
+    displayName: 'Terraform Plan + Apply'
+    inputs:
+      azureSubscription: 'azure-cloud'
+      scriptType: bash
+      scriptLocation: inlineScript
+      addSpnToEnvironment: true
+      workingDirectory: $(System.DefaultWorkingDirectory)/iac/environments/dev
+      inlineScript: |
+        set -euo pipefail
+        STAGING="$(Build.ArtifactStagingDirectory)"
+
+        export ARM_CLIENT_ID="$servicePrincipalId"
+        export ARM_OIDC_TOKEN="$idToken"
+        export ARM_TENANT_ID="$tenantId"
+        export ARM_SUBSCRIPTION_ID="$(az account show --query id -o tsv)"
+        export ARM_USE_OIDC=true
+        export ARM_USE_AZUREAD=true
+
+        terraform init -input=false -no-color
+
+        terraform plan -input=false -no-color -out=tfplan
+        terraform show -no-color tfplan > "$STAGING/tfplan.txt"
+
+        terraform apply -input=false -no-color tfplan | tee "$STAGING/apply-output.txt"
+
+  # Publish plan + apply output for audit trail
+  - publish: $(Build.ArtifactStagingDirectory)
+    artifact: 'tf-deploy-$(Build.BuildId)'
+    displayName: 'Publish plan & apply output'
