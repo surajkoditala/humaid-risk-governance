@@ -14,7 +14,7 @@ This file gives Claude Code full context on this hackathon project. Read this be
 
 ## Team
 **Team name:** HumAId Risk Governance
-**Size:** 4 — Insurity account
+**Size:** 4
 
 | Role | Owns |
 |---|---|

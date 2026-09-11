@@ -11,7 +11,7 @@ literally, we kept the existing architecture and mapped the brief's *ideas* onto
 |---|---|---|
 | `RAW.Domain` (entities/VOs, zero deps) | Models live in `2-Infrastructure/Models/<Module>/` | Our `2-Infrastructure` is already a zero-implementation, interfaces-and-models layer — the same role `RAW.Domain` would play, just under the name this repo already uses. |
 | `RAW.Application` (CQRS use cases, submodules `ChangeRequests/Assessments/Scoring/Committee/Audit`) | `3-Service/Humaid.RiskGovernance.AdminUI.Services/<Module>/` | Same module boundaries, kept as sub-folders of the existing Services project rather than a new project. |
-| `RAW.Infrastructure` (EF Core) | `4-Persistence/Humaid.RiskGovernance.AdminUI.DA` (Dapper, stored procedures only) | Explicit call: this repo's convention (inherited from the `erc-insurity-adminui` reference project) is Dapper against named `func_*`/`sp_*` routines, never an ORM or ad-hoc SQL. EF Core was not adopted. |
+| `RAW.Infrastructure` (EF Core) | `4-Persistence/Humaid.RiskGovernance.AdminUI.DA` (Dapper, stored procedures only) | Explicit call: this repo's convention is Dapper against named `func_*`/`sp_*` routines, never an ORM or ad-hoc SQL. EF Core was not adopted. |
 | `RAW.AI` (Claude orchestration, RAG, prompts) | New sibling project `3-Service/Humaid.RiskGovernance.AdminUI.AI` | Kept as CLAUDE.md suggested — a separate project from `.Services` so the AI-orchestration surface (prompts, Claude API client, citation-fabrication guards) has one clear owner and can be tested/replaced independently of business logic. |
 | `RAW.Api` | `1-API/Humaid.RiskGovernance.AdminUI.Web` | Same role, existing project. |
 | One monolithic `docs/architecture/` | This file | Records the decision so it isn't silently lost — matches CLAUDE.md's own `docs/architecture/` folder expectation. |
@@ -19,10 +19,8 @@ literally, we kept the existing architecture and mapped the brief's *ideas* onto
 ## Database structure
 
 `src/4-Persistence/Humaid.RiskGovernance.AdminUI.DB/` — a plain SQL folder (schema, stored
-functions, seed data), not a compiled project — is the schema's single source of truth, the same
-role `erc-insurity-integration`'s own `ERCIntegrationDB` project plays for the reference admin UI
-this scaffold was originally derived from. Every repo method in `.DA` calls a named function from
-here; nothing issues ad-hoc SQL.
+functions, seed data), not a compiled project — is the schema's single source of truth. Every repo
+method in `.DA` calls a named function from here; nothing issues ad-hoc SQL.
 
 ## Committee decision resolution rule (Epic 8/10)
 

@@ -1,9 +1,8 @@
 # Risk Governance Admin UI
 
-Scaffolded from the `erc-insurity-adminui` reference project's **architecture pattern only**
-(5-layer Clean Architecture .NET backend + React/Vite frontend, Auth0 + PostgreSQL/Dapper). No
-ERC-specific business logic, entities, or vendored UI library were carried over — this is a fresh
-domain.
+Built on a 5-layer Clean Architecture pattern (.NET backend + React/Vite frontend, Auth0 +
+PostgreSQL/Dapper) — a fresh domain, with no external business logic, entities, or vendored UI
+library carried over from anywhere else.
 
 ## How it fits together
 

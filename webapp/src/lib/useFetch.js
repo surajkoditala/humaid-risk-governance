@@ -3,8 +3,8 @@ import { apiFetch } from './api.js'
 
 /**
  * Small GET-fetching hook: loading/error/data plus a refetch() for after a mutation. `url` may be
- * null to skip fetching (e.g. waiting on a dependency like the current user) - deliberately not
- * one hook per resource (see the reference erc-insurity-adminui's useX.js pattern this simplifies).
+ * null to skip fetching (e.g. waiting on a dependency like the current user) - deliberately one
+ * shared hook rather than one hook per resource.
  */
 export function useFetch(url, deps = []) {
   const [data, setData] = useState(null)

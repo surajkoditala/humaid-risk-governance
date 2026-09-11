@@ -8,10 +8,8 @@ namespace Humaid.RiskGovernance.AdminUI.AI
     using Microsoft.Extensions.Logging;
 
     /// <summary>
-    /// Thin client for Anthropic's Messages API - the same "one explicit client per external
-    /// dependency" pattern this repo already uses for its own backend calls (see the
-    /// erc-insurity-adminui reference project's ErcIntegrationApiClient). No SDK dependency; a
-    /// handful of well-known REST calls don't need one.
+    /// Thin client for Anthropic's Messages API - one explicit client per external dependency,
+    /// no SDK wrapper. A handful of well-known REST calls don't need one.
     /// <para>
     /// <c>ANTHROPIC_MODEL</c> has no hardcoded fallback deliberately - shipping a guessed or
     /// stale model ID is worse than failing loudly the first time an AI endpoint is actually
