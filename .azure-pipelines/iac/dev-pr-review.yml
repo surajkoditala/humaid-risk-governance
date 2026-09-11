@@ -121,18 +121,21 @@ steps:
     displayName: 'Terraform Security Scan (Trivy)'
     workingDirectory: $(System.DefaultWorkingDirectory)/iac/environments/dev
 
-  # Running Checkov through custom install because downloading external modules is not supported on microsoft devops extension while Checkov needs authentication to happen for private Azure Repos
-  # and any flags cannot be passed with the extension.
-  # NOTE: also writes a JSON report for the AI review step (--soft-fail keeps
-  # this step from hard-failing so you still get plan-level review even when
-  # Checkov finds things — remove --soft-fail if you want it to gate the PR).
+  # Running Checkov through custom install because the Microsoft DevOps
+  # extension doesn't let you pass arbitrary CLI flags.
+  # NOTE: all modules referenced here are local (relative source paths), so
+  # --download-external-modules is intentionally omitted — it only applies to
+  # registry/git-remote module sources, and enabling it against a local
+  # relative source silently breaks Checkov's graph build (0 resources
+  # scanned, no error). Re-add it (with VCS_BASE_URL/VCS_TOKEN) only if a
+  # private git/registry module source gets introduced.
+  # --soft-fail keeps this step from hard-failing so you still get plan-level
+  # review even when Checkov finds things — remove it if you want it to gate the PR.
   - script: |
       set -euo pipefail
       python -m pip install --quiet checkov==3.2.482
 
       checkov -d . \
-        --download-external-modules true \
-        --external-modules-download-path .external_modules \
         --config-file ../../../.azure-pipelines/iac/.checkov.yml \
         --soft-fail \
         --output cli \
@@ -140,12 +143,9 @@ steps:
         --output-file-path console,$(Build.ArtifactStagingDirectory)/checkov-results.json
     displayName: 'Terraform Security Scan (Checkov)'
     workingDirectory: $(System.DefaultWorkingDirectory)/iac/environments/dev
-    env:
-      VCS_BASE_URL: $(VCS_BASE_URL)                   # Base URL of the self-hosted VCS
-      VCS_TOKEN: $(VCS_TOKEN)                         # Personal Access Token
 
   # Install Node.js (required to install the Claude Code CLI)
-  - task: NodeTool@0
+  - task: UseNode@1
     displayName: 'Install Node.js'
     inputs:
       versionSpec: '20.x'
