@@ -1,0 +1,272 @@
+# =============================================================================
+# PR validation pipeline for iac/environments/dev
+# =============================================================================
+# Repo lives in GitHub; pipeline runs in Azure DevOps (GitHub service
+# connection required on the pipeline).
+#
+# Triggers ONLY when: a PR targets `main` AND the PR contains changes under
+# iac/environments/dev/**.
+# =============================================================================
+
+# Disable push triggers — this pipeline is PR-only
+trigger: none
+
+# Trigger only for PRs targeting main that touch iac/environments/dev
+pr:
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - iac/environments/dev/*
+
+# Variable groups: checkov-secrets (existing) + one holding ANTHROPIC_API_KEY
+# and, if you want the bot to comment on the PR, a GitHub PAT (repo scope).
+variables:
+  - group: checkov-secrets
+  - group: ai-review-secrets   # ANTHROPIC_API_KEY, GITHUB_PAT (optional)
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+  # Checkout repository
+  - checkout: self
+
+  # Install Terraform CLI
+  - task: TerraformInstaller@1
+    displayName: 'Install Terraform'
+    inputs:
+      terraformVersion: '1.12.2'
+
+  # Check Terraform formatting
+  - script: |
+      terraform fmt -check -recursive # Check if any files are not properly formatted
+    displayName: 'Terraform Format Check'
+    workingDirectory: $(System.DefaultWorkingDirectory)/iac/environments/dev
+
+  # Initialize Terraform and download private modules
+  - script: |
+      terraform init \
+        -backend=false \
+        -input=false \
+        -no-color
+    displayName: 'Terraform Init'
+    workingDirectory: $(System.DefaultWorkingDirectory)/iac/environments/dev
+    env:
+      TF_TOKEN_app_terraform_io: $(TF_REGISTRY_TOKEN)
+
+  # Install and Run TFLint to check for issues in Terraform code
+  - script: |
+      set -euo pipefail
+      TFLINT_VERSION="0.63.1"
+      TFLINT_FILE="tflint_linux_amd64.zip"
+      TFLINT_URL=https://github.com/terraform-linters/tflint/releases/download/v${TFLINT_VERSION}
+      curl -fsSLo "${TFLINT_FILE}" "${TFLINT_URL}/${TFLINT_FILE}"
+      curl -fsSLo checksums.txt "${TFLINT_URL}/checksums.txt"
+      grep " ${TFLINT_FILE}$" checksums.txt | sha256sum --check -
+      unzip -q "${TFLINT_FILE}"
+      sudo install -m 0755 tflint /usr/local/bin/tflint
+      rm -f tflint "${TFLINT_FILE}" checksums.txt
+      tflint --version
+      tflint --init
+      set +e
+      tflint --recursive
+      TFLINT_EXIT_CODE=$?
+      set -e
+      if [ "${TFLINT_EXIT_CODE}" -eq 2 ]; then
+        echo "##vso[task.logissue type=warning]TFLint found warnings."
+      elif [ "${TFLINT_EXIT_CODE}" -ne 0 ]; then
+        exit "${TFLINT_EXIT_CODE}"
+      fi
+    displayName: 'Terraform Lint (TFLint)'
+    workingDirectory: $(System.DefaultWorkingDirectory)/iac/environments/dev
+    env:
+      TF_TOKEN_app_terraform_io: $(TF_REGISTRY_TOKEN)
+
+  # Install Trivy
+  - script: |
+      set -euo pipefail
+      curl -sfL \
+        https://raw.githubusercontent.com/aquasecurity/trivy/v0.71.2/contrib/install.sh \
+        -o install.sh
+      chmod +x install.sh
+      sudo ./install.sh -b /usr/local/bin
+      rm -f install.sh
+
+      trivy --version
+    displayName: 'Install Trivy'
+
+  # Scan Terraform configuration using Trivy
+  # NOTE: writes JSON alongside the human-readable table so the AI review
+  # step below has structured findings to read.
+  - script: |
+      set -euo pipefail
+
+      trivy config . \
+        --severity MEDIUM,HIGH,CRITICAL \
+        --exit-code 0 \
+        --format json \
+        --output "$(Build.ArtifactStagingDirectory)/trivy-results.json"
+
+      set +e
+      trivy config . \
+        --severity MEDIUM,HIGH,CRITICAL \
+        --exit-code 1
+      TRIVY_EXIT_CODE=$?
+      set -e
+
+      if [ "${TRIVY_EXIT_CODE}" -eq 1 ]; then
+        echo "##vso[task.logissue type=warning]Trivy found security findings."
+      elif [ "${TRIVY_EXIT_CODE}" -ne 0 ]; then
+        exit "${TRIVY_EXIT_CODE}"
+      fi
+    displayName: 'Terraform Security Scan (Trivy)'
+    workingDirectory: $(System.DefaultWorkingDirectory)/iac/environments/dev
+    env:
+      TF_TOKEN_app_terraform_io: $(TF_REGISTRY_TOKEN)
+
+  # Install and Run Checkov scan and skip CKV_TF_1 (commit hash check) since we use version tags for internal module versioning
+  # Running Checkov through custom install because downloading external modules is not supported on microsoft devops extension while Checkov needs authentication to happen for private Azure Repos
+  # and any flags cannot be passed with the extension.
+  # NOTE: also writes a JSON report for the AI review step (--soft-fail keeps
+  # this step from hard-failing so you still get plan-level review even when
+  # Checkov finds things — remove --soft-fail if you want it to gate the PR).
+  - script: |
+      set -euo pipefail
+      python -m pip install --quiet checkov==3.2.482
+
+      checkov -d . \
+        --download-external-modules true \
+        --external-modules-download-path .external_modules \
+        --config-file ../.azure-pipelines/iac/.checkov.yml \
+        --soft-fail \
+        --output cli \
+        --output json \
+        --output-file-path console,$(Build.ArtifactStagingDirectory)
+
+      mv "$(Build.ArtifactStagingDirectory)/results_json.json" \
+         "$(Build.ArtifactStagingDirectory)/checkov-results.json" || true
+    displayName: 'Terraform Security Scan (Checkov)'
+    workingDirectory: $(System.DefaultWorkingDirectory)/iac/environments/dev
+    env:
+      VCS_BASE_URL: $(VCS_BASE_URL)                   # Base URL of the self-hosted VCS
+      VCS_USERNAME: $(VCS_USERNAME)                   # Dummy Value as PAT will be used to validate
+      VCS_TOKEN: $(VCS_TOKEN)                         # Personal Access Token
+      TF_REGISTRY_TOKEN: $(TF_REGISTRY_TOKEN)         # Private registry access token
+      TF_TOKEN_app_terraform_io: $(TF_REGISTRY_TOKEN) # Terraform Cloud Access Token
+
+  # AI review of the Trivy + Checkov findings — summarizes and prioritizes
+  # what actually needs attention before merge.
+  - task: Bash@3
+    displayName: 'AI Review (Claude) — Trivy & Checkov findings'
+    env:
+      ANTHROPIC_API_KEY: $(ANTHROPIC_API_KEY)
+    inputs:
+      targetType: 'inline'
+      script: |
+        set -euo pipefail
+        STAGING="$(Build.ArtifactStagingDirectory)"
+
+        TRIVY_JSON=$(cat "$STAGING/trivy-results.json" 2>/dev/null | head -c 40000 || echo "{}")
+        CHECKOV_JSON=$(cat "$STAGING/checkov-results.json" 2>/dev/null | head -c 40000 || echo "{}")
+
+        REQUEST_BODY=$(jq -n \
+          --arg trivy "$TRIVY_JSON" \
+          --arg checkov "$CHECKOV_JSON" \
+          '{
+            model: "claude-sonnet-5",
+            max_tokens: 2000,
+            messages: [{
+              role: "user",
+              content: ("You are reviewing Trivy and Checkov scan results for a Terraform pull request under iac/environments/dev, before it merges to main.\n\nProduce a concise PR-review comment with:\n1. A one-line verdict: LOOKS_GOOD, NEEDS_ATTENTION, or BLOCKING_ISSUES.\n2. A short bulleted list of the findings that are actual risks worth fixing before merge (reference the specific resource/check ID).\n3. A short bulleted list of findings that look like noise or false positives, with a one-line reason why.\nBe specific and terse — this will be posted directly as a PR comment. Keep it under 350 words. Use markdown.\n\n--- TRIVY FINDINGS (JSON) ---\n" + $trivy + "\n\n--- CHECKOV FINDINGS (JSON) ---\n" + $checkov)
+            }]
+          }')
+
+        RESPONSE=$(curl -s https://api.anthropic.com/v1/messages \
+          -H "x-api-key: $ANTHROPIC_API_KEY" \
+          -H "anthropic-version: 2023-06-01" \
+          -H "content-type: application/json" \
+          -d "$REQUEST_BODY")
+
+        REVIEW_TEXT=$(echo "$RESPONSE" | jq -r '.content[0].text // empty')
+
+        if [ -z "$REVIEW_TEXT" ]; then
+          echo "##vso[task.logissue type=warning]AI review returned no content. Raw response:"
+          echo "$RESPONSE"
+          exit 0
+        fi
+
+        echo "$REVIEW_TEXT" > "$STAGING/ai-review.md"
+
+        echo "=============================================="
+        echo " AI REVIEW — Trivy & Checkov"
+        echo "=============================================="
+        cat "$STAGING/ai-review.md"
+
+        if echo "$REVIEW_TEXT" | grep -qi 'BLOCKING_ISSUES'; then
+          echo "##vso[task.logissue type=warning]AI review flagged BLOCKING_ISSUES — see ai-review.md artifact."
+        fi
+
+  # Post the AI review as a comment on the GitHub PR.
+  # Requires GITHUB_PAT (repo scope) in the ai-review-secrets group.
+  # Only runs when this build was actually triggered by a GitHub PR.
+  - task: Bash@3
+    displayName: 'Post AI review to GitHub PR'
+    condition: and(succeeded(), eq(variables['Build.Reason'], 'PullRequest'))
+    env:
+      GITHUB_PAT: $(GITHUB_PAT)
+    inputs:
+      targetType: 'inline'
+      script: |
+        set -euo pipefail
+        STAGING="$(Build.ArtifactStagingDirectory)"
+        REVIEW_FILE="$STAGING/ai-review.md"
+
+        if [ ! -f "$REVIEW_FILE" ]; then
+          echo "No ai-review.md found — skipping PR comment."
+          exit 0
+        fi
+
+        REPO="$(Build.Repository.Name)"       # e.g. myorg/myridius-erc-iac
+        PR_NUMBER="$(System.PullRequest.PullRequestId)"
+
+        BODY=$(jq -Rs '{body: ("### 🤖 AI Review — Trivy & Checkov\n\n" + .)}' "$REVIEW_FILE")
+
+        curl -s -X POST \
+          -H "Authorization: token $GITHUB_PAT" \
+          -H "Accept: application/vnd.github+json" \
+          "https://api.github.com/repos/${REPO}/issues/${PR_NUMBER}/comments" \
+          -d "$BODY" > /dev/null
+
+        echo "Posted AI review comment to PR #${PR_NUMBER} in ${REPO}"
+
+  # Publish scan + AI review artifacts for the build
+  - publish: $(Build.ArtifactStagingDirectory)
+    artifact: 'pr-review-$(Build.BuildId)'
+    displayName: 'Publish scan & AI review artifacts'
+
+# =============================================================================
+# SETUP NOTES
+# =============================================================================
+# 1. This pipeline must be created in ADO as a "GitHub" YAML pipeline (Pipelines
+#    > New pipeline > GitHub), using a GitHub service connection/App install
+#    that has access to the repo. That's what lets `pr:` triggers and
+#    System.PullRequest.* variables work against a GitHub-hosted repo.
+#
+# 2. New variable group "ai-review-secrets" needs:
+#      ANTHROPIC_API_KEY (secret)
+#      GITHUB_PAT (secret, repo scope) — only needed if you want the PR comment
+#      step; otherwise delete that step and rely on the build log + artifact.
+#
+# 3. Fixed a couple of typos from the reference (a stray space in
+#    "iac/ environments/dev" that would have broken workingDirectory).
+#
+# 4. Checkov step now has --soft-fail so a finding doesn't kill the build
+#    before the AI step gets to summarize it — remove --soft-fail if you'd
+#    rather Checkov hard-block the PR itself and only use AI review as
+#    commentary on what got through.
+#
+# 5. Path filter is on iac/environments/dev/* — PRs that touch other env
+#    folders won't trigger this pipeline at all.
+# =============================================================================
