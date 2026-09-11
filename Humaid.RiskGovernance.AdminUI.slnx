@@ -1,0 +1,32 @@
+<Solution>
+  <Folder Name="/1-API/">
+    <Project Path="src/1-API/Humaid.RiskGovernance.AdminUI.Web/Humaid.RiskGovernance.AdminUI.Web.csproj" />
+  </Folder>
+  <Folder Name="/2-Infrastructure/">
+    <Project Path="src/2-Infrastructure/Humaid.RiskGovernance.AdminUI.Infrastructure/Humaid.RiskGovernance.AdminUI.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/3-Service/">
+    <Project Path="src/3-Service/Humaid.RiskGovernance.AdminUI.Services/Humaid.RiskGovernance.AdminUI.Services.csproj" />
+    <Project Path="src/3-Service/Humaid.RiskGovernance.AdminUI.AI/Humaid.RiskGovernance.AdminUI.AI.csproj" />
+  </Folder>
+  <Folder Name="/4-Persistence/">
+    <Project Path="src/4-Persistence/Humaid.RiskGovernance.AdminUI.DA/Humaid.RiskGovernance.AdminUI.DA.csproj" />
+  </Folder>
+  <Folder Name="/5-Presentation/">
+    <Project Path="webapp/webapp.esproj">
+      <Build />
+    </Project>
+  </Folder>
+  <Folder Name="/6-MockExternalSystems/">
+    <!-- Deliberately NOT part of the monolith - see docs/architecture/architecture-mapping.md.
+         Included here only so `dotnet build` on this .slnx builds it too; nothing in
+         1-API..5-Presentation has a ProjectReference to it. -->
+    <Project Path="src/6-MockExternalSystems/Humaid.RiskGovernance.MockSystems/Humaid.RiskGovernance.MockSystems.csproj" />
+  </Folder>
+  <Folder Name="/evals/">
+    <Project Path="evals/Humaid.RiskGovernance.AdminUI.Evals/Humaid.RiskGovernance.AdminUI.Evals.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Humaid.RiskGovernance.AdminUI.UnitTests/Humaid.RiskGovernance.AdminUI.UnitTests.csproj" />
+  </Folder>
+</Solution>
