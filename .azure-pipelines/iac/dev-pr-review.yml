@@ -145,7 +145,11 @@ steps:
     workingDirectory: $(System.DefaultWorkingDirectory)/iac/environments/dev
 
   # Install Node.js (required to install the Claude Code CLI)
-  - task: UseNode@1
+  # NOTE: UseNode@1 resolved node v10.x on this agent instead of the
+  # requested 20.x, which is below Claude Code's node>=22 requirement and
+  # broke the postinstall script. NodeTool@0 (deprecated but functional)
+  # installs the requested version correctly — verified working.
+  - task: NodeTool@0
     displayName: 'Install Node.js'
     inputs:
       versionSpec: '20.x'
