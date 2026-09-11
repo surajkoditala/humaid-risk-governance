@@ -172,12 +172,6 @@ steps:
         export ARM_USE_OIDC=true
         export ARM_USE_AZUREAD=true
 
-        # TEMP DEBUG — remove once WIF auth is confirmed working
-        echo "ARM_CLIENT_ID=$ARM_CLIENT_ID"
-        echo "ARM_TENANT_ID=$ARM_TENANT_ID"
-        echo "ARM_SUBSCRIPTION_ID=$ARM_SUBSCRIPTION_ID"
-        echo "idToken length: ${#ARM_OIDC_TOKEN}"
-
         set +e
         terraform init -reconfigure -input=false -no-color
         INIT_EXIT_CODE=$?
@@ -244,6 +238,8 @@ steps:
           echo "3. A short bulleted list of the scan findings that are actual risks worth fixing before merge (reference the specific resource/check ID)."
           echo "4. A short bulleted list of findings that look like noise or false positives, with a one-line reason why."
           echo "Be specific and terse — this will be posted directly as a PR comment. Keep it under 350 words. Use markdown. Answer directly in text — do not read, write, or run anything."
+          echo ""
+          echo "Note: Checkov reporting resource_count: 0 / passed: 0 / failed: 0 is EXPECTED and not a scan failure when the diff only touches resource types Checkov has no applicable policies for (e.g. azurerm_resource_group — verified by isolating it: Checkov genuinely has zero built-in checks for that resource type, unlike e.g. aws_s3_bucket which returns real findings). Do not flag this as BLOCKING or as evidence Checkov didn't run — only treat it as suspicious if the diff includes resource types that normally have Checkov coverage (storage, compute, networking, etc.) and still shows 0."
           echo ""
           echo "--- TERRAFORM PLAN ---"
           echo "$TFPLAN_TEXT"
