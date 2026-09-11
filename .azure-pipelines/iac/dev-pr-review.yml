@@ -160,6 +160,7 @@ steps:
       scriptType: bash
       scriptLocation: inlineScript
       addSpnToEnvironment: true
+      workingDirectory: $(System.DefaultWorkingDirectory)/iac/environments/dev
       inlineScript: |
         set -euo pipefail
         STAGING="$(Build.ArtifactStagingDirectory)"
@@ -191,7 +192,6 @@ steps:
 
         terraform show -no-color tfplan > "$STAGING/tfplan.txt"
         terraform show -no-color -json tfplan > "$STAGING/tfplan.json"
-    workingDirectory: $(System.DefaultWorkingDirectory)/iac/environments/dev
 
   # Install Node.js (required to install the Claude Code CLI)
   # NOTE: UseNode@1 resolved node v10.x on this agent instead of the
