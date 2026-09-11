@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+
+  <!-- Deliberately has NO ProjectReference to any Workbench project (1-API..5-Presentation).
+       This is not part of the monolith - see docs/architecture/architecture-mapping.md's
+       "Mock External Systems" section. It talks to Postgres directly with Dapper, the same way
+       every other persistence in this repo does, but owns its own schema (mock_systems) and its
+       own connection string - the Workbench's Data Ingestion Layer is the only thing that reads
+       this service's data, and it does so over HTTP, never by sharing a DbContext/connection. -->
+  <ItemGroup>
+    <PackageReference Include="Dapper" Version="2.1.35" />
+    <PackageReference Include="Npgsql" Version="9.0.2" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.9" />
+    <PackageReference Include="Microsoft.OpenApi" Version="2.7.5" />
+    <!-- Phase 4 - observability. Registered conditionally in Program.cs only when
+         APPLICATIONINSIGHTS_CONNECTION_STRING is set - see ops/README.md. -->
+    <PackageReference Include="Azure.Monitor.OpenTelemetry.AspNetCore" Version="1.6.0" />
+  </ItemGroup>
+
+</Project>
