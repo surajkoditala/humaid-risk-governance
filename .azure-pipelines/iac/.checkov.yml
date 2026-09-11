@@ -1,0 +1,6 @@
+# Each skipped check includes the approved technical justification.
+
+skip-check:
+
+  # Internal Terraform Cloud modules use approved registry releases.
+  - CKV_TF_1
