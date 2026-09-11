@@ -137,10 +137,7 @@ steps:
         --soft-fail \
         --output cli \
         --output json \
-        --output-file-path console,$(Build.ArtifactStagingDirectory)
-
-      mv "$(Build.ArtifactStagingDirectory)/results_json.json" \
-         "$(Build.ArtifactStagingDirectory)/checkov-results.json" || true
+        --output-file-path console,$(Build.ArtifactStagingDirectory)/checkov-results.json
     displayName: 'Terraform Security Scan (Checkov)'
     workingDirectory: $(System.DefaultWorkingDirectory)/iac/environments/dev
     env:
