@@ -144,6 +144,55 @@ steps:
     displayName: 'Terraform Security Scan (Checkov)'
     workingDirectory: $(System.DefaultWorkingDirectory)/iac/environments/dev
 
+  # Terraform Plan — authenticates via Workload Identity Federation using the
+  # 'azure-cloud' Azure DevOps service connection (no client secret / storage
+  # account key). Re-inits WITH the real backend (earlier init used
+  # -backend=false for fmt/lint/checkov, which needs no credentials).
+  # ARM_USE_AZUREAD=true is required because WIF has no storage-account-key
+  # auth path — the service connection's identity needs Storage Blob Data
+  # Contributor on the state storage account.
+  # Soft-fail for now (matches Checkov) while this is validated against real
+  # PRs — switch to hard-fail once confirmed stable.
+  - task: AzureCLI@2
+    displayName: 'Terraform Plan'
+    inputs:
+      azureSubscription: 'azure-cloud'
+      scriptType: bash
+      scriptLocation: inlineScript
+      addSpnToEnvironment: true
+      inlineScript: |
+        set -euo pipefail
+        STAGING="$(Build.ArtifactStagingDirectory)"
+
+        export ARM_CLIENT_ID="$servicePrincipalId"
+        export ARM_OIDC_TOKEN="$idToken"
+        export ARM_TENANT_ID="$tenantId"
+        export ARM_SUBSCRIPTION_ID="$(az account show --query id -o tsv)"
+        export ARM_USE_OIDC=true
+        export ARM_USE_AZUREAD=true
+
+        set +e
+        terraform init -reconfigure -input=false -no-color
+        INIT_EXIT_CODE=$?
+        set -e
+        if [ "${INIT_EXIT_CODE}" -ne 0 ]; then
+          echo "##vso[task.logissue type=warning]Terraform init (with backend) failed — skipping plan."
+          exit 0
+        fi
+
+        set +e
+        terraform plan -input=false -no-color -out=tfplan
+        PLAN_EXIT_CODE=$?
+        set -e
+        if [ "${PLAN_EXIT_CODE}" -ne 0 ]; then
+          echo "##vso[task.logissue type=warning]Terraform plan failed."
+          exit 0
+        fi
+
+        terraform show -no-color tfplan > "$STAGING/tfplan.txt"
+        terraform show -no-color -json tfplan > "$STAGING/tfplan.json"
+    workingDirectory: $(System.DefaultWorkingDirectory)/iac/environments/dev
+
   # Install Node.js (required to install the Claude Code CLI)
   # NOTE: UseNode@1 resolved node v10.x on this agent instead of the
   # requested 20.x, which is below Claude Code's node>=22 requirement and
@@ -163,10 +212,10 @@ steps:
       claude --version
     displayName: 'Install Claude Code CLI'
 
-  # AI review of the Trivy + Checkov findings — summarizes and prioritizes
-  # what actually needs attention before merge.
+  # AI review of the Trivy + Checkov findings and the Terraform plan —
+  # summarizes and prioritizes what actually needs attention before merge.
   - task: Bash@3
-    displayName: 'AI Review (Claude) — Trivy & Checkov findings'
+    displayName: 'AI Review (Claude) — Trivy, Checkov & Terraform Plan'
     env:
       CLAUDE_CODE_OAUTH_TOKEN: $(CLAUDE_CODE_OAUTH_TOKEN)
     inputs:
@@ -177,16 +226,21 @@ steps:
 
         TRIVY_JSON=$(cat "$STAGING/trivy-results.json" 2>/dev/null | head -c 40000 || echo "{}")
         CHECKOV_JSON=$(cat "$STAGING/checkov-results.json" 2>/dev/null | head -c 40000 || echo "{}")
+        TFPLAN_TEXT=$(cat "$STAGING/tfplan.txt" 2>/dev/null | head -c 40000 || echo "(no plan available — init or plan failed, see pipeline log)")
 
         PROMPT_FILE=$(mktemp)
         {
-          echo "You are reviewing Trivy and Checkov scan results for a Terraform pull request under iac/environments/dev, before it merges to main."
+          echo "You are reviewing Trivy and Checkov scan results plus a Terraform plan for a pull request under iac/environments/dev, before it merges to main."
           echo ""
           echo "Produce a concise PR-review comment with:"
           echo "1. A one-line verdict: LOOKS_GOOD, NEEDS_ATTENTION, or BLOCKING_ISSUES."
-          echo "2. A short bulleted list of the findings that are actual risks worth fixing before merge (reference the specific resource/check ID)."
-          echo "3. A short bulleted list of findings that look like noise or false positives, with a one-line reason why."
+          echo "2. A short summary of what the Terraform plan changes (resources added/changed/destroyed), flagging anything surprising (e.g. unexpected destroys/replacements) or any indication the plan failed."
+          echo "3. A short bulleted list of the scan findings that are actual risks worth fixing before merge (reference the specific resource/check ID)."
+          echo "4. A short bulleted list of findings that look like noise or false positives, with a one-line reason why."
           echo "Be specific and terse — this will be posted directly as a PR comment. Keep it under 350 words. Use markdown. Answer directly in text — do not read, write, or run anything."
+          echo ""
+          echo "--- TERRAFORM PLAN ---"
+          echo "$TFPLAN_TEXT"
           echo ""
           echo "--- TRIVY FINDINGS (JSON) ---"
           echo "$TRIVY_JSON"
@@ -240,7 +294,7 @@ steps:
         REPO="$(Build.Repository.Name)"       # e.g. myorg/myridius-erc-iac
         PR_NUMBER="$(System.PullRequest.PullRequestNumber)"
 
-        BODY=$(jq -Rs '{body: ("### 🤖 AI Review — Trivy & Checkov\n\n" + .)}' "$REVIEW_FILE")
+        BODY=$(jq -Rs '{body: ("### 🤖 AI Review — Trivy, Checkov & Terraform Plan\n\n" + .)}' "$REVIEW_FILE")
 
         curl -sf -X POST \
           -H "Authorization: token $GITHUB_PAT" \
