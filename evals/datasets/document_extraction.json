@@ -1,0 +1,39 @@
+[
+  {
+    "id": "de-01-vendor-document-clear-fields",
+    "description": "A vendor document stating fields plainly and verbatim — every field should be extracted with high confidence, none flagged for review.",
+    "changeType": "Vendor",
+    "documentText": "Vendor Onboarding Summary: Vendor name is Global KYC Solutions Inc. The vendor is incorporated and headquartered in Singapore. Data access scope is limited to customer PII required for identity verification (name, date of birth, government ID number). The vendor holds an active ISO 27001 certification.",
+    "expectedFields": {
+      "vendor_name": "Global KYC Solutions Inc",
+      "vendor_jurisdiction": "Singapore"
+    },
+    "fieldsThatMustNotNeedReview": ["vendor_name", "vendor_jurisdiction"]
+  },
+  {
+    "id": "de-02-geography-document",
+    "description": "A geography-change document with the target country stated once, unambiguously.",
+    "changeType": "Geography",
+    "documentText": "Market Entry Brief: This proposal covers retail banking expansion into Kenya. No other countries are in scope for this phase.",
+    "expectedFields": {
+      "target_country": "Kenya"
+    },
+    "fieldsThatMustNotNeedReview": ["target_country"]
+  },
+  {
+    "id": "de-03-ambiguous-jurisdiction",
+    "description": "Deliberate edge case — the jurisdiction is explicitly uncertain in the source text. A correct extraction must flag needsReview rather than confidently picking one candidate (US-4.1 AC2). This is the extraction-side counterpart to category_mapping.json's no-framework-mapping edge case.",
+    "changeType": "Vendor",
+    "documentText": "Vendor Note: The vendor's registered office may be in either Ireland or the Netherlands, pending confirmation from their legal team; final jurisdiction to be confirmed before go-live.",
+    "expectedFields": {},
+    "fieldsThatMustNeedReview": ["vendor_jurisdiction"]
+  },
+  {
+    "id": "de-04-empty-document",
+    "description": "Deterministic, zero-cost case (no AI call) — empty document text must short-circuit to an empty result, matching DocumentExtractionAiClient's own guard clause.",
+    "changeType": "Vendor",
+    "documentText": "",
+    "expectedFields": {},
+    "expectEmptyResult": true
+  }
+]

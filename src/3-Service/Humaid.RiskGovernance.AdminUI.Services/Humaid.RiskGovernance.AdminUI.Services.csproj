@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.3" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.0" />
+    <!-- Phase 3 Step 4 - real document extraction. Deterministic parsing only, no AI/network
+         dependency for either package - see IDocumentTextExtractor's own reasoning. -->
+    <PackageReference Include="Azure.Storage.Blobs" Version="12.29.2" />
+    <PackageReference Include="PdfPig" Version="0.1.16" />
+    <PackageReference Include="DocumentFormat.OpenXml" Version="3.1.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\2-Infrastructure\Humaid.RiskGovernance.AdminUI.Infrastructure\Humaid.RiskGovernance.AdminUI.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

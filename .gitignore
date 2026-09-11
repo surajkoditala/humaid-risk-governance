@@ -1,0 +1,16 @@
+# .NET build output
+bin/
+obj/
+*.user
+.vs/
+
+# Node (webapp has its own .gitignore too; this covers anything at the root)
+node_modules/
+
+# Local-only backend settings (real local dev values, keeps changing per developer/machine) -
+# see appsettings.Development.json.example, same idea as webapp/.env.local vs .env.example.
+src/1-API/Humaid.RiskGovernance.AdminUI.Web/appsettings.Development.json
+src/6-MockExternalSystems/Humaid.RiskGovernance.MockSystems/appsettings.Development.json
+
+# Eval run artifacts - see evals/README.md. The datasets themselves (evals/datasets/) are checked in.
+evals/results/
