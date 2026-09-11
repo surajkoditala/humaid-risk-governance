@@ -1,0 +1,37 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: risk-governance-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: risk_governance_db
+    ports:
+      # Mapped to 5433 on the host, not 5432 - this machine already has a native Postgres service
+      # listening on 5432 (used by other local projects); this avoids a port clash rather than
+      # requiring you to stop that service.
+      - "5433:5432"
+    volumes:
+      - risk-governance-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d risk_governance_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Phase 3 Step 4 - local stand-in for Azure Blob Storage (real document upload/extraction).
+  # Same "local, no hosted/cloud sign-in" constraint already enforced for Postgres.
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite:latest
+    container_name: risk-governance-azurite
+    restart: unless-stopped
+    command: "azurite-blob --blobHost 0.0.0.0 --blobPort 10000"
+    ports:
+      - "10000:10000"
+    volumes:
+      - risk-governance-azurite-data:/data
+
+volumes:
+  risk-governance-postgres-data:
+  risk-governance-azurite-data:
