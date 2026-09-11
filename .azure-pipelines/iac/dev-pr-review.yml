@@ -172,6 +172,12 @@ steps:
         export ARM_USE_OIDC=true
         export ARM_USE_AZUREAD=true
 
+        # TEMP DEBUG — remove once WIF auth is confirmed working
+        echo "ARM_CLIENT_ID=$ARM_CLIENT_ID"
+        echo "ARM_TENANT_ID=$ARM_TENANT_ID"
+        echo "ARM_SUBSCRIPTION_ID=$ARM_SUBSCRIPTION_ID"
+        echo "idToken length: ${#ARM_OIDC_TOKEN}"
+
         set +e
         terraform init -reconfigure -input=false -no-color
         INIT_EXIT_CODE=$?
