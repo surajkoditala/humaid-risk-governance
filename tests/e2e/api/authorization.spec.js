@@ -141,3 +141,45 @@ test.describe('Input validation still holds', () => {
     expect(response.status()).toBe(404);
   });
 });
+
+test.describe('Error handling', () => {
+  // Separate finding, surfaced while probing the authorization gap above: a well-formed but
+  // unknown id reaches Postgres and the resulting exception escapes as a 500 rather than being
+  // mapped to a 4xx. BaseApiController.ExecuteAsync catches it and logs, but its fallback is
+  // OperationResult.Failure -> 500, so "you sent me an id that does not exist" is reported to the
+  // caller as "the server broke". OperationResult already has NotFound and BadRequest shapes for
+  // exactly this.
+  //
+  // Confirmed in the API log:
+  //   Npgsql.PostgresException 23503: insert or update on table "scoring_config"
+  //   violates foreign key constraint "scoring_config_risk_category_id_fkey"
+
+  test('an unknown risk category is a client error, not a server error', async ({ request }) => {
+    test.fail(); // Currently 500 - the FK violation is unmapped.
+
+    const { analyst } = await usersByRole(request);
+    const response = await request.post('/api/Scoring/Config', {
+      data: {
+        riskCategoryId: NON_EXISTENT_ID,
+        maxMitigationFactor: 0.5,
+        reason: 'Probe: unknown category id should be a 4xx.',
+        actorUserId: analyst?.id ?? NON_EXISTENT_ID,
+      },
+    });
+    test.info().annotations.push({ type: 'actual status', description: String(response.status()) });
+
+    expect(response.status(), 'an unknown id is the caller’s error').toBeLessThan(500);
+  });
+
+  test('finalizing an unknown assessment is a client error, not a server error', async ({ request }) => {
+    test.fail(); // Currently 500.
+
+    const { analyst } = await usersByRole(request);
+    const response = await request.post(`/api/Assessment/${NON_EXISTENT_ID}/Finalize`, {
+      data: { actorUserId: analyst?.id ?? NON_EXISTENT_ID },
+    });
+    test.info().annotations.push({ type: 'actual status', description: String(response.status()) });
+
+    expect(response.status(), 'an unknown assessment should be 404').toBeLessThan(500);
+  });
+});

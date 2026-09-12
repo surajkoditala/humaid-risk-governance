@@ -74,9 +74,44 @@ yet — not a live breach. But it is **not** fixed by configuring Auth0 either, 
 authorization layer Auth0 would feed does not exist. Roles are seeded
 (`ProductOwner | Analyst | CommitteeMember | Admin`, see `seed/seed_dev_users.sql`) and never read.
 
+### Verified against a running stack (2026-09-12)
+
+| Probe | Expected | Actual |
+|---|---|---|
+| `GET /api/User` with **no credential at all** | 401 | **200 — returns all 6 users** (name, email, role) |
+| `POST /api/Committee/Vote`, actor = Product Owner | 403 | 400 (workflow) |
+| `POST /api/Assessment/{id}/Finalize`, actor = Product Owner | 403 | 500 |
+| `POST /api/Scoring/Config`, actor = Product Owner | 403 | 500 |
+
+**No endpoint returned 403.** The declared actor's role was never consulted on any of them.
+
+Precision matters on the last three: those probes used a deliberately non-existent id, so each was
+rejected (or crashed) on *data* grounds before role could ever have mattered. They prove the role
+check does not run first — they do **not** prove a request against a valid, committee-routed
+assessment would be accepted. Confirming that end to end needs a seeded `PendingCommittee`
+assessment, which is follow-up work.
+
+Row 1 needs no such caveat and is the serious one: **the full user directory is readable with no
+credential whatsoever.**
+
 `api/authorization.spec.js` also keeps two *passing* validation tests. That is deliberate: the API
 does validate input — a mitigation factor of `1.0` is refused — so the finding stays precisely an
 authorization gap and is not overstated into "the API accepts anything".
+
+## Second finding: unknown ids surface as 500
+
+Found while probing the above. A well-formed but non-existent id reaches Postgres, and the
+resulting exception escapes as a **500** instead of a 4xx:
+
+```
+Npgsql.PostgresException 23503: insert or update on table "scoring_config"
+violates foreign key constraint "scoring_config_risk_category_id_fkey"
+```
+
+`BaseApiController.ExecuteAsync` does catch and log it, but its fallback is
+`OperationResult.Failure` → 500 — so "you sent an id that does not exist" is reported to the caller
+as "the server broke". `OperationResult` already has `NotFound` and `BadRequest` shapes built for
+exactly this. Two `test.fail()` tests in the `Error handling` block record it.
 
 ## Layout
 
