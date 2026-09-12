@@ -1,0 +1,57 @@
+import { chromium } from '@playwright/test';
+import { readFileSync, writeFileSync } from 'node:fs';
+
+const [, , srcPath, outPdf, outHtml] = process.argv;
+
+// The artifact file is authored as a fragment (no <html>/<head>/<body>) because the Artifact
+// runtime supplies that skeleton at publish time. For a standalone file - one someone opens from
+// disk or attaches to an email - we have to supply it ourselves, including the charset and
+// viewport the runtime would otherwise add.
+const fragment = readFileSync(srcPath, 'utf8');
+const standalone = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root { color-scheme: light dark; }
+  body { margin: 0; }
+  img { max-width: 100%; }
+  [hidden] { display: none !important; }
+</style>
+${fragment}
+</body>
+</html>
+`;
+writeFileSync(outHtml, standalone, 'utf8');
+
+const browser = await chromium.launch();
+const page = await browser.newPage();
+
+// Light theme for the PDF regardless of the rendering machine's OS setting - the print
+// stylesheet forces the palette too, but this stops a dark first paint bleeding through.
+await page.emulateMedia({ colorScheme: 'light' });
+await page.goto(`file://${outHtml.replace(/\\/g, '/')}`, { waitUntil: 'networkidle' });
+
+// Google Fonts are linked, not inlined - without this the PDF silently renders in the fallback
+// stack and the whole type system is lost.
+await page.evaluate(() => document.fonts.ready);
+
+await page.emulateMedia({ media: 'print', colorScheme: 'light' });
+await page.pdf({
+  path: outPdf,
+  format: 'A4',
+  printBackground: true,
+  displayHeaderFooter: true,
+  headerTemplate: '<div></div>',
+  footerTemplate:
+    '<div style="width:100%;font-family:Georgia,serif;font-size:7.5pt;color:#6b7680;' +
+    'padding:0 15mm;display:flex;justify-content:space-between;">' +
+    '<span>HumAId Risk Governance · QA &amp; BA Strategy · 12 Sep 2026</span>' +
+    '<span class="pageNumber"></span></div>',
+  margin: { top: '14mm', bottom: '16mm', left: '15mm', right: '15mm' },
+});
+
+await browser.close();
+console.log(`PDF  -> ${outPdf}`);
+console.log(`HTML -> ${outHtml}`);

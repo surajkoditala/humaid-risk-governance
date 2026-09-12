@@ -1,0 +1,849 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root { color-scheme: light dark; }
+  body { margin: 0; }
+  img { max-width: 100%; }
+  [hidden] { display: none !important; }
+</style>
+<title>Risk Workbench QA Strategy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@500;600;700&display=swap">
+<style>
+  :root {
+    --ground: #F6F7F9;
+    --surface: #FFFFFF;
+    --surface-2: #EFF2F5;
+    --ink: #131C26;
+    --ink-2: #3B4956;
+    --muted: #66757F;
+    --line: #DBE1E7;
+    --line-2: #C7D0D8;
+    --accent: #0F4C5C;
+    --accent-ink: #0F4C5C;
+    --accent-soft: #E2EDF0;
+    --critical: #A02B21;
+    --critical-soft: #F7E7E5;
+    --warn: #8A5A06;
+    --warn-soft: #FBF0DC;
+    --pass: #1B6B4C;
+    --pass-soft: #E2F0E9;
+    --neutral: #5D6B78;
+    --neutral-soft: #E9EDF1;
+
+    --f-display: "IBM Plex Serif", Georgia, "Times New Roman", serif;
+    --f-body: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+
+    --measure: 68ch;
+    --radius: 3px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0D141B;
+      --surface: #131C25;
+      --surface-2: #18232E;
+      --ink: #E5EBF1;
+      --ink-2: #BDC9D4;
+      --muted: #8B9BA8;
+      --line: #24313D;
+      --line-2: #314250;
+      --accent: #5FB4C8;
+      --accent-ink: #7CC5D6;
+      --accent-soft: #10303A;
+      --critical: #E4837A;
+      --critical-soft: #351917;
+      --warn: #D9A44E;
+      --warn-soft: #33260F;
+      --pass: #6BC49C;
+      --pass-soft: #122C22;
+      --neutral: #92A2AF;
+      --neutral-soft: #1C2731;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground: #0D141B;
+    --surface: #131C25;
+    --surface-2: #18232E;
+    --ink: #E5EBF1;
+    --ink-2: #BDC9D4;
+    --muted: #8B9BA8;
+    --line: #24313D;
+    --line-2: #314250;
+    --accent: #5FB4C8;
+    --accent-ink: #7CC5D6;
+    --accent-soft: #10303A;
+    --critical: #E4837A;
+    --critical-soft: #351917;
+    --warn: #D9A44E;
+    --warn-soft: #33260F;
+    --pass: #6BC49C;
+    --pass-soft: #122C22;
+    --neutral: #92A2AF;
+    --neutral-soft: #1C2731;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--f-body);
+    font-size: 15px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .shell {
+    display: grid;
+    grid-template-columns: 232px minmax(0, 1fr);
+    gap: 56px;
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 0 32px 96px;
+  }
+
+  /* ---------- rail ---------- */
+  .rail { position: sticky; top: 0; align-self: start; padding-top: 48px; height: 100vh; overflow-y: auto; }
+  .rail-mark { font-family: var(--f-mono); font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--accent-ink); margin-bottom: 28px; }
+  .rail nav { display: flex; flex-direction: column; gap: 1px; border-left: 1px solid var(--line); }
+  .rail a { display: grid; grid-template-columns: 22px 1fr; gap: 8px; padding: 7px 0 7px 14px; text-decoration: none; color: var(--muted); font-size: 12.5px; line-height: 1.4; border-left: 2px solid transparent; margin-left: -1px; transition: color .12s, border-color .12s; }
+  .rail a:hover { color: var(--ink); border-left-color: var(--line-2); }
+  .rail a .n { font-family: var(--f-mono); font-size: 11px; color: var(--accent-ink); }
+  .rail a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ---------- masthead ---------- */
+  .masthead { padding: 56px 0 0; }
+  .eyebrow { font-family: var(--f-mono); font-size: 11px; letter-spacing: .15em; text-transform: uppercase; color: var(--muted); }
+  h1 { font-family: var(--f-display); font-weight: 700; font-size: clamp(32px, 4.6vw, 46px); line-height: 1.1; letter-spacing: -.015em; margin: 14px 0 16px; text-wrap: balance; }
+  .standfirst { font-size: 17px; line-height: 1.6; color: var(--ink-2); max-width: var(--measure); margin: 0 0 32px; }
+
+  .meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 0; border-top: 1px solid var(--line-2); border-bottom: 1px solid var(--line-2); }
+  .meta div { padding: 14px 18px 14px 0; border-right: 1px solid var(--line); }
+  .meta div:last-child { border-right: 0; }
+  .meta dt { font-family: var(--f-mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-bottom: 5px; }
+  .meta dd { margin: 0; font-size: 13.5px; font-weight: 500; }
+
+  /* ---------- sections ---------- */
+  section { padding-top: 68px; scroll-margin-top: 24px; }
+  .sec-head { display: grid; grid-template-columns: 44px 1fr; gap: 16px; align-items: start; border-top: 2px solid var(--ink); padding-top: 14px; margin-bottom: 26px; }
+  .sec-num { font-family: var(--f-mono); font-size: 12px; font-weight: 600; color: var(--accent-ink); padding-top: 7px; }
+  h2 { font-family: var(--f-display); font-weight: 600; font-size: clamp(22px, 2.7vw, 29px); line-height: 1.22; letter-spacing: -.01em; margin: 0; text-wrap: balance; }
+  .sec-sub { grid-column: 2; color: var(--muted); font-size: 14px; margin-top: 6px; max-width: var(--measure); }
+
+  h3 { font-family: var(--f-display); font-weight: 600; font-size: 17.5px; margin: 34px 0 10px; letter-spacing: -.005em; }
+  h4 { font-family: var(--f-body); font-weight: 600; font-size: 14px; margin: 22px 0 8px; }
+  p { max-width: var(--measure); margin: 0 0 14px; }
+  ul, ol { max-width: var(--measure); padding-left: 20px; margin: 0 0 14px; }
+  li { margin-bottom: 6px; }
+  strong { font-weight: 600; }
+  code { font-family: var(--f-mono); font-size: .875em; background: var(--surface-2); padding: 1px 5px; border-radius: var(--radius); border: 1px solid var(--line); }
+  a { color: var(--accent-ink); }
+
+  /* ---------- tables ---------- */
+  .tw { overflow-x: auto; margin: 18px 0 22px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+  table { width: 100%; border-collapse: collapse; font-size: 13.2px; }
+  th, td { text-align: left; padding: 9px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  thead th { font-family: var(--f-mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 500; background: var(--surface-2); white-space: nowrap; }
+  tbody tr:last-child td { border-bottom: 0; }
+  td.num, th.num { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+  td.mono { font-family: var(--f-mono); font-size: 12px; }
+
+  /* ---------- pills ---------- */
+  .pill { display: inline-block; font-family: var(--f-mono); font-size: 10.5px; font-weight: 500; letter-spacing: .05em; text-transform: uppercase; padding: 2px 7px; border-radius: 2px; white-space: nowrap; }
+  .p-pass { background: var(--pass-soft); color: var(--pass); }
+  .p-crit { background: var(--critical-soft); color: var(--critical); }
+  .p-warn { background: var(--warn-soft); color: var(--warn); }
+  .p-neut { background: var(--neutral-soft); color: var(--neutral); }
+  .p-acc  { background: var(--accent-soft); color: var(--accent-ink); }
+
+  /* ---------- callout ---------- */
+  .note { border-left: 2px solid var(--accent); background: var(--accent-soft); padding: 14px 18px; margin: 20px 0; max-width: var(--measure); }
+  .note p:last-child { margin-bottom: 0; }
+  .note .lbl { font-family: var(--f-mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent-ink); display: block; margin-bottom: 6px; }
+
+  /* ---------- findings ---------- */
+  .finding { background: var(--surface); border: 1px solid var(--line); border-left-width: 3px; border-radius: var(--radius); padding: 20px 22px; margin: 20px 0; }
+  .f-crit { border-left-color: var(--critical); }
+  .f-warn { border-left-color: var(--warn); }
+  .f-head { display: flex; flex-wrap: wrap; gap: 10px; align-items: baseline; margin-bottom: 4px; }
+  .f-id { font-family: var(--f-mono); font-size: 12px; font-weight: 600; color: var(--muted); }
+  .f-title { font-family: var(--f-display); font-weight: 600; font-size: 17px; margin: 0 0 10px; }
+  .finding dl { display: grid; grid-template-columns: 108px 1fr; gap: 4px 14px; margin: 14px 0 0; font-size: 13.2px; }
+  .finding dt { font-family: var(--f-mono); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding-top: 3px; }
+  .finding dd { margin: 0; }
+
+  pre { font-family: var(--f-mono); font-size: 12px; line-height: 1.6; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius); padding: 13px 15px; overflow-x: auto; margin: 12px 0; }
+  pre code { background: none; border: 0; padding: 0; font-size: inherit; }
+
+  /* ---------- figures ---------- */
+  figure { margin: 26px 0 28px; }
+  figure svg { display: block; width: 100%; max-width: 100%; height: auto; color: var(--ink-2); }
+  figcaption { font-size: 12.5px; color: var(--muted); margin-top: 10px; max-width: var(--measure); }
+  .svg-box { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px 18px; overflow-x: auto; }
+
+  .node { fill: var(--surface-2); stroke: var(--line-2); stroke-width: 1; }
+  .node-acc { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.5; }
+  .node-ext { fill: none; stroke: var(--line-2); stroke-width: 1; stroke-dasharray: 4 3; }
+  .lbl { font-family: var(--f-body); font-size: 12.5px; font-weight: 600; fill: var(--ink); }
+  .sub { font-family: var(--f-mono); font-size: 10px; fill: var(--muted); }
+  .edge { stroke: var(--line-2); stroke-width: 1.4; fill: none; }
+  .edge-acc { stroke: var(--accent); stroke-width: 1.8; fill: none; }
+  .elbl { font-family: var(--f-mono); font-size: 9.5px; fill: var(--muted); }
+
+  /* ---------- misc ---------- */
+  .lede-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); margin: 22px 0 26px; }
+  .lede-stats div { padding: 15px 18px; border-right: 1px solid var(--line); }
+  .lede-stats div:last-child { border-right: 0; }
+  .lede-stats .v { font-family: var(--f-display); font-size: 27px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+  .lede-stats .k { font-family: var(--f-mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-top: 7px; }
+
+  hr.rule { border: 0; border-top: 1px solid var(--line); margin: 30px 0; }
+  .foot { margin-top: 72px; padding-top: 20px; border-top: 1px solid var(--line-2); font-size: 12.5px; color: var(--muted); max-width: var(--measure); }
+
+  @media (max-width: 900px) {
+    .shell { grid-template-columns: 1fr; gap: 0; padding: 0 20px 64px; }
+    .rail { position: static; height: auto; padding-top: 28px; }
+    .rail nav { flex-direction: row; flex-wrap: wrap; gap: 4px; border-left: 0; }
+    .rail a { border: 1px solid var(--line); border-radius: 2px; padding: 5px 9px; margin-left: 0; grid-template-columns: auto auto; }
+    .masthead { padding-top: 32px; }
+    .finding dl { grid-template-columns: 1fr; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+  /* ---------- print / PDF ---------- */
+  @page { size: A4; margin: 16mm 15mm 18mm; }
+
+  @media print {
+    /* Force the light palette: a PDF has no viewer theme, and a dark-ground
+       export wastes toner and reads badly on paper. */
+    :root, :root[data-theme="dark"], :root:not([data-theme="light"]) {
+      --ground: #FFFFFF; --surface: #FFFFFF; --surface-2: #F2F5F7;
+      --ink: #101820; --ink-2: #33414E; --muted: #5A6874;
+      --line: #D3DAE1; --line-2: #B8C2CC;
+      --accent: #0F4C5C; --accent-ink: #0F4C5C; --accent-soft: #E6EFF2;
+      --critical: #8E2219; --critical-soft: #F8E9E7;
+      --warn: #7A4F05; --warn-soft: #FBF1DE;
+      --pass: #17593F; --pass-soft: #E5F1EB;
+      --neutral: #4F5D69; --neutral-soft: #EDF0F3;
+    }
+
+    /* Severity is encoded in colour, so backgrounds must survive the export. */
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+
+    body { font-size: 10.2pt; line-height: 1.5; background: #fff; }
+    .shell { display: block; max-width: none; padding: 0; }
+    .rail { display: none; }
+    .masthead { padding-top: 0; }
+
+    h1 { font-size: 26pt; }
+    h2 { font-size: 16pt; }
+    h3 { font-size: 12pt; }
+    p, ul, ol, .standfirst, .sec-sub, figcaption, .note { max-width: none; }
+
+    /* Each numbered section starts a page - this is a reference document that
+       people will jump around in, not read straight through. */
+    section { break-before: page; padding-top: 0; }
+    #s1 { break-before: auto; }
+
+    .sec-head, h3, h4 { break-after: avoid; }
+    .finding, figure, .tw, .note, pre, .lede-stats { break-inside: avoid; }
+    tr, li { break-inside: avoid; }
+    thead { display: table-header-group; }
+
+    a { color: var(--ink); text-decoration: none; }
+    .svg-box { padding: 8px 0; border: 0; }
+    figure svg { max-width: 165mm; }
+
+    /* The live URL is lost on paper, so state where this came from. */
+    .foot::after {
+      content: " · Live version: claude.ai/code/artifact/0181e636-fb00-4065-9cc1-dd402040ae7c";
+      font-family: var(--f-mono); font-size: 8pt;
+    }
+  }
+</style>
+
+<div class="shell">
+
+  <aside class="rail">
+    <div class="rail-mark">HumAId&nbsp;·&nbsp;QA&nbsp;&amp;&nbsp;BA</div>
+    <nav>
+      <a href="#s1"><span class="n">01</span><span>Requirements &amp; architecture</span></a>
+      <a href="#s2"><span class="n">02</span><span>Testing this project needs</span></a>
+      <a href="#s3"><span class="n">03</span><span>BA approach</span></a>
+      <a href="#s4"><span class="n">04</span><span>Testing approach</span></a>
+      <a href="#s5"><span class="n">05</span><span>Automation strategy</span></a>
+      <a href="#s6"><span class="n">06</span><span>Work completed</span></a>
+      <a href="#s7"><span class="n">07</span><span>Defects &amp; repro steps</span></a>
+    </nav>
+  </aside>
+
+  <main>
+    <header class="masthead">
+      <div class="eyebrow">Genius Hacks Q3 2026 · Risk Assessment Workbench</div>
+      <h1>QA &amp; BA Strategy</h1>
+      <p class="standfirst">What this platform must do, how we intend to prove it does, what has already been proven, and the four defects found so far. Written for the HumAId Risk Governance team ahead of the 30 September submission.</p>
+
+      <dl class="meta">
+        <div><dt>Author</dt><dd>Alagappan Annamalai · BA&nbsp;/&nbsp;QA</dd></div>
+        <div><dt>Date</dt><dd>12 September 2026</dd></div>
+        <div><dt>Branch</dt><dd class="mono">qa/ba-qa-workstream</dd></div>
+        <div><dt>Days to submit</dt><dd>18</dd></div>
+      </dl>
+
+      <div class="lede-stats">
+        <div><div class="v">74</div><div class="k">Automated tests</div></div>
+        <div><div class="v">4</div><div class="k">Defects raised</div></div>
+        <div><div class="v">12</div><div class="k">AI eval cases</div></div>
+        <div><div class="v">0</div><div class="k">CI pipelines running them</div></div>
+      </div>
+    </header>
+
+    <!-- ══════════════ 01 ══════════════ -->
+    <section id="s1">
+      <div class="sec-head">
+        <div class="sec-num">01</div>
+        <h2>Requirement understanding &amp; architecture</h2>
+        <p class="sec-sub">What we are building, for whom, and the shape of the system that delivers it.</p>
+      </div>
+
+      <h3>The business problem</h3>
+      <p>A national bank (~$500B assets) must assess financial-crime risk before any business change goes live — a new product, a feature, a process change, a vendor, a new geography, or a new customer segment. Today that assessment runs on email, Word, Excel and SharePoint. It takes <strong>15–20 business days</strong>, two analysts can reach different conclusions on the same change, and reconstructing the reasoning behind a past rating for an examiner is slow and incomplete.</p>
+      <p>The Risk Assessment Workbench carries a change request through <strong>intake → assessment → committee decision</strong> on one governed platform, with an audit trail an examiner can read.</p>
+
+      <h3>Actors</h3>
+      <div class="tw"><table>
+        <thead><tr><th>Actor</th><th>Does</th><th>Must never be able to</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Product Owner</strong></td><td>Raises the change request, attaches documents, tracks status</td><td>See analyst scoring rationale; act on the assessment itself</td></tr>
+          <tr><td><strong>FCRM Analyst</strong></td><td>Reviews AI output, overrides with reason, scores, finalizes, owns configuration</td><td>Route an unreviewed assessment to committee</td></tr>
+          <tr><td><strong>Risk Committee</strong></td><td>Reviews the finalized assessment and votes</td><td>Vote anonymously or have a vote aggregated away</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>The three constraints everything hangs off</h3>
+      <ol>
+        <li><strong>The system prepares, humans decide.</strong> Nothing is auto-approved or auto-rejected. Every AI touchpoint pairs with a human review gate <em>in code</em>.</li>
+        <li><strong>Controls mitigate, never eliminate.</strong> Residual risk can never reach zero — enforced at calculation time <em>and</em> at configuration time.</li>
+        <li><strong>Grounded in a citable framework.</strong> Risk decomposition uses the FFIEC BSA/AML Examination Manual's four categories. Nothing invented, every category carries a citation.</li>
+      </ol>
+
+      <div class="note">
+        <span class="lbl">Why this matters for test design</span>
+        <p>These three are not features — they are invariants. A test suite for this product is judged on whether it can <em>prove</em> them, not on line coverage. That is the organising principle for everything in sections 4 and 5.</p>
+      </div>
+
+      <h3>The ten epics</h3>
+      <div class="tw"><table>
+        <thead><tr><th class="num">#</th><th>Epic</th><th>AI?</th><th>Paired human gate</th></tr></thead>
+        <tbody>
+          <tr><td class="num">1</td><td>Change Request Intake</td><td><span class="pill p-neut">No</span></td><td>—</td></tr>
+          <tr><td class="num">2</td><td>Risk Categorization &amp; Framework Mapping</td><td><span class="pill p-acc">AI</span></td><td>Analyst adds/removes category, reason mandatory</td></tr>
+          <tr><td class="num">3</td><td>Policy Research</td><td><span class="pill p-neut">No</span> <span class="sub">— Postgres FTS by design</span></td><td>Analyst marks each policy relied-upon / not relevant</td></tr>
+          <tr><td class="num">4</td><td>Document Extraction</td><td><span class="pill p-acc">AI</span></td><td>Analyst corrects any field; low-confidence pre-flagged</td></tr>
+          <tr><td class="num">5</td><td>AI-Drafted Risk Assessment</td><td><span class="pill p-acc">AI</span></td><td>Section cannot route to committee until reviewed/edited</td></tr>
+          <tr><td class="num">6</td><td>Analyst Review, Edit &amp; Override</td><td><span class="pill p-neut">No</span></td><td><em>Is</em> the gate — reason mandatory everywhere</td></tr>
+          <tr><td class="num">7</td><td>Risk Scoring Engine</td><td><span class="pill p-neut">No</span> <span class="sub">— fixed formula by design</span></td><td>Analyst override with reason; residual &gt; 0 always</td></tr>
+          <tr><td class="num">8</td><td>Committee Review &amp; Voting</td><td><span class="pill p-neut">No</span></td><td>Individual votes never aggregated anonymously</td></tr>
+          <tr><td class="num">9</td><td>Immutable Audit Trail</td><td><span class="pill p-neut">No</span></td><td>Append-only enforced by DB trigger</td></tr>
+          <tr><td class="num">10</td><td>Platform Configuration</td><td><span class="pill p-neut">No</span></td><td>Config change is itself an audit event</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>System architecture</h3>
+      <p>A 5-layer Clean Architecture .NET solution using Dapper against named PostgreSQL stored functions — never an ORM, never ad-hoc SQL. Mock External Systems is deliberately a <em>separate</em> service, standing in for the CRM / Core Banking / Vendor Management systems a real bank already runs.</p>
+
+      <figure>
+        <div class="svg-box">
+          <svg viewBox="0 0 710 300" role="img" aria-label="Architecture: the browser calls the React webapp, which calls the Workbench API, which reads and writes PostgreSQL. The API also calls Azure AI Foundry for model completions, Azurite for document blobs, and the separate Mock Systems service over HTTP; Mock Systems uses its own schema in the same PostgreSQL instance.">
+            <defs>
+              <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/>
+              </marker>
+            </defs>
+
+            <!-- main row -->
+            <rect class="node" x="16" y="120" width="100" height="56" rx="2"/>
+            <text class="lbl" x="66" y="145" text-anchor="middle">Browser</text>
+            <text class="sub" x="66" y="160" text-anchor="middle">analyst / PO</text>
+
+            <rect class="node" x="148" y="120" width="140" height="56" rx="2"/>
+            <text class="lbl" x="218" y="145" text-anchor="middle">webapp</text>
+            <text class="sub" x="218" y="160" text-anchor="middle">React + Vite :3000</text>
+
+            <rect class="node-acc" x="320" y="112" width="176" height="72" rx="2"/>
+            <text class="lbl" x="408" y="139" text-anchor="middle">Workbench API</text>
+            <text class="sub" x="408" y="154" text-anchor="middle">:5210 · 5 layers</text>
+            <text class="sub" x="408" y="168" text-anchor="middle">API·Infra·Service·DA·DB</text>
+
+            <rect class="node" x="528" y="120" width="166" height="56" rx="2"/>
+            <text class="lbl" x="611" y="145" text-anchor="middle">PostgreSQL</text>
+            <text class="sub" x="611" y="160" text-anchor="middle">:5433 · triggers, CHECKs</text>
+
+            <line class="edge" x1="116" y1="148" x2="144" y2="148" marker-end="url(#ar)"/>
+            <line class="edge" x1="288" y1="148" x2="316" y2="148" marker-end="url(#ar)"/>
+            <text class="elbl" x="302" y="140" text-anchor="middle">HTTP</text>
+            <line class="edge-acc" x1="496" y1="148" x2="524" y2="148" marker-end="url(#ar)"/>
+            <text class="elbl" x="510" y="140" text-anchor="middle">Dapper</text>
+
+            <!-- foundry above -->
+            <rect class="node-ext" x="320" y="24" width="176" height="48" rx="2"/>
+            <text class="lbl" x="408" y="45" text-anchor="middle">Azure AI Foundry</text>
+            <text class="sub" x="408" y="60" text-anchor="middle">gpt-4.1-mini</text>
+            <line class="edge" x1="408" y1="112" x2="408" y2="76" marker-end="url(#ar)"/>
+            <text class="elbl" x="416" y="97">IChatCompletionClient</text>
+
+            <!-- mock systems below -->
+            <rect class="node" x="320" y="224" width="176" height="48" rx="2"/>
+            <text class="lbl" x="408" y="245" text-anchor="middle">Mock Systems</text>
+            <text class="sub" x="408" y="260" text-anchor="middle">:5220 · CRM / Core / Vendor</text>
+            <line class="edge" x1="408" y1="184" x2="408" y2="220" marker-end="url(#ar)"/>
+            <text class="elbl" x="416" y="206">HTTP only</text>
+
+            <!-- azurite left-below -->
+            <rect class="node-ext" x="120" y="224" width="150" height="48" rx="2"/>
+            <text class="lbl" x="195" y="245" text-anchor="middle">Azurite / Blob</text>
+            <text class="sub" x="195" y="260" text-anchor="middle">:10000 · documents</text>
+            <polyline class="edge" points="352,184 352,204 195,204 195,220" marker-end="url(#ar)"/>
+
+            <!-- mock -> postgres -->
+            <polyline class="edge" points="496,248 611,248 611,180" marker-end="url(#ar)"/>
+            <text class="elbl" x="556" y="241" text-anchor="middle">mock_systems schema</text>
+          </svg>
+        </div>
+        <figcaption><strong>Figure 1.</strong> The Workbench is the only thing that talks to Mock Systems, and only over HTTP — the boundary is real, not cosmetic. Both services share one PostgreSQL instance in different schemas, for cost.</figcaption>
+      </figure>
+
+      <h3>Requirements drift — a BA finding</h3>
+      <p>The existing <code>docs/requirements/user-stories.md</code> is strong: 10 epics, Given/When/Then throughout, inline assumptions, and five consolidated open questions. But <strong>three of those five have since been answered in code without the document being updated.</strong></p>
+
+      <div class="tw"><table>
+        <thead><tr><th>Open question</th><th>Doc says</th><th>Reality</th></tr></thead>
+        <tbody>
+          <tr><td>Q1 — PO visibility of analyst rationale</td><td>Assumption</td><td><span class="pill p-pass">Implemented as assumed</span></td></tr>
+          <tr><td>Q2 — Framework configurable per jurisdiction?</td><td>Open</td><td><span class="pill p-pass">Resolved</span> — DB-driven <code>risk_category</code> table, not an enum</td></tr>
+          <tr><td>Q3 — Override needs secondary sign-off?</td><td>Open</td><td><span class="pill p-warn">Genuinely still open</span></td></tr>
+          <tr><td>Q4 — Majority / unanimous / chair?</td><td>Open</td><td><span class="pill p-pass">Resolved</span> — configurable quorum, conservative rule</td></tr>
+          <tr><td>Q5 — Who approves config changes?</td><td>Open</td><td><span class="pill p-warn">Genuinely still open</span> — self-service today</td></tr>
+        </tbody>
+      </table></div>
+      <p>Closing this loop is cheap and directly serves the 10% requirement-expansion criterion. A judge reading requirements then code will otherwise see decisions drift.</p>
+    </section>
+
+    <!-- ══════════════ 02 ══════════════ -->
+    <section id="s2">
+      <div class="sec-head">
+        <div class="sec-num">02</div>
+        <h2>What kind of testing this project needs</h2>
+        <p class="sec-sub">Six test types, each earning its place by reaching something the others structurally cannot.</p>
+      </div>
+
+      <p>This is a governance product. The thing under test is not "does the button work" but "can an unreviewed AI output reach a human decision-maker, and can anyone tamper with the record afterwards". That pushes testing down to the data layer and out to the authorization boundary — two places a conventional unit-test suite never visits.</p>
+
+      <div class="tw"><table>
+        <thead><tr><th>Type</th><th>Proves</th><th>Reaches</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Unit</strong> <span class="sub">xUnit + Moq</span></td><td>Service invariants — scoring formula, quorum rule, finalize gate, AI citation guards</td><td>Service layer only</td><td><span class="pill p-pass">74 tests</span></td></tr>
+          <tr><td><strong>Integration (DB)</strong> <span class="sub">Testcontainers</span></td><td>Audit trigger rejects UPDATE/DELETE; <code>CHECK</code> constraints hold; each stored function writes its audit row in the same transaction</td><td>PostgreSQL — triggers, constraints, functions</td><td><span class="pill p-crit">Not started</span></td></tr>
+          <tr><td><strong>API / contract</strong> <span class="sub">Playwright</span></td><td>HTTP status mapping, <code>OperationResult</code> envelope, seed integrity</td><td>HTTP boundary</td><td><span class="pill p-pass">12 tests</span></td></tr>
+          <tr><td><strong>Authorization</strong> <span class="sub">Playwright</span></td><td>Role separation across PO / Analyst / Committee</td><td>HTTP boundary</td><td><span class="pill p-warn">Gap recorded</span></td></tr>
+          <tr><td><strong>E2E journey</strong> <span class="sub">Playwright UI</span></td><td>The three-role golden path holds end to end</td><td>Browser → DB</td><td><span class="pill p-crit">Not started</span></td></tr>
+          <tr><td><strong>AI evaluation</strong> <span class="sub">custom C# harness</span></td><td>Model output quality against fixed datasets and deterministic rubrics</td><td>The three AI clients</td><td><span class="pill p-warn">2 of 12 exercised</span></td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Where each suite can and cannot reach</h3>
+      <p>This is the single most important thing to understand about the strategy, and the reason "just use Playwright for everything" would fail.</p>
+
+      <div class="tw"><table>
+        <thead><tr><th>Layer</th><th>Unit</th><th>API / Playwright</th><th>Testcontainers</th><th>UI journey</th></tr></thead>
+        <tbody>
+          <tr><td>webapp (React)</td><td>—</td><td>—</td><td>—</td><td><span class="pill p-pass">yes</span></td></tr>
+          <tr><td>HTTP / controllers</td><td>—</td><td><span class="pill p-pass">yes</span></td><td>—</td><td><span class="pill p-pass">yes</span></td></tr>
+          <tr><td>Services (business rules)</td><td><span class="pill p-pass">yes</span></td><td>indirect</td><td>indirect</td><td>indirect</td></tr>
+          <tr><td>Dapper repos → stored functions</td><td>mocked away</td><td>indirect</td><td><span class="pill p-pass">yes</span></td><td>indirect</td></tr>
+          <tr><td><strong>DB triggers &amp; CHECK constraints</strong></td><td><span class="pill p-crit">never</span></td><td><span class="pill p-crit">never</span></td><td><span class="pill p-pass">yes</span></td><td><span class="pill p-crit">never</span></td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="note">
+        <span class="lbl">The load-bearing consequence</span>
+        <p>No HTTP endpoint anywhere in the API attempts <code>UPDATE audit_event</code>. So no Playwright test, and no UI test, can <em>ever</em> prove the append-only trigger works — the API simply never asks. US-9.2, the flagship governance claim of this entire product, is currently asserted in a SQL comment and proven nowhere. Only a Testcontainers suite opening a real connection can close it.</p>
+      </div>
+
+      <h3>The human-in-the-loop chain the tests protect</h3>
+      <figure>
+        <div class="svg-box">
+          <svg viewBox="0 0 710 270" role="img" aria-label="Three AI outputs — category mapping, document extraction and narrative drafting — each pass through their own human review gate, and all three converge on the single FinalizeAsync chokepoint, which is the only route to the committee vote.">
+            <defs>
+              <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/>
+              </marker>
+            </defs>
+
+            <text class="sub" x="16" y="16">AI OUTPUT</text>
+            <text class="sub" x="212" y="16">HUMAN GATE</text>
+            <text class="sub" x="410" y="16">CHOKEPOINT</text>
+            <text class="sub" x="588" y="16">DECISION</text>
+
+            <rect class="node" x="16" y="28" width="160" height="48" rx="2"/>
+            <text class="lbl" x="96" y="49" text-anchor="middle">Category mapping</text>
+            <text class="sub" x="96" y="64" text-anchor="middle">Epic 2</text>
+
+            <rect class="node" x="16" y="100" width="160" height="48" rx="2"/>
+            <text class="lbl" x="96" y="121" text-anchor="middle">Doc extraction</text>
+            <text class="sub" x="96" y="136" text-anchor="middle">Epic 4</text>
+
+            <rect class="node" x="16" y="172" width="160" height="48" rx="2"/>
+            <text class="lbl" x="96" y="193" text-anchor="middle">Narrative draft</text>
+            <text class="sub" x="96" y="208" text-anchor="middle">Epic 5</text>
+
+            <rect class="node" x="212" y="28" width="150" height="48" rx="2"/>
+            <text class="lbl" x="287" y="49" text-anchor="middle">Override</text>
+            <text class="sub" x="287" y="64" text-anchor="middle">reason mandatory</text>
+
+            <rect class="node" x="212" y="100" width="150" height="48" rx="2"/>
+            <text class="lbl" x="287" y="121" text-anchor="middle">Correct</text>
+            <text class="sub" x="287" y="136" text-anchor="middle">reason mandatory</text>
+
+            <rect class="node" x="212" y="172" width="150" height="48" rx="2"/>
+            <text class="lbl" x="287" y="193" text-anchor="middle">Review / edit</text>
+            <text class="sub" x="287" y="208" text-anchor="middle">status must change</text>
+
+            <line class="edge" x1="176" y1="52" x2="208" y2="52" marker-end="url(#ar2)"/>
+            <line class="edge" x1="176" y1="124" x2="208" y2="124" marker-end="url(#ar2)"/>
+            <line class="edge" x1="176" y1="196" x2="208" y2="196" marker-end="url(#ar2)"/>
+
+            <rect class="node-acc" x="410" y="96" width="140" height="56" rx="2"/>
+            <text class="lbl" x="480" y="119" text-anchor="middle">FinalizeAsync</text>
+            <text class="sub" x="480" y="134" text-anchor="middle">US-6.3</text>
+
+            <polyline class="edge-acc" points="362,52 386,52 386,116 406,116" marker-end="url(#ar2)"/>
+            <line class="edge-acc" x1="362" y1="124" x2="406" y2="124" marker-end="url(#ar2)"/>
+            <polyline class="edge-acc" points="362,196 386,196 386,132 406,132" marker-end="url(#ar2)"/>
+
+            <rect class="node" x="588" y="96" width="106" height="56" rx="2"/>
+            <text class="lbl" x="641" y="119" text-anchor="middle">Committee</text>
+            <text class="sub" x="641" y="134" text-anchor="middle">vote</text>
+
+            <line class="edge-acc" x1="550" y1="124" x2="584" y2="124" marker-end="url(#ar2)"/>
+            <text class="elbl" x="567" y="115" text-anchor="middle">only if</text>
+            <text class="elbl" x="567" y="146" text-anchor="middle">all clear</text>
+
+            <text class="sub" x="480" y="176" text-anchor="middle">12 tests added — §6</text>
+          </svg>
+        </div>
+        <figcaption><strong>Figure 2.</strong> Every AI output converges on one function. <code>CommitteeService.CastVoteAsync</code> refuses a vote unless the request is already <code>PendingCommittee</code>, so <code>FinalizeAsync</code> is the only route in — which is why it was the first thing tested.</figcaption>
+      </figure>
+    </section>
+
+    <!-- ══════════════ 03 ══════════════ -->
+    <section id="s3">
+      <div class="sec-head">
+        <div class="sec-num">03</div>
+        <h2>BA approach</h2>
+        <p class="sec-sub">The requirements baseline exists and is good. The work is closing its own stated gaps.</p>
+      </div>
+
+      <p>I am inheriting <code>user-stories.md</code>, not writing it. It ends with its own next steps — <em>"non-functional requirements, a data model / ERD, and a role-based permission matrix"</em> — and none of the three exist. That list is the BA backlog, and the RBAC matrix in particular has just been validated as urgent by an actual defect (§7, DEF-002).</p>
+
+      <div class="tw"><table>
+        <thead><tr><th>Deliverable</th><th>Why</th><th>Priority</th></tr></thead>
+        <tbody>
+          <tr><td><strong>RBAC permission matrix</strong><br><span class="sub">docs/requirements/rbac-matrix.md</span></td><td>3 roles × ~45 endpoints. Writing it exposes real bugs — it already has. Today every controller is a blanket <code>[Authorize]</code> with no role differentiation.</td><td><span class="pill p-crit">Highest</span></td></tr>
+          <tr><td><strong>Non-functional requirements</strong><br><span class="sub">docs/requirements/non-functional-requirements.md</span></td><td>Performance, security, data retention (bank records: 5–7 years), access control, availability. Named explicitly by the existing doc.</td><td><span class="pill p-warn">High</span></td></tr>
+          <tr><td><strong>Traceability matrix</strong><br><span class="sub">docs/requirements/traceability-matrix.md</span></td><td>Every US → implementing code → the test proving it → status. Makes a judge trust everything else, and surfaces which acceptance criteria have no coverage.</td><td><span class="pill p-warn">High</span></td></tr>
+          <tr><td><strong>Data model / ERD</strong><br><span class="sub">docs/requirements/data-model.md</span></td><td>14 schema files, no diagram. Also the natural home for documenting the audit design.</td><td><span class="pill p-neut">Medium</span></td></tr>
+          <tr><td><strong>Update open questions</strong></td><td>Mark Q2 and Q4 resolved with links to where; escalate Q3 and Q5 to the team as genuinely open.</td><td><span class="pill p-neut">Quick win</span></td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Working method</h3>
+      <ul>
+        <li><strong>Acceptance criteria are the spec.</strong> Every test I write names the US/AC it proves, in the test's own doc comment. That is what makes the traceability matrix mechanical to produce rather than a separate invention.</li>
+        <li><strong>Ambiguity becomes a question, not an assumption.</strong> Q3 and Q5 go to the team at standup; they change the design if answered, so they cannot sit in a document unread.</li>
+        <li><strong>Findings carry reproductions.</strong> A defect raised with a failing test is acted on; a defect raised as a doc bullet is discussed. §7 follows that rule.</li>
+      </ul>
+    </section>
+
+    <!-- ══════════════ 04 ══════════════ -->
+    <section id="s4">
+      <div class="sec-head">
+        <div class="sec-num">04</div>
+        <h2>Testing approach</h2>
+        <p class="sec-sub">Risk-based, invariant-led, and deliberately not chasing a coverage percentage.</p>
+      </div>
+
+      <h3>Prioritisation</h3>
+      <p>With 18 days and one person, test effort follows two things: the judging weights, and what breaks the product's own claims. Those happen to agree.</p>
+
+      <div class="tw"><table>
+        <thead><tr><th>Priority</th><th>What</th><th>Serves</th></tr></thead>
+        <tbody>
+          <tr><td class="num">1</td><td>Governance invariants — finalize gate, audit immutability, residual&nbsp;&gt;&nbsp;0, individual votes</td><td>15% human-in-the-loop</td></tr>
+          <tr><td class="num">2</td><td>CI running tests + evals at all</td><td>20% SDLC automation</td></tr>
+          <tr><td class="num">3</td><td>Adversarial AI eval cases</td><td>10% evaluation framework</td></tr>
+          <tr><td class="num">4</td><td>Authorization / RBAC</td><td>5% production readiness</td></tr>
+          <tr><td class="num">5</td><td>Three UI journeys</td><td>demo evidence</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Rules we hold ourselves to</h3>
+      <ul>
+        <li><strong>A test that cannot fail is not a test.</strong> Every governance test is verified by mutation — break the rule deliberately, confirm the test catches it, revert. Done for the finalize gate already (§6).</li>
+        <li><strong>Known gaps are recorded, not hidden.</strong> Where the product does not yet do the right thing, the test asserts the <em>right</em> behaviour and is marked expected-to-fail, so the fix announces itself. It is never deleted or weakened to keep the board green.</li>
+        <li><strong>Characterization over silence.</strong> Where current behaviour is arguably wrong but changing it is the dev's call, we pin it with a clearly-commented test so any future change is deliberate.</li>
+        <li><strong>Never let a dead environment look like a pass.</strong> Expected-to-fail tests pass when they fail for <em>any</em> reason, including a refused connection — so the suite aborts up front if the API is unreachable.</li>
+        <li><strong>Scope claims honestly.</strong> If a probe used a non-existent id, the report says so and says what it therefore does <em>not</em> prove.</li>
+      </ul>
+
+      <h3>Defect workflow</h3>
+      <ol>
+        <li>Reproduce with a command or a test — no defect without one.</li>
+        <li>Classify severity by what it breaks in the <em>product's own claims</em>, not by crash loudness.</li>
+        <li>Land the failing/characterization test on the QA branch first.</li>
+        <li>Raise at standup with the repro and the owning user story.</li>
+        <li>When fixed, the marker flips and tells us — remove the annotation, not the test.</li>
+      </ol>
+
+      <h3>Entry and exit criteria</h3>
+      <div class="tw"><table>
+        <thead><tr><th>Gate</th><th>Criteria</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Entry to test</strong></td><td>Stack starts clean from a fresh clone; schema + seed apply; <code>/api/Ping</code> returns 200; the user story has acceptance criteria.</td></tr>
+          <tr><td><strong>Exit for submission</strong></td><td>All four governance invariants proven by a test that has been shown to fail when broken; CI runs unit + API suites on every PR; all 12 eval cases exercised against a real model; every open defect either fixed or documented with a repro.</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- ══════════════ 05 ══════════════ -->
+    <section id="s5">
+      <div class="sec-head">
+        <div class="sec-num">05</div>
+        <h2>Automation strategy</h2>
+        <p class="sec-sub">Four tools, each chosen for the layer it can reach — and one deliberate decision about what not to automate.</p>
+      </div>
+
+      <div class="tw"><table>
+        <thead><tr><th>Tool</th><th>Layer</th><th>Why this and not something else</th></tr></thead>
+        <tbody>
+          <tr><td><strong>xUnit + Moq</strong></td><td>Services</td><td>Already the repo's convention. No I/O, milliseconds, runs anywhere. Every dependency mocked through its existing interface.</td></tr>
+          <tr><td><strong>Playwright</strong></td><td>HTTP + browser</td><td>One tool for API and UI. Auth0 is bypassed in local dev, so there is <em>no login flow to automate</em> — normally the most painful part of E2E setup.</td></tr>
+          <tr><td><strong>Testcontainers</strong></td><td>PostgreSQL</td><td>The only way to reach triggers and CHECK constraints. Docker is already a prerequisite, so this adds no new dependency.</td></tr>
+          <tr><td><strong>Custom C# eval harness</strong></td><td>AI clients</td><td>Already built. Scores the <em>production</em> AI clients, not reimplementations, with deterministic rubrics where the domain allows.</td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="note">
+        <span class="lbl">Engineering judgement — where we deliberately do not automate</span>
+        <p><strong>The UI suite stays at three journeys, not thirty.</strong> UI tests are the most expensive evidence per hour in this repo — they need the Vite dev server plus both .NET services plus Postgres — and a broad UI suite would mostly re-prove what 74 unit tests already cover far more cheaply. Three role journeys (PO submits → Analyst assesses and finalizes → Committee votes) are the product demo and exercise the whole governance chain. That is the right amount.</p>
+      </div>
+
+      <h3>The CI gap — priority one</h3>
+      <p>Two Azure DevOps pipelines exist and both are path-filtered to <code>iac/environments/dev/*</code>. <strong>Nothing in CI ever runs <code>dotnet test</code> or the eval suite.</strong> On the branches page, the application branches show a blank check-status column while every IaC branch shows a green tick — that is the gap made visible.</p>
+
+      <h4>Proposed pipelines</h4>
+      <div class="tw"><table>
+        <thead><tr><th>Pipeline</th><th>Trigger</th><th>Steps</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">app-pr-validation.yml</td><td>PR touching <code>src/**</code>, <code>tests/**</code>, <code>webapp/**</code></td><td><code>dotnet build</code> → <code>dotnet test</code> → publish TRX → Playwright API suite against a service container</td></tr>
+          <tr><td class="mono">evals-nightly.yml</td><td>Scheduled + manual</td><td><code>dotnet run</code> the eval harness with the Foundry key from a variable group; publish the Markdown report as an artifact</td></tr>
+        </tbody>
+      </table></div>
+      <p>Mirroring the existing IaC pipeline's structure — including its Claude review step, which already works — makes this read as deliberate rather than bolted on, and evidences SDLC automation breadth across stages.</p>
+
+      <h3>A note on the IaC pipelines</h3>
+      <p>Trivy, Checkov and <code>terraform plan</code> are all currently <strong>soft-fail</strong>. A PR with real security findings still goes green and auto-applies to <code>main</code>. On a project whose entire thesis is governance, that is worth raising with DevOps — it is a two-line change.</p>
+    </section>
+
+    <!-- ══════════════ 06 ══════════════ -->
+    <section id="s6">
+      <div class="sec-head">
+        <div class="sec-num">06</div>
+        <h2>Work completed so far</h2>
+        <p class="sec-sub">Three commits on <code>qa/ba-qa-workstream</code>, all verified against a running stack.</p>
+      </div>
+
+      <div class="lede-stats">
+        <div><div class="v">62</div><div class="k">Unit tests</div></div>
+        <div><div class="v">12</div><div class="k">Playwright tests</div></div>
+        <div><div class="v">12</div><div class="k">Eval cases</div></div>
+        <div><div class="v">4</div><div class="k">Defects found</div></div>
+      </div>
+
+      <h3>Environment brought up</h3>
+      <p>The local stack now runs end to end, which no prior work had established. Note the setup script assumes <code>psql</code> on the host — it is not installed on this machine, so both schemas were applied through the container instead. Worth fixing in <code>ops/setup-local-db.sh</code> so a fresh clone works for everyone.</p>
+      <div class="tw"><table>
+        <thead><tr><th>Component</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>PostgreSQL + Azurite containers</td><td><span class="pill p-pass">healthy</span> :5433 / :10000</td></tr>
+          <tr><td>Both schemas + seed applied</td><td><span class="pill p-pass">6 users / 4 roles, 4 FFIEC categories</span></td></tr>
+          <tr><td>Workbench API</td><td><span class="pill p-pass">:5210 responding</span></td></tr>
+          <tr><td>.NET 10.0.401 SDK</td><td><span class="pill p-pass">matches net10.0 target</span></td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Commit 1 — the finalization gate <span class="sub">1ca7a37</span></h3>
+      <p><code>AssessmentService.FinalizeAsync</code> is the single chokepoint in Figure 2, and it <strong>had no test at all</strong>. Added 12, taking the suite from 50 to 62.</p>
+      <div class="tw"><table>
+        <thead><tr><th>Test</th><th>Proves</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">BlocksAndNamesTheCategoryWhenItsNarrativeIsStillAiDrafted</td><td>US-5.1 AC2</td></tr>
+          <tr><td class="mono">BlocksWhenAMappedCategoryHasNoNarrativeSectionAtAll</td><td>US-6.3 AC1</td></tr>
+          <tr><td class="mono">BlocksWhenAMappedCategoryHasNoPolicyRelianceDecision</td><td>US-3.2 AC2</td></tr>
+          <tr><td class="mono">NeverFinalizesTheAssessmentWhenBlocked</td><td>the governance assertion</td></tr>
+          <tr><td class="mono">ListsEveryOutstandingReasonNotJustTheFirst</td><td>US-6.3 AC1 — "lists what's outstanding"</td></tr>
+          <tr><td class="mono">RecordsTheFinalizingAnalystWhenEveryGateIsSatisfied</td><td>US-6.3 AC3 — not anonymous</td></tr>
+          <tr><td class="mono">TreatsAReviewedOrEditedSectionAsSatisfied</td><td>US-6.3 AC2 (×2 cases)</td></tr>
+          <tr><td class="mono">IgnoresACategoryTheAnalystDeactivated</td><td>Epic 2 override</td></tr>
+          <tr><td class="mono">AcceptsAnAssessmentWideRelianceForEveryMappedCategory</td><td>null-category reliance branch</td></tr>
+          <tr><td class="mono">ReportsReadyWhenNoCategoriesAreMappedAtAll</td><td>characterization — see DEF-004</td></tr>
+        </tbody>
+      </table></div>
+
+      <h4>Verified by mutation</h4>
+      <p>Passing tests prove nothing on their own. The gate condition was temporarily replaced with <code>if (false)</code> — effectively deleting it — and the suite re-run:</p>
+      <pre><code>Failed: 5, Passed: 57, Total: 62</code></pre>
+      <p>Exactly the five <code>FinalizeAsync</code> gate tests failed; the seven readiness and delegation tests correctly stayed green because they never pass through the gate. That is the right kill pattern. Production code was then restored byte-for-byte (<code>git diff -- src/</code> empty) and the suite returned to 62/62.</p>
+
+      <h3>Commits 2 &amp; 3 — Playwright API suite <span class="sub">da40d82, 2f2f8b7</span></h3>
+      <p>Scaffolded <code>tests/e2e</code> and ran it against the live stack: <strong>12 passed</strong> — 6 genuine assertions plus 6 expected-to-fail markers recording DEF-001 through DEF-003.</p>
+      <p>The suite includes a smoke spec that pins the <code>OperationResult</code> envelope, the six seeded users across four roles, and the four FFIEC category codes — so a broken stack or a partial seed is always distinguishable from a real finding. It also keeps two <em>passing</em> validation tests (a mitigation factor of <code>1.0</code> is correctly refused), which keeps the authorization finding precise rather than overstated into "the API accepts anything".</p>
+
+      <h3>AI evaluation baseline</h3>
+      <p>The harness runs and behaves exactly as documented: <strong>2 pass, 0 fail, 10 skip</strong> without a key. The two that pass are deterministic guard-clause cases that never call a model. Everything else reports <code>Skip</code> rather than <code>Fail</code> — the right distinction, since "we didn't check" is not the same claim as "the model got it wrong".</p>
+      <div class="note">
+        <span class="lbl">Open item</span>
+        <p>The Foundry project is now provisioned (<code>gpt-4.1-mini</code>, <code>proj-gh.services.ai.azure.com</code>) and that host matches the route the code already calls. Setting the four <code>FOUNDRY_*</code> environment variables moves 10 skipped cases into real pass/fail. <strong>Expect some genuine failures</strong> — these prompts and rubrics were written against Claude, and gpt-4.1-mini is a smaller model. That is not a problem to paper over; measuring a model swap is exactly what an evaluation framework is for, and "here is what moved" is a far stronger story than twelve green ticks.</p>
+      </div>
+    </section>
+
+    <!-- ══════════════ 07 ══════════════ -->
+    <section id="s7">
+      <div class="sec-head">
+        <div class="sec-num">07</div>
+        <h2>Defects &amp; reproduction steps</h2>
+        <p class="sec-sub">Four findings, each with a command you can run in front of the team.</p>
+      </div>
+
+      <p>All four are on synthetic data, in a Development configuration, with no Auth0 tenant and no production deployment. <strong>None is a live breach.</strong> They are raised because each one contradicts a claim the product makes about itself.</p>
+
+      <!-- DEF-001 -->
+      <div class="finding f-crit">
+        <div class="f-head"><span class="f-id">DEF-001</span><span class="pill p-crit">High</span><span class="pill p-neut">Security</span></div>
+        <h3 class="f-title" style="margin-top:0">The full user directory is readable with no credential at all</h3>
+        <p><code>GET /api/User</code> returns every user's display name, email address and role to a caller presenting no <code>Authorization</code> header whatsoever.</p>
+        <p><code>DevBypassAuthHandler</code> authenticates <em>every</em> request as a generic <code>system-dev</code> principal whenever <code>AUTH0_DOMAIN</code> is blank in Development. So <code>[Authorize]</code>, which every controller carries, currently proves nothing at all.</p>
+        <h4>Reproduce</h4>
+        <pre><code>curl -i http://localhost:5210/api/User</code></pre>
+        <p><strong>Expected</strong> 401 · <strong>Actual</strong> 200 with all six seeded users.</p>
+        <dl>
+          <dt>Breaks</dt><dd>Access control; the principle that role separation is enforced</dd>
+          <dt>Test</dt><dd class="mono">authorization.spec.js → "the user directory is not readable without a credential"</dd>
+          <dt>Owner</dt><dd>Suleman (API / auth)</dd>
+        </dl>
+      </div>
+
+      <!-- DEF-002 -->
+      <div class="finding f-crit">
+        <div class="f-head"><span class="f-id">DEF-002</span><span class="pill p-crit">High</span><span class="pill p-neut">Governance</span></div>
+        <h3 class="f-title" style="margin-top:0">No endpoint enforces role — the acting user is self-declared</h3>
+        <p>Every write endpoint reads the acting user from the <strong>request body</strong>, not from the token — <code>CastCommitteeVoteInput.CommitteeMemberUserId</code>, <code>FinalizeBody.ActorUserId</code>, <code>UpsertScoringConfigInput.ActorUserId</code>. Nothing checks that the declared actor holds the role the action requires. Roles are seeded and never read.</p>
+        <h4>Reproduce</h4>
+        <pre><code># Resolve the Product Owner's id
+curl -s http://localhost:5210/api/User
+
+# Cast a committee vote as that Product Owner
+curl -i -X POST http://localhost:5210/api/Committee/Vote \
+  -H 'Content-Type: application/json' \
+  -d '{"assessmentId":"&lt;id&gt;","committeeMemberUserId":"&lt;product-owner-id&gt;","vote":"Approve"}'</code></pre>
+        <div class="tw"><table>
+          <thead><tr><th>Probe (actor = Product Owner)</th><th class="num">Expected</th><th class="num">Actual</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">POST /api/Committee/Vote</td><td class="num">403</td><td class="num">400</td></tr>
+            <tr><td class="mono">POST /api/Assessment/{id}/Finalize</td><td class="num">403</td><td class="num">500</td></tr>
+            <tr><td class="mono">POST /api/Scoring/Config</td><td class="num">403</td><td class="num">500</td></tr>
+          </tbody>
+        </table></div>
+        <p><strong>No endpoint returned 403.</strong> The role was never consulted on any of them.</p>
+        <div class="note" style="border-left-color:var(--warn); background:var(--warn-soft)">
+          <span class="lbl" style="color:var(--warn)">Scope this honestly when presenting</span>
+          <p>These three probes used a deliberately non-existent id, so each was rejected on <em>data</em> grounds before role could have mattered. They prove the role check does not run first. They do <strong>not</strong> prove a request against a valid, committee-routed assessment would be accepted — confirming that needs a seeded <code>PendingCommittee</code> assessment, which is follow-up work. DEF-001 carries no such caveat and is the stronger demo.</p>
+        </div>
+        <dl>
+          <dt>Breaks</dt><dd>US-8.2 AC5, US-6.3 AC3, US-10.1</dd>
+          <dt>Note</dt><dd>Configuring Auth0 will <em>not</em> fix this — the authorization layer Auth0 would feed does not exist</dd>
+          <dt>Owner</dt><dd>Suleman (API / auth)</dd>
+        </dl>
+      </div>
+
+      <!-- DEF-003 -->
+      <div class="finding f-warn">
+        <div class="f-head"><span class="f-id">DEF-003</span><span class="pill p-warn">Medium</span><span class="pill p-neut">Robustness</span></div>
+        <h3 class="f-title" style="margin-top:0">An unknown id surfaces as HTTP 500</h3>
+        <p>A well-formed but non-existent id reaches Postgres and the resulting exception escapes as a 500 rather than a 4xx. <code>BaseApiController.ExecuteAsync</code> catches and logs it, but its fallback is <code>OperationResult.Failure</code> → 500 — so "you sent an id that does not exist" reads to the caller as "the server broke". <code>OperationResult</code> already has <code>NotFound</code> and <code>BadRequest</code> shapes built for exactly this.</p>
+        <h4>Reproduce</h4>
+        <pre><code>curl -i -X POST http://localhost:5210/api/Scoring/Config \
+  -H 'Content-Type: application/json' \
+  -d '{"riskCategoryId":"00000000-0000-0000-0000-0000000000ff",
+       "maxMitigationFactor":0.5,"reason":"probe","actorUserId":"&lt;analyst-id&gt;"}'</code></pre>
+        <p>Server log confirms the cause:</p>
+        <pre><code>Npgsql.PostgresException 23503: insert or update on table "scoring_config"
+violates foreign key constraint "scoring_config_risk_category_id_fkey"</code></pre>
+        <dl>
+          <dt>Breaks</dt><dd>API contract; masks client errors as server faults</dd>
+          <dt>Test</dt><dd class="mono">authorization.spec.js → "Error handling" block (2 tests)</dd>
+          <dt>Owner</dt><dd>Suleman (API)</dd>
+        </dl>
+      </div>
+
+      <!-- DEF-004 -->
+      <div class="finding f-warn">
+        <div class="f-head"><span class="f-id">DEF-004</span><span class="pill p-warn">Medium</span><span class="pill p-neut">Governance</span></div>
+        <h3 class="f-title" style="margin-top:0">An assessment with no mapped categories finalizes vacuously</h3>
+        <p>With zero active risk categories, both readiness loops in <code>CheckReadinessAsync</code> iterate over an empty list, so <code>IsReady</code> is <strong>vacuously true</strong>. <code>FinalizeAsync</code> then succeeds and routes the assessment to committee with no narrative and no policy review whatsoever.</p>
+        <p>Reachable two ways: the AI proposes nothing — which is US-2.1 AC3's <em>legitimate</em> "no framework mapping configured" path, correctly returning empty rather than guessing — or an analyst deactivates every proposed category.</p>
+        <h4>Reproduce</h4>
+        <p>Covered by the characterization test <code>CheckReadinessAsync_ReportsReadyWhenNoCategoriesAreMappedAtAll</code>. To show it live: open a workspace on a change request, propose no categories, and call Finalize — it succeeds.</p>
+        <dl>
+          <dt>Breaks</dt><dd>"Don't let an AI output reach the committee stage without a review gate"</dd>
+          <dt>Fix</dt><dd>One guard in <code>CheckReadinessAsync</code>: zero active categories is not ready</dd>
+          <dt>Status</dt><dd>Pinned as characterization, deliberately not "fixed" by QA — it is the dev's call</dd>
+          <dt>Owner</dt><dd>Suleman (Assessment module)</dd>
+        </dl>
+      </div>
+
+      <hr class="rule">
+
+      <h3>How to showcase this to the team</h3>
+      <p>A five-minute live demo, in this order. It builds from the most unambiguous finding to the most nuanced, which is also least-to-most likely to attract debate.</p>
+      <ol>
+        <li><strong>Start the stack</strong> — containers plus the API, roughly 30 seconds.</li>
+        <li><strong>Run <code>curl http://localhost:5210/api/User</code> with no header.</strong> Six users, names and emails, on screen. This needs no explanation and no caveat.</li>
+        <li><strong>Run the Playwright suite.</strong> 12 passed in ~4 seconds. Then open the HTML report and show the six expected-to-fail markers with their recorded actual status codes — the gaps are <em>in</em> the green run, not hidden by it.</li>
+        <li><strong>Show the mutation result.</strong> Break the finalize gate to <code>if (false)</code>, re-run, 5 fail, revert. This is the strongest single thing to show: it proves the tests are real, which is the question any reviewer should ask about a green board.</li>
+        <li><strong>Close with DEF-002's caveat, out loud.</strong> Saying plainly what the probes do not prove is what makes the rest of the report credible.</li>
+      </ol>
+
+      <div class="note">
+        <span class="lbl">Asks for the team</span>
+        <p><strong>Suleman —</strong> DEF-001 to DEF-004; and a decision on open questions Q3 (does a scoring override need secondary sign-off?) and Q5 (who approves configuration changes?).<br>
+        <strong>Suraj —</strong> merge <code>release/1.00</code> into <code>main</code> so application CI becomes possible at all; and consider hard-failing Trivy/Checkov on the IaC pipelines.<br>
+        <strong>Everyone —</strong> API keys are being shared in Google Chat on a project whose own ops plan specifies Key Vault. Worth rotating before submission.</p>
+      </div>
+    </section>
+
+    <p class="foot">Prepared from a full read of both branches — <code>main</code> (IaC) and <code>release/1.00</code> (the application, 262 files). All test results in §6 and all status codes in §7 were observed against a running local stack on 12 September 2026, not inferred. Where a claim is unverified, it is marked as such.</p>
+
+  </main>
+</div>
+
+</body>
+</html>
