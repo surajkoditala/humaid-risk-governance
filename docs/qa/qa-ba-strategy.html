@@ -275,13 +275,15 @@
   <aside class="rail">
     <div class="rail-mark">HumAId&nbsp;·&nbsp;QA&nbsp;&amp;&nbsp;BA</div>
     <nav>
-      <a href="#s1"><span class="n">01</span><span>Requirements &amp; architecture</span></a>
-      <a href="#s2"><span class="n">02</span><span>Testing this project needs</span></a>
-      <a href="#s3"><span class="n">03</span><span>BA approach</span></a>
-      <a href="#s4"><span class="n">04</span><span>Testing approach</span></a>
-      <a href="#s5"><span class="n">05</span><span>Automation strategy</span></a>
-      <a href="#s6"><span class="n">06</span><span>Work completed</span></a>
-      <a href="#s7"><span class="n">07</span><span>Defects &amp; repro steps</span></a>
+      <a href="#s1"><span class="n">01</span><span>The problem statement</span></a>
+      <a href="#s2"><span class="n">02</span><span>Requirement analysis</span></a>
+      <a href="#s3"><span class="n">03</span><span>The solution</span></a>
+      <a href="#s4"><span class="n">04</span><span>Testing this project needs</span></a>
+      <a href="#s5"><span class="n">05</span><span>BA approach</span></a>
+      <a href="#s6"><span class="n">06</span><span>Testing approach</span></a>
+      <a href="#s7"><span class="n">07</span><span>Automation strategy</span></a>
+      <a href="#s8"><span class="n">08</span><span>Work completed</span></a>
+      <a href="#s9"><span class="n">09</span><span>Defects &amp; repro steps</span></a>
     </nav>
   </aside>
 
@@ -289,7 +291,7 @@
     <header class="masthead">
       <div class="eyebrow">Genius Hacks Q3 2026 · Risk Assessment Workbench</div>
       <h1>QA &amp; BA Strategy</h1>
-      <p class="standfirst">What this platform must do, how we intend to prove it does, what has already been proven, and the four defects found so far. Written for the HumAId Risk Governance team ahead of the 30 September submission.</p>
+      <p class="standfirst">What this platform must do, how we intend to prove it does, what has already been proven, and the five defects found so far. Written for the HumAId Risk Governance team ahead of the 30 September submission.</p>
 
       <dl class="meta">
         <div><dt>Author</dt><dd>Alagappan Annamalai · BA&nbsp;/&nbsp;QA</dd></div>
@@ -300,7 +302,7 @@
 
       <div class="lede-stats">
         <div><div class="v">74</div><div class="k">Automated tests</div></div>
-        <div><div class="v">4</div><div class="k">Defects raised</div></div>
+        <div><div class="v">5</div><div class="k">Defects raised</div></div>
         <div><div class="v">12</div><div class="k">AI eval cases</div></div>
         <div><div class="v">0</div><div class="k">CI pipelines running them</div></div>
       </div>
@@ -310,9 +312,17 @@
     <section id="s1">
       <div class="sec-head">
         <div class="sec-num">01</div>
-        <h2>Requirement understanding &amp; architecture</h2>
-        <p class="sec-sub">What we are building, for whom, and the shape of the system that delivers it.</p>
+        <h2>The problem statement</h2>
+        <p class="sec-sub">What we were given, what was deliberately left out, and what we added.</p>
       </div>
+
+      <div class="note">
+        <span class="lbl">The brief is incomplete on purpose</span>
+        <p>Myridius issued this problem statement <strong>deliberately under-specified</strong>, and expanding it is itself graded — 10% of the total score is "context engineering &amp; requirement expansion". So the gaps below are not oversights in the brief; filling them is the assignment. That reframes the BA role on this project from <em>capturing</em> requirements to <em>deriving and defending</em> them.</p>
+      </div>
+
+      <h3>The client and the function</h3>
+      <p>A large national bank, roughly <strong>$500B in assets</strong>, operating consumer banking, commercial banking, payments and wealth management — and heavily supervised on financial crime risk controls. The relevant function is <strong>Financial Crimes Risk Management (FCRM)</strong>.</p>
 
       <h3>The business problem</h3>
       <p>A national bank (~$500B assets) must assess financial-crime risk before any business change goes live — a new product, a feature, a process change, a vendor, a new geography, or a new customer segment. Today that assessment runs on email, Word, Excel and SharePoint. It takes <strong>15–20 business days</strong>, two analysts can reach different conclusions on the same change, and reconstructing the reasoning behind a past rating for an examiner is slow and incomplete.</p>
@@ -328,6 +338,20 @@
         </tbody>
       </table></div>
 
+      <h3>What triggers an assessment</h3>
+      <p>Six change types, and the type drives everything downstream — which fields intake demands, which risk categories get proposed, and which controls apply. This enumeration is closed, enforced by a database <code>CHECK</code> constraint.</p>
+      <div class="tw"><table>
+        <thead><tr><th>Change type</th><th>Example</th><th>Primary FFIEC category</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Product</strong></td><td>Launch same-day international wire transfers</td><td>Products &amp; Services <span class="sub">+ Customers (secondary)</span></td></tr>
+          <tr><td><strong>Feature</strong></td><td>Raise the daily transfer limit</td><td>Products &amp; Services</td></tr>
+          <tr><td><strong>Process</strong></td><td>Change how customer tickets are routed</td><td>Delivery Channels</td></tr>
+          <tr><td><strong>Vendor</strong></td><td>Onboard a third-party KYC verification vendor</td><td>Customers &amp; Entities <span class="sub">+ Delivery Channels</span></td></tr>
+          <tr><td><strong>Geography</strong></td><td>Open retail branches in a FATF-monitored jurisdiction</td><td>Geographic Locations <span class="sub">(heaviest)</span></td></tr>
+          <tr><td><strong>Customer Segment</strong></td><td>Begin onboarding money services businesses</td><td>Customers &amp; Entities <span class="sub">(heaviest)</span></td></tr>
+        </tbody>
+      </table></div>
+
       <h3>The three constraints everything hangs off</h3>
       <ol>
         <li><strong>The system prepares, humans decide.</strong> Nothing is auto-approved or auto-rejected. Every AI touchpoint pairs with a human review gate <em>in code</em>.</li>
@@ -338,6 +362,26 @@
       <div class="note">
         <span class="lbl">Why this matters for test design</span>
         <p>These three are not features — they are invariants. A test suite for this product is judged on whether it can <em>prove</em> them, not on line coverage. That is the organising principle for everything in sections 4 and 5.</p>
+      </div>
+
+      <h3>What the brief did not say</h3>
+      <p>Five things a real FCRM engagement would have specified and this brief left open. Each one changes the design, so each is a BA decision that must be <em>stated</em> rather than allowed to happen by accident.</p>
+      <ol>
+        <li>What visibility Product Owners have into analyst reasoning and scoring.</li>
+        <li>Whether the risk framework is fixed or configurable per jurisdiction and business line.</li>
+        <li>Whether a scoring override needs secondary sign-off before finalization.</li>
+        <li>Whether committee decisioning is majority, unanimous, or chair-decided.</li>
+        <li>Who may approve scoring and workflow configuration changes.</li>
+      </ol>
+      <p>Their current status is tracked in §02.</p>
+    </section>
+
+    <!-- ══════════════ 04 ══════════════ -->
+    <section id="s2">
+      <div class="sec-head">
+        <div class="sec-num">02</div>
+        <h2>Requirement analysis</h2>
+        <p class="sec-sub">Decomposition into epics, the data model behind them, what is still missing, and where the spec has drifted from the code.</p>
       </div>
 
       <h3>The ten epics</h3>
@@ -356,6 +400,66 @@
           <tr><td class="num">10</td><td>Platform Configuration</td><td><span class="pill p-neut">No</span></td><td>Config change is itself an audit event</td></tr>
         </tbody>
       </table></div>
+
+      <h3>The FFIEC risk framework, as actually modelled</h3>
+      <p>The framework is <strong>data, not code</strong> — a <code>risk_framework</code> row, four <code>risk_category</code> rows each carrying its own citation string, and 21 <code>risk_subfactor</code> rows. That is what resolves open question 2: adding a second framework (FATF, or an internal equivalent) is a seed change, not a schema change.</p>
+      <div class="tw"><table>
+        <thead><tr><th>Category</th><th class="num">Sub-factors</th><th>Examples</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Products &amp; Services</strong></td><td class="num">7</td><td>ACH, wire transfers, FX, trade finance, private banking, prepaid access, correspondent banking</td></tr>
+          <tr><td><strong>Customers &amp; Entities</strong></td><td class="num">7</td><td>Cash-intensive businesses, PEPs, non-resident aliens, MSBs, NGOs, shell companies, beneficial ownership complexity</td></tr>
+          <tr><td><strong>Geographic Locations</strong></td><td class="num">3</td><td>FATF high-risk/monitored, OFAC sanctioned, domestic HIFCAs</td></tr>
+          <tr><td><strong>Delivery Channels</strong></td><td class="num">4</td><td>Branch, online/non-face-to-face, third-party agents, correspondent relationships</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Three kinds of data — deliberately not conflated</h3>
+      <div class="tw"><table>
+        <thead><tr><th>Data</th><th>Source</th><th>Refresh</th></tr></thead>
+        <tbody>
+          <tr><td>Risk framework &amp; categories</td><td>One-time research, seeded</td><td>Static — no live fetch, ever</td></tr>
+          <tr><td>Policy corpus for retrieval</td><td>Public FFIEC/FATF documents, chunked into Postgres</td><td>Loaded once; searched locally, no internet call at assessment time</td></tr>
+          <tr><td>Bank data (customers, products, vendors)</td><td>100% synthetic, via Mock Systems</td><td>Never connects to a real system — a hard constraint of the brief</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Non-functional requirements — the largest analysis gap</h3>
+      <p>The brief specifies no NFRs and the user-stories document names this as its own next step. For a supervised bank platform these are not optional, and several have direct test implications:</p>
+      <div class="tw"><table>
+        <thead><tr><th>Area</th><th>What needs deciding</th><th>Testable as</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Data retention</strong></td><td>Bank records typically 5–7 years; audit trail must outlive the assessment</td><td>Retention policy on <code>audit_event</code>; export completeness</td></tr>
+          <tr><td><strong>Access control</strong></td><td>Role-to-permission mapping — currently undefined, and the cause of DEF-002</td><td>RBAC matrix → API authorization tests</td></tr>
+          <tr><td><strong>Auditability</strong></td><td>Export format an examiner accepts without reformatting (US-9.1 AC3)</td><td>Export fidelity test against a known event chain</td></tr>
+          <tr><td><strong>Performance</strong></td><td>Assessment workspace load time with a full policy corpus; AI call timeouts</td><td>Currently a 180s HTTP timeout, untested under load</td></tr>
+          <tr><td><strong>Availability</strong></td><td>Degraded behaviour when Foundry or Mock Systems is down</td><td>Partially covered — outage tolerance is unit-tested for both</td></tr>
+          <tr><td><strong>Data residency</strong></td><td>Whether model calls may leave the tenant — drove the Azure Foundry choice</td><td>Config assertion: <code>AI_PROVIDER</code> is <code>AzureFoundry</code> in non-dev</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Requirements drift — a BA finding</h3>
+      <p>The existing <code>docs/requirements/user-stories.md</code> is strong: 10 epics, Given/When/Then throughout, inline assumptions, and five consolidated open questions. But <strong>three of those five have since been answered in code without the document being updated.</strong></p>
+
+      <div class="tw"><table>
+        <thead><tr><th>Open question</th><th>Doc says</th><th>Reality</th></tr></thead>
+        <tbody>
+          <tr><td>Q1 — PO visibility of analyst rationale</td><td>Assumption</td><td><span class="pill p-pass">Implemented as assumed</span></td></tr>
+          <tr><td>Q2 — Framework configurable per jurisdiction?</td><td>Open</td><td><span class="pill p-pass">Resolved</span> — DB-driven <code>risk_category</code> table, not an enum</td></tr>
+          <tr><td>Q3 — Override needs secondary sign-off?</td><td>Open</td><td><span class="pill p-warn">Genuinely still open</span></td></tr>
+          <tr><td>Q4 — Majority / unanimous / chair?</td><td>Open</td><td><span class="pill p-pass">Resolved</span> — configurable quorum, conservative rule</td></tr>
+          <tr><td>Q5 — Who approves config changes?</td><td>Open</td><td><span class="pill p-warn">Genuinely still open</span> — self-service today</td></tr>
+        </tbody>
+      </table></div>
+      <p>Closing this loop is cheap and directly serves the 10% requirement-expansion criterion. A judge reading requirements then code will otherwise see decisions drift.</p>
+    </section>
+
+    <!-- ══════════════ 03 ══════════════ -->
+    <section id="s3">
+      <div class="sec-head">
+        <div class="sec-num">03</div>
+        <h2>The solution</h2>
+        <p class="sec-sub">How a change request actually moves through the platform, and which parts of that journey are deterministic by choice.</p>
+      </div>
 
       <h3>System architecture</h3>
       <p>A 5-layer Clean Architecture .NET solution using Dapper against named PostgreSQL stored functions — never an ORM, never ad-hoc SQL. Mock External Systems is deliberately a <em>separate</em> service, standing in for the CRM / Core Banking / Vendor Management systems a real bank already runs.</p>
@@ -421,26 +525,86 @@
         <figcaption><strong>Figure 1.</strong> The Workbench is the only thing that talks to Mock Systems, and only over HTTP — the boundary is real, not cosmetic. Both services share one PostgreSQL instance in different schemas, for cost.</figcaption>
       </figure>
 
-      <h3>Requirements drift — a BA finding</h3>
-      <p>The existing <code>docs/requirements/user-stories.md</code> is strong: 10 epics, Given/When/Then throughout, inline assumptions, and five consolidated open questions. But <strong>three of those five have since been answered in code without the document being updated.</strong></p>
+      <h3>The journey of one change request</h3>
+      <p>Nine steps from submission to decision. This is the sequence the three UI journey tests will follow, and the sequence an examiner would reconstruct from the audit trail.</p>
 
       <div class="tw"><table>
-        <thead><tr><th>Open question</th><th>Doc says</th><th>Reality</th></tr></thead>
+        <thead><tr><th class="num">#</th><th>Step</th><th>Who</th><th>What the system does</th></tr></thead>
         <tbody>
-          <tr><td>Q1 — PO visibility of analyst rationale</td><td>Assumption</td><td><span class="pill p-pass">Implemented as assumed</span></td></tr>
-          <tr><td>Q2 — Framework configurable per jurisdiction?</td><td>Open</td><td><span class="pill p-pass">Resolved</span> — DB-driven <code>risk_category</code> table, not an enum</td></tr>
-          <tr><td>Q3 — Override needs secondary sign-off?</td><td>Open</td><td><span class="pill p-warn">Genuinely still open</span></td></tr>
-          <tr><td>Q4 — Majority / unanimous / chair?</td><td>Open</td><td><span class="pill p-pass">Resolved</span> — configurable quorum, conservative rule</td></tr>
-          <tr><td>Q5 — Who approves config changes?</td><td>Open</td><td><span class="pill p-warn">Genuinely still open</span> — self-service today</td></tr>
+          <tr><td class="num">1</td><td>Submit</td><td>Product Owner</td><td>Assigns an immutable <code>CR-2026-00001</code> number; type-specific fields stored as JSON; status <code>Submitted</code></td></tr>
+          <tr><td class="num">2</td><td>Ingest</td><td>System</td><td>Links the request to a Mock Systems customer/product/vendor and freezes an <strong>immutable snapshot</strong> — everything downstream reads the snapshot, never the live system</td></tr>
+          <tr><td class="num">3</td><td>Attach documents</td><td>Product Owner</td><td>PDF/DOCX/XLSX only, enforced by a DB <code>CHECK</code>. Replacing a document creates a <em>new version row</em>, never an overwrite</td></tr>
+          <tr><td class="num">4</td><td>Map categories <span class="pill p-acc">AI</span></td><td>System → Analyst</td><td>Proposes FFIEC categories from a fixed allowed list; analyst adds/removes with a mandatory reason</td></tr>
+          <tr><td class="num">5</td><td>Surface policy</td><td>System → Analyst</td><td>Postgres full-text search ranks policy chunks; analyst marks each <em>relied upon</em> or <em>not relevant</em></td></tr>
+          <tr><td class="num">6</td><td>Extract fields <span class="pill p-acc">AI</span></td><td>System → Analyst</td><td>Structured facts with a source excerpt per field; low-confidence pre-flagged <code>needsReview</code></td></tr>
+          <tr><td class="num">7</td><td>Draft narrative <span class="pill p-acc">AI</span></td><td>System → Analyst</td><td>One narrative per category, citing only supplied sources; unsupported claims returned separately, never folded into the text</td></tr>
+          <tr><td class="num">8</td><td>Score &amp; finalize</td><td>Analyst</td><td>Deterministic scoring; <code>FinalizeAsync</code> blocks until every category has a reviewed narrative <em>and</em> a policy decision</td></tr>
+          <tr><td class="num">9</td><td>Vote &amp; feed back</td><td>Committee</td><td>Individual votes recorded; on quorum the decision resolves and pushes a go-live flag back to Mock Systems</td></tr>
         </tbody>
       </table></div>
-      <p>Closing this loop is cheap and directly serves the 10% requirement-expansion criterion. A judge reading requirements then code will otherwise see decisions drift.</p>
-    </section>
 
-    <!-- ══════════════ 02 ══════════════ -->
-    <section id="s2">
+      <h3>The scoring model</h3>
+      <p>Entirely deterministic — no model anywhere in this path. The formula is one line of PL/pgSQL:</p>
+      <pre><code>residual = inherent_rating − (control_effectiveness × max_mitigation_factor)</code></pre>
+      <p>Residual risk cannot reach zero, and that is a matter of arithmetic rather than of anyone remembering to check. The bounds enforce it:</p>
+      <div class="tw"><table>
+        <thead><tr><th>Term</th><th>Bound</th><th>Enforced by</th></tr></thead>
+        <tbody>
+          <tr><td><code>inherent_rating</code></td><td>1 – 5</td><td><code>CHECK (inherent_rating &gt;= 1 AND &lt;= 5)</code></td></tr>
+          <tr><td><code>control_effectiveness</code></td><td>0 – 1</td><td><code>CHECK (&gt;= 0 AND &lt;= 1)</code></td></tr>
+          <tr><td><code>max_mitigation_factor</code></td><td>0 – 0.999…</td><td><code>CHECK (&gt;= 0 AND &lt; 1.0)</code> — strictly below 1</td></tr>
+          <tr><td><code>residual_rating</code></td><td>&gt; 0</td><td><code>CHECK (residual_rating &gt; 0)</code> — belt and braces</td></tr>
+        </tbody>
+      </table></div>
+      <p>Worst case with the seeded default of <code>0.85</code>: <code>1 − (1 × 0.85) = 0.15</code>. The floor holds at four independent layers — the arithmetic, the DB constraints, the stored function, and a C# guard in <code>ScoringService</code>. A configuration change is a <em>new version row</em>, so an assessment keeps scoring against the config that was active when it started.</p>
+
+      <h3>Where AI is used — and deliberately is not</h3>
+      <p>This table is worth defending out loud: 5% of the score is explicitly for judgement about <em>when not to use an LLM</em>.</p>
+      <div class="tw"><table>
+        <thead><tr><th>Epic</th><th>Approach</th><th>Reasoning</th></tr></thead>
+        <tbody>
+          <tr><td>2 — Category mapping</td><td><span class="pill p-acc">AI</span></td><td>Judgement over free text, grounded against a fixed list so a category cannot be invented</td></tr>
+          <tr><td>3 — Policy research</td><td><span class="pill p-pass">Deterministic</span></td><td>Ranking indexed text by relevance is solved search. An LLM adds latency, cost and nondeterminism for no accuracy gain</td></tr>
+          <tr><td>4 — Document extraction</td><td><span class="pill p-acc">AI</span></td><td>Pulling structure from free text is exactly the task LLMs are good at; every field carries a confidence and a source excerpt</td></tr>
+          <tr><td>5 — Narrative drafting</td><td><span class="pill p-acc">AI</span></td><td>Genuinely generative — but permitted to cite only what it was handed</td></tr>
+          <tr><td>7 — Scoring</td><td><span class="pill p-pass">Deterministic</span></td><td>A fixed formula with a provable guarantee. An LLM here would trade a proof for a probability</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>How fabrication is prevented</h3>
+      <p>Each of the three AI clients drops or flags anything it cannot trace back to its input, rather than passing it through:</p>
+      <ul>
+        <li><strong>Category mapping</strong> — discards any proposed category whose id is not in the supplied allowed list. The model physically cannot introduce a category.</li>
+        <li><strong>Document extraction</strong> — requires a <code>sourceExcerpt</code> per field, and forces <code>needsReview</code> on anything the model itself flagged low-confidence.</li>
+        <li><strong>Narrative drafting</strong> — unsupported statements must be returned in a separate <code>unsupportedClaims</code> array, never folded into the narrative text.</li>
+      </ul>
+      <div class="note">
+        <span class="lbl">An honest limit</span>
+        <p>The first guard is structural — the code filters the list, so it holds regardless of what the model returns. The second and third are <em>contractual</em>: they depend on the model populating the right JSON field. If it fabricates inside <code>narrativeText</code> instead, only the analyst review gate catches it. The eval suite's own README states this plainly rather than claiming coverage it does not have, which is the right call.</p>
+      </div>
+
+      <h3>The six screens</h3>
+      <div class="tw"><table>
+        <thead><tr><th>Screen</th><th>Role</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td>Submit Request</td><td>Product Owner</td><td>Type-driven intake form with per-type fields</td></tr>
+          <tr><td>My Requests</td><td>Product Owner</td><td>Status and days elapsed — replaces chasing FCRM by email</td></tr>
+          <tr><td>Analyst Inbox</td><td>Analyst</td><td>Queue of submitted requests</td></tr>
+          <tr><td>Assessment Workspace</td><td>Analyst</td><td>The core screen — categories, policy, extracted fields, narrative, scoring, finalize</td></tr>
+          <tr><td>Committee Queue</td><td>Committee</td><td>Read-only assessment plus the voting action</td></tr>
+          <tr><td>Configuration</td><td>Admin</td><td>Scoring parameters and workflow rules, no code change</td></tr>
+        </tbody>
+      </table></div>
+      <div class="note" style="border-left-color:var(--warn); background:var(--warn-soft)">
+        <span class="lbl" style="color:var(--warn)">Relevant to DEF-002</span>
+        <p>The frontend filters this navigation by role — <code>visibleNavItems</code> shows a screen only if <code>currentUser.role</code> matches. So the role model is fully specified and visibly honoured in the UI. The API enforces none of it. That combination is worse than having no role model at all, because the product <em>looks</em> access-controlled.</p>
+      </div>
+
+    </section>
+    <!-- ══════════════ 04 ══════════════ -->
+    <section id="s4">
       <div class="sec-head">
-        <div class="sec-num">02</div>
+        <div class="sec-num">04</div>
         <h2>What kind of testing this project needs</h2>
         <p class="sec-sub">Six test types, each earning its place by reaching something the others structurally cannot.</p>
       </div>
@@ -545,9 +709,9 @@
     </section>
 
     <!-- ══════════════ 03 ══════════════ -->
-    <section id="s3">
+    <section id="s5">
       <div class="sec-head">
-        <div class="sec-num">03</div>
+        <div class="sec-num">05</div>
         <h2>BA approach</h2>
         <p class="sec-sub">The requirements baseline exists and is good. The work is closing its own stated gaps.</p>
       </div>
@@ -574,9 +738,9 @@
     </section>
 
     <!-- ══════════════ 04 ══════════════ -->
-    <section id="s4">
+    <section id="s6">
       <div class="sec-head">
-        <div class="sec-num">04</div>
+        <div class="sec-num">06</div>
         <h2>Testing approach</h2>
         <p class="sec-sub">Risk-based, invariant-led, and deliberately not chasing a coverage percentage.</p>
       </div>
@@ -624,9 +788,9 @@
     </section>
 
     <!-- ══════════════ 05 ══════════════ -->
-    <section id="s5">
+    <section id="s7">
       <div class="sec-head">
-        <div class="sec-num">05</div>
+        <div class="sec-num">07</div>
         <h2>Automation strategy</h2>
         <p class="sec-sub">Four tools, each chosen for the layer it can reach — and one deliberate decision about what not to automate.</p>
       </div>
@@ -664,9 +828,9 @@
     </section>
 
     <!-- ══════════════ 06 ══════════════ -->
-    <section id="s6">
+    <section id="s8">
       <div class="sec-head">
-        <div class="sec-num">06</div>
+        <div class="sec-num">08</div>
         <h2>Work completed so far</h2>
         <p class="sec-sub">Three commits on <code>qa/ba-qa-workstream</code>, all verified against a running stack.</p>
       </div>
@@ -675,7 +839,7 @@
         <div><div class="v">62</div><div class="k">Unit tests</div></div>
         <div><div class="v">12</div><div class="k">Playwright tests</div></div>
         <div><div class="v">12</div><div class="k">Eval cases</div></div>
-        <div><div class="v">4</div><div class="k">Defects found</div></div>
+        <div><div class="v">5</div><div class="k">Defects found</div></div>
       </div>
 
       <h3>Environment brought up</h3>
@@ -726,14 +890,14 @@
     </section>
 
     <!-- ══════════════ 07 ══════════════ -->
-    <section id="s7">
+    <section id="s9">
       <div class="sec-head">
-        <div class="sec-num">07</div>
+        <div class="sec-num">09</div>
         <h2>Defects &amp; reproduction steps</h2>
         <p class="sec-sub">Four findings, each with a command you can run in front of the team.</p>
       </div>
 
-      <p>All four are on synthetic data, in a Development configuration, with no Auth0 tenant and no production deployment. <strong>None is a live breach.</strong> They are raised because each one contradicts a claim the product makes about itself.</p>
+      <p>All five are on synthetic data, in a Development configuration, with no Auth0 tenant and no production deployment. <strong>None is a live breach.</strong> They are raised because each one contradicts a claim the product makes about itself.</p>
 
       <!-- DEF-001 -->
       <div class="finding f-crit">
@@ -817,6 +981,26 @@ violates foreign key constraint "scoring_config_risk_category_id_fkey"</code></p
           <dt>Fix</dt><dd>One guard in <code>CheckReadinessAsync</code>: zero active categories is not ready</dd>
           <dt>Status</dt><dd>Pinned as characterization, deliberately not "fixed" by QA — it is the dev's call</dd>
           <dt>Owner</dt><dd>Suleman (Assessment module)</dd>
+        </dl>
+      </div>
+
+      <!-- DEF-005 -->
+      <div class="finding f-warn">
+        <div class="f-head"><span class="f-id">DEF-005</span><span class="pill p-warn">Medium</span><span class="pill p-neut">Data / completeness</span></div>
+        <h3 class="f-title" style="margin-top:0">The control catalogue is empty — scoring has nothing to credit</h3>
+        <p>The <code>control</code> table is created by the schema but <strong>never populated by any seed file</strong>. US-7.1 AC3 requires that an analyst "can trace which specific controls were credited and each control's configured mitigation weight" — with an empty catalogue there is nothing to credit, nothing to trace, and <code>control_ids_credited</code> is permanently <code>[]</code>.</p>
+        <p>Scoring still runs, because <code>control_effectiveness</code> is passed in as a number rather than derived from the credited controls. So the arithmetic works while the explainability requirement behind it does not — which is precisely the kind of gap a coverage metric would never surface.</p>
+        <h4>Reproduce</h4>
+        <pre><code>curl -s http://localhost:5210/api/Scoring/Controls/22222222-2222-2222-2222-222222222221
+# -> {"isSuccessful":true,"data":[],...}     # Products &amp; Services
+
+docker exec risk-governance-postgres \
+  psql -U postgres -d risk_governance_db -tAc "SELECT count(*) FROM control;"
+# -> 0</code></pre>
+        <dl>
+          <dt>Breaks</dt><dd>US-7.1 AC3 — score explainability</dd>
+          <dt>Fix</dt><dd>Seed a control catalogue per FFIEC category (CDD, transaction monitoring, sanctions screening, EDD for PEPs, and so on)</dd>
+          <dt>Owner</dt><dd>Suleman (Scoring) with BA input on the control list</dd>
         </dl>
       </div>
 
