@@ -36,11 +36,50 @@ pipeline is DevOps' explicit ownership (CLAUDE.md's team table), not written as 
 ## Container image build
 
 Per the call: "the agent code, whatever you have, will be part of your application code only" -
-there's no separate "agent" artifact to build. Each service (`1-API/Humaid.RiskGovernance.AdminUI.Web`,
-`6-MockExternalSystems/Humaid.RiskGovernance.MockSystems`) builds into its own container image the
-usual `dotnet publish` way; the image is pushed to a container registry and deployed to its
-Container App. The webapp (`5-Presentation`) is a static build (`npm run build`), served from
-whichever static hosting the deploy pipeline targets - not part of either container image above.
+there's no separate "agent" artifact to build. Each service has its own multi-stage `Dockerfile`
+(SDK image to `dotnet publish`, `aspnet` runtime image to run) - the image is pushed to a container
+registry and deployed to its Container App. The webapp (`5-Presentation`) is a static build
+(`npm run build`), served from whichever static hosting the deploy pipeline targets - not part of
+either container image below.
+
+**Build context is the repo root for both** (each project references sibling projects by relative
+path, so the build stage needs the whole `src/` tree it depends on - see each Dockerfile's own
+top comment):
+
+```bash
+docker build -f src/1-API/Humaid.RiskGovernance.AdminUI.Web/Dockerfile -t humaid-workbench .
+docker build -f src/6-MockExternalSystems/Humaid.RiskGovernance.MockSystems/Dockerfile -t humaid-mocksystems .
+```
+
+Both listen on `:8080` inside the container (`ASPNETCORE_URLS`) - the Container Apps convention.
+Config is unchanged from local dev, injected via `-e KEY=value` / Container App env vars (see the
+table below) - no secret is baked into either image.
+
+**Building behind an SSL-inspecting corporate proxy** (Netskope, Zscaler, etc.)? `dotnet restore`
+inside the build stage will fail with `NU1301` / `UntrustedRoot` if so - see `ops/certs/README.md`
+to fix it (drop your proxy's root CA in `ops/certs/`, gitignored, picked up automatically by both
+Dockerfiles).
+
+**Smoke-testing a built image locally** against the same `ops/docker-compose.yml` Postgres/Azurite
+used for local dev (both containers need to be on that compose network to resolve each other and
+Postgres by container name - the compose project's network is `ops_default` by default):
+
+```bash
+docker run -d --name mocksystems --network ops_default -p 5221:8080 \
+  -e MOCK_SYSTEMS_POSTGRESQL_CONNECTIONSTRING="Host=risk-governance-postgres;Username=postgres;Password=postgres;Database=risk_governance_db;Port=5432" \
+  humaid-mocksystems
+
+docker run -d --name workbench --network ops_default -p 5211:8080 \
+  -e AZURE_POSTGRESQL_CONNECTIONSTRING="Host=risk-governance-postgres;Username=postgres;Password=postgres;Database=risk_governance_db;Port=5432" \
+  -e MOCK_SYSTEMS_BASE_URL="http://mocksystems:8080" \
+  -e BLOB_STORAGE_CONNECTION_STRING="DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://risk-governance-azurite:10000/devstoreaccount1;" \
+  humaid-workbench
+```
+
+Verified working end to end (2026-09-15): both images build clean, `curl localhost:5211/api/Ping`
+and `curl localhost:5221/api/customers` both return real data, and the Workbench container reaches
+the Mock Systems container over the Docker network (`GET /api/DataIngestion/MockCustomers`) exactly
+as it will Container-App-to-Container-App in Azure.
 
 ## Environment variables
 
