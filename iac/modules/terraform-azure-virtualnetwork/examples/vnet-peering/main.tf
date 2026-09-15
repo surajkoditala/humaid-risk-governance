@@ -15,10 +15,10 @@ module "vnet-1" {
     }
   ]
   tags = {
-    "business_unit" = "insurity-product"
-    "customer"      = "erc-client"
-    "environment"   = "dev-sandbox"
-    "product"       = "erc"
+    "business_unit" = "banking"
+    "customer"      = "myridius"
+    "environment"   = "dev"
+    "product"       = "gh"
     "owner"         = "devops"
     "region"        = "eastus2"
   }
@@ -50,10 +50,10 @@ module "vnet-2" {
     }
   ]
   tags = {
-    "business_unit" = "insurity-product"
-    "customer"      = "erc-client"
-    "environment"   = "dev-sandbox"
-    "product"       = "erc"
+    "business_unit" = "banking"
+    "customer"      = "myridius"
+    "environment"   = "dev"
+    "product"       = "gh"
     "owner"         = "devops"
     "region"        = "eastus2"
   }

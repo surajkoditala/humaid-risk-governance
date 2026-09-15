@@ -38,10 +38,10 @@ module "vnet" {
     }
   ]
   tags = {
-    "business_unit" = "insurity-product"
-    "customer"      = "erc-client"
-    "environment"   = "dev-sandbox"
-    "product"       = "erc"
+    "business_unit" = "banking"
+    "customer"      = "myridius"
+    "environment"   = "dev"
+    "product"       = "gh"
     "owner"         = "devops"
     "region"        = "eastus2"
   }
@@ -53,10 +53,10 @@ resource "azurerm_network_ddos_protection_plan" "ddos_protection_plan" {
   location            = "eastus2"
   resource_group_name = "rg-erc-dev-sandbox"
   tags = {
-    "business_unit" = "insurity-product"
-    "customer"      = "erc-client"
-    "environment"   = "dev-sandbox"
-    "product"       = "erc"
+    "business_unit" = "banking"
+    "customer"      = "myridius"
+    "environment"   = "dev"
+    "product"       = "gh"
     "owner"         = "devops"
     "region"        = "eastus2"
   }
