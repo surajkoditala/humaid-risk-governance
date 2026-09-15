@@ -2,7 +2,7 @@ module "vnet" {
   source = "../../" # In reality, this will be like "app.terraform.io/<tfc-org-name>/<registry-name>/azure"; version = "<version>"
 
   location            = "eastus2"
-  resource_group_name = "rg-erc-dev-sandbox"
+  resource_group_name = "rg-gh-dev-sandbox"
   address_space       = ["10.1.0.0/16"]
   ddos_protection_plan = {
     enable = true
@@ -106,7 +106,7 @@ module "vnet" {
 resource "azurerm_network_ddos_protection_plan" "ddos_protection_plan" {
   name                = "my-ddos-plan"
   location            = "eastus2"
-  resource_group_name = "rg-erc-dev-sandbox"
+  resource_group_name = "rg-gh-dev-sandbox"
   tags = {
     "business_unit" = "banking"
     "customer"      = "myridius"
