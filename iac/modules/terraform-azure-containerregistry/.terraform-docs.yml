@@ -1,0 +1,93 @@
+---
+formatter: markdown table
+
+settings:
+  required: false
+
+output:
+  file: README.md
+  mode: inject
+  sort-by: name
+  header-from: README.md
+  output-values: true
+  output-variables: true
+  output-providers: true
+  output-requirements: true
+  output-resources: true
+ 
+content: |-
+  {{ .Header }}
+
+  {{ include "Intro.md" }}
+
+  #Examples
+
+  ```hcl
+  {{ include "examples/basic/main.tf" }}
+
+  {{ include "examples/basic/variables.tf" }}
+
+  {{ include "examples/basic/outputs.tf" }}
+
+  {{ include "examples/basic/terraform.tf" }}
+
+  {{ include "examples/basic/providers.tf" }}
+  ```
+
+  #cmk-encryption
+
+  ```hcl
+  {{ include "examples/cmk-encryption/main.tf" }}
+
+  {{ include "examples/cmk-encryption/variables.tf" }}
+
+  {{ include "examples/cmk-encryption/outputs.tf" }}
+
+  {{ include "examples/cmk-encryption/terraform.tf" }}
+
+  {{ include "examples/cmk-encryption/providers.tf" }}
+  ```
+
+  #geo-replication
+
+  ```hcl
+  {{ include "examples/geo-replication/main.tf" }}
+
+  {{ include "examples/geo-replication/variables.tf" }}
+
+  {{ include "examples/geo-replication/outputs.tf" }}
+
+  {{ include "examples/geo-replication/terraform.tf" }}
+
+  {{ include "examples/geo-replication/providers.tf" }}
+  ```
+
+  #private-endpoint-and-dns
+
+  ```hcl
+  {{ include "examples/private-endpoint-and-dns/main.tf" }}
+
+  {{ include "examples/private-endpoint-and-dns/variables.tf" }}
+
+  {{ include "examples/private-endpoint-and-dns/outputs.tf" }}
+
+  {{ include "examples/private-endpoint-and-dns/terraform.tf" }}
+
+  {{ include "examples/private-endpoint-and-dns/providers.tf" }}
+  ```
+
+  {{ .Requirements }}
+
+  {{ .Providers }}
+
+  {{ .Modules }}
+
+  {{ .Resources }}
+
+  {{ .Inputs }}
+
+  {{ .Outputs }}
+
+  {{ include "CHANGELOG.md" }}
+
+  {{ .Footer }}
