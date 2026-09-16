@@ -18,3 +18,9 @@ variable "location" {
   nullable    = false
   default     = "eastus2"
 }
+
+variable "public_network_access_enabled" {
+  description = "Whether public network access is enabled for the container registry"
+  type        = bool
+  default     = true
+}

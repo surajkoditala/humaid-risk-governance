@@ -4,3 +4,15 @@ skip-check:
 
   # Internal Terraform Cloud modules use approved registry releases.
   - CKV_TF_1
+
+  # ACR (Standard SKU, hackathon env) — Microsoft-hosted pipeline agents have no
+  # private network path to the registry, so public network access must stay on.
+  - CKV_AZURE_139  # Ensure ACR set to disable public networking
+
+  # Remaining ACR findings require Premium SKU features not justified for this
+  # hackathon workload (single region, no CI vuln scanning tier, cost-constrained).
+  - CKV_AZURE_237  # Dedicated data endpoints (Premium only)
+  - CKV_AZURE_166  # Quarantine/scan/mark verified images (Premium + Defender only)
+  - CKV_AZURE_233  # Zone redundancy (Premium only)
+  - CKV_AZURE_164  # Signed/trusted images / content trust (Premium only)
+  - CKV_AZURE_165  # Geo-replication (Premium only, single-region deployment)
