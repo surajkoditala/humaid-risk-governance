@@ -6,7 +6,7 @@ module "acr" {
 
   sku                           = "Standard"
   admin_enabled                 = false
-  public_network_access_enabled = true
+  public_network_access_enabled = var.public_network_access_enabled
   zone_redundancy_enabled       = false
 
   # For production, we can add geo-replication for the container registry.
