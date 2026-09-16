@@ -14,3 +14,8 @@ src/6-MockExternalSystems/Humaid.RiskGovernance.MockSystems/appsettings.Developm
 
 # Eval run artifacts - see evals/README.md. The datasets themselves (evals/datasets/) are checked in.
 evals/results/
+
+# Local-only corporate root CA certs for Docker builds behind an SSL-inspecting proxy (Netskope,
+# Zscaler, etc.) - see ops/certs/README.md. Never commit an actual cert; only .gitkeep is tracked.
+ops/certs/*.crt
+ops/certs/*.pem
