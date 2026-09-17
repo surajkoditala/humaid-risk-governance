@@ -1,0 +1,8 @@
+﻿{
+    "id":  22,
+    "rev":  1,
+    "title":  "US-7.1 - View calculated risk score with breakdown",
+    "tags":  "Scoring",
+    "acceptanceCriteria":  "\u003cul\u003e\u003cli\u003eGiven an assessment with mapped risk categories, when the score is calculated, then I see an inherent risk rating per category and a separate mitigated/residual rating after controls are applied. \u003c/li\u003e\u003cli\u003eGiven any control is applied, when I inspect the math, then the residual risk score is always greater than zero; the scoring model must not allow a control (or combination of controls) to reduce a category residual risk to zero or \u0026quot;no risk.\u0026quot; \u003c/li\u003e\u003cli\u003eGiven a residual score is displayed, when I view it, then I can trace which specific controls were credited and each control configured mitigation weight. \u003c/li\u003e \u003c/ul\u003e",
+    "capturedUtc":  "2026-09-17T13:12:41.8565480Z"
+}

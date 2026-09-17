@@ -1,0 +1,8 @@
+﻿{
+    "id":  6,
+    "rev":  1,
+    "title":  "US-2.1 - Auto-map request to risk categories [AI]",
+    "tags":  "AI; Categorization",
+    "acceptanceCriteria":  "\u003cul\u003e\u003cli\u003eGiven a request is submitted, when the system processes it, then it proposes applicable risk categories drawn from a configured, named framework (e.g. FFIEC BSA/AML Examination Manual categories, FATF risk categories). \u003c/li\u003e\u003cli\u003eGiven the system proposes categories, when I view the proposal, then each category shows a citation back to the specific framework section it came from. \u003c/li\u003e\u003cli\u003eGiven no framework mapping is configured for a change type, when the system cannot propose categories, then it flags this explicitly rather than guessing silently. \u003c/li\u003e \u003c/ul\u003e",
+    "capturedUtc":  "2026-09-17T13:12:41.1534831Z"
+}

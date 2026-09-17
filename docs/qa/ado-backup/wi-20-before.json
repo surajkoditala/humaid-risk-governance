@@ -1,0 +1,8 @@
+﻿{
+    "id":  20,
+    "rev":  1,
+    "title":  "US-6.3 - Finalize the assessment",
+    "tags":  "Governance",
+    "acceptanceCriteria":  "\u003cul\u003e\u003cli\u003eGiven an assessment has outstanding AI-drafted sections not yet reviewed by me, when I try to finalize, then the system blocks finalization and lists what is outstanding. \u003c/li\u003e\u003cli\u003eGiven all sections are reviewed (accepted as-is or edited), when I finalize, then the assessment locks from further edits by the Product Owner and enters \u0026quot;Pending Committee\u0026quot; status. \u003c/li\u003e\u003cli\u003eGiven I finalize an assessment, when this occurs, then my identity and timestamp are recorded as the finalizing analyst; this cannot be anonymous or attributed to \u0026quot;system.\u0026quot; \u003c/li\u003e \u003c/ul\u003e",
+    "capturedUtc":  "2026-09-17T12:45:56.4612174Z"
+}

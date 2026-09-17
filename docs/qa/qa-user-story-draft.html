@@ -1,0 +1,523 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root { color-scheme: light dark; }
+  body { margin: 0; }
+  img { max-width: 100%; }
+  [hidden] { display: none !important; }
+</style>
+<title>User Story Revision Draft</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@500;600;700&display=swap">
+<style>
+  :root {
+    --ground:#F6F7F9; --surface:#FFFFFF; --surface-2:#EFF2F5;
+    --ink:#131C26; --ink-2:#3B4956; --muted:#66757F;
+    --line:#DBE1E7; --line-2:#C7D0D8;
+    --accent:#0F4C5C; --accent-ink:#0F4C5C; --accent-soft:#E2EDF0;
+    --critical:#A02B21; --critical-soft:#F7E7E5;
+    --warn:#8A5A06; --warn-soft:#FBF0DC;
+    --pass:#1B6B4C; --pass-soft:#E2F0E9;
+    --neutral:#5D6B78; --neutral-soft:#E9EDF1;
+    --add:#1B6B4C; --add-soft:#E2F0E9;
+    --f-display:"IBM Plex Serif",Georgia,serif;
+    --f-body:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+    --measure:72ch; --radius:3px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:#0D141B; --surface:#131C25; --surface-2:#18232E;
+      --ink:#E5EBF1; --ink-2:#BDC9D4; --muted:#8B9BA8;
+      --line:#24313D; --line-2:#314250;
+      --accent:#5FB4C8; --accent-ink:#7CC5D6; --accent-soft:#10303A;
+      --critical:#E4837A; --critical-soft:#351917;
+      --warn:#D9A44E; --warn-soft:#33260F;
+      --pass:#6BC49C; --pass-soft:#122C22;
+      --neutral:#92A2AF; --neutral-soft:#1C2731;
+      --add:#6BC49C; --add-soft:#122C22;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:#0D141B; --surface:#131C25; --surface-2:#18232E;
+    --ink:#E5EBF1; --ink-2:#BDC9D4; --muted:#8B9BA8;
+    --line:#24313D; --line-2:#314250;
+    --accent:#5FB4C8; --accent-ink:#7CC5D6; --accent-soft:#10303A;
+    --critical:#E4837A; --critical-soft:#351917;
+    --warn:#D9A44E; --warn-soft:#33260F;
+    --pass:#6BC49C; --pass-soft:#122C22;
+    --neutral:#92A2AF; --neutral-soft:#1C2731;
+    --add:#6BC49C; --add-soft:#122C22;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--ground); color:var(--ink); font-family:var(--f-body); font-size:15px; line-height:1.6; -webkit-font-smoothing:antialiased; }
+  .shell { display:grid; grid-template-columns:224px minmax(0,1fr); gap:52px; max-width:1190px; margin:0 auto; padding:0 32px 90px; }
+  .rail { position:sticky; top:0; align-self:start; padding-top:46px; height:100vh; overflow-y:auto; }
+  .rail-mark { font-family:var(--f-mono); font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent-ink); margin-bottom:22px; }
+  .rail nav { display:flex; flex-direction:column; gap:1px; border-left:1px solid var(--line); }
+  .rail a { padding:6px 0 6px 14px; text-decoration:none; color:var(--muted); font-size:12.5px; line-height:1.35; border-left:2px solid transparent; margin-left:-1px; transition:color .12s,border-color .12s; }
+  .rail a:hover { color:var(--ink); border-left-color:var(--line-2); }
+  .rail a:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  .rail .grp { font-family:var(--f-mono); font-size:9.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-2); padding:13px 0 4px 14px; }
+
+  .masthead { padding:54px 0 0; }
+  .eyebrow { font-family:var(--f-mono); font-size:11px; letter-spacing:.15em; text-transform:uppercase; color:var(--muted); }
+  h1 { font-family:var(--f-display); font-weight:700; font-size:clamp(31px,4.5vw,45px); line-height:1.1; letter-spacing:-.015em; margin:14px 0 16px; text-wrap:balance; }
+  .standfirst { font-size:17px; line-height:1.6; color:var(--ink-2); max-width:var(--measure); margin:0 0 28px; }
+  .meta { display:grid; grid-template-columns:repeat(auto-fit,minmax(142px,1fr)); border-top:1px solid var(--line-2); border-bottom:1px solid var(--line-2); }
+  .meta div { padding:13px 16px 13px 0; border-right:1px solid var(--line); }
+  .meta div:last-child { border-right:0; }
+  .meta dt { font-family:var(--f-mono); font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); margin-bottom:5px; }
+  .meta dd { margin:0; font-size:13.5px; font-weight:500; }
+
+  section { padding-top:58px; scroll-margin-top:20px; }
+  .sec-head { border-top:2px solid var(--ink); padding-top:13px; margin-bottom:20px; }
+  h2 { font-family:var(--f-display); font-weight:600; font-size:clamp(21px,2.6vw,27px); line-height:1.22; margin:0; letter-spacing:-.01em; }
+  .sec-sub { color:var(--muted); font-size:14px; margin-top:6px; max-width:var(--measure); }
+  h3 { font-family:var(--f-display); font-weight:600; font-size:16.5px; margin:28px 0 9px; }
+  p { max-width:var(--measure); margin:0 0 12px; }
+  ul,ol { max-width:var(--measure); padding-left:20px; margin:0 0 12px; }
+  li { margin-bottom:5px; }
+  code { font-family:var(--f-mono); font-size:.875em; background:var(--surface-2); padding:1px 5px; border-radius:var(--radius); border:1px solid var(--line); }
+  a { color:var(--accent-ink); }
+
+  .pill { display:inline-block; font-family:var(--f-mono); font-size:10px; font-weight:500; letter-spacing:.05em; text-transform:uppercase; padding:2px 7px; border-radius:2px; white-space:nowrap; }
+  .p-pass { background:var(--pass-soft); color:var(--pass); }
+  .p-crit { background:var(--critical-soft); color:var(--critical); }
+  .p-warn { background:var(--warn-soft); color:var(--warn); }
+  .p-neut { background:var(--neutral-soft); color:var(--neutral); }
+  .p-acc  { background:var(--accent-soft); color:var(--accent-ink); }
+
+  /* story card */
+  .story { background:var(--surface); border:1px solid var(--line); border-left-width:3px; border-radius:var(--radius); margin:20px 0; }
+  .story.edit { border-left-color:var(--warn); }
+  .story.new  { border-left-color:var(--add); }
+  .st-head { padding:13px 18px; border-bottom:1px solid var(--line); background:var(--surface-2); }
+  .st-id { font-family:var(--f-mono); font-size:11.5px; font-weight:600; color:var(--accent-ink); }
+  .st-title { font-weight:600; font-size:15px; margin:5px 0 0; }
+  .st-tags { display:flex; flex-wrap:wrap; gap:7px; margin-top:8px; }
+  .st-body { padding:15px 18px 18px; }
+  .st-body p:first-child { margin-top:0; }
+  .narrative { font-style:italic; color:var(--ink-2); border-left:2px solid var(--line-2); padding-left:12px; margin:0 0 14px; max-width:none; }
+  .ac { margin:0; padding-left:0; list-style:none; max-width:none; }
+  .ac li { position:relative; padding-left:26px; margin-bottom:9px; font-size:13.6px; }
+  .ac li::before { content:"▸"; position:absolute; left:8px; color:var(--muted); }
+  .ac li.is-new { background:var(--add-soft); border-radius:2px; padding:7px 10px 7px 26px; margin-left:-4px; }
+  .ac li.is-new::before { content:"＋"; color:var(--add); left:8px; top:7px; }
+  .tagline { font-family:var(--f-mono); font-size:11px; color:var(--muted); margin-top:12px; }
+
+  .tw { overflow-x:auto; margin:15px 0 20px; border:1px solid var(--line); border-radius:var(--radius); background:var(--surface); }
+  table { width:100%; border-collapse:collapse; font-size:12.9px; }
+  th,td { text-align:left; padding:8px 12px; border-bottom:1px solid var(--line); vertical-align:top; }
+  thead th { font-family:var(--f-mono); font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); font-weight:500; background:var(--surface-2); white-space:nowrap; }
+  tbody tr:last-child td { border-bottom:0; }
+  td.mono,th.mono { font-family:var(--f-mono); font-size:11px; }
+
+  pre { font-family:var(--f-mono); font-size:11.4px; line-height:1.55; background:var(--surface-2); border:1px solid var(--line); border-radius:var(--radius); padding:11px 13px; overflow-x:auto; margin:10px 0; }
+  pre code { background:none; border:0; padding:0; font-size:inherit; }
+
+  .note { border-left:2px solid var(--accent); background:var(--accent-soft); padding:13px 17px; margin:17px 0; max-width:var(--measure); }
+  .note p:last-child { margin-bottom:0; }
+  .note .lbl { font-family:var(--f-mono); font-size:9.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--accent-ink); display:block; margin-bottom:5px; }
+  .note.warn { border-left-color:var(--warn); background:var(--warn-soft); }
+  .note.warn .lbl { color:var(--warn); }
+  .note.crit { border-left-color:var(--critical); background:var(--critical-soft); }
+  .note.crit .lbl { color:var(--critical); }
+
+  .lede-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(112px,1fr)); border:1px solid var(--line); border-radius:var(--radius); background:var(--surface); margin:20px 0 24px; }
+  .lede-stats div { padding:14px 17px; border-right:1px solid var(--line); }
+  .lede-stats div:last-child { border-right:0; }
+  .lede-stats .v { font-family:var(--f-display); font-size:26px; font-weight:700; line-height:1; font-variant-numeric:tabular-nums; }
+  .lede-stats .k { font-family:var(--f-mono); font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin-top:6px; }
+
+  .foot { margin-top:62px; padding-top:18px; border-top:1px solid var(--line-2); font-size:12.5px; color:var(--muted); max-width:var(--measure); }
+
+  @media (max-width:900px) {
+    .shell { grid-template-columns:1fr; gap:0; padding:0 18px 56px; }
+    .rail { position:static; height:auto; padding-top:24px; }
+    .rail nav { flex-direction:row; flex-wrap:wrap; gap:4px; border-left:0; }
+    .rail a { border:1px solid var(--line); border-radius:2px; padding:5px 9px; margin-left:0; }
+    .rail .grp { display:none; }
+    .masthead { padding-top:28px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition:none !important; } }
+
+  @page { size:A4; margin:16mm 15mm 18mm; }
+  @media print {
+    :root, :root[data-theme="dark"], :root:not([data-theme="light"]) {
+      --ground:#FFF; --surface:#FFF; --surface-2:#F2F5F7; --ink:#101820; --ink-2:#33414E;
+      --muted:#5A6874; --line:#D3DAE1; --line-2:#B8C2CC; --accent:#0F4C5C; --accent-ink:#0F4C5C;
+      --accent-soft:#E6EFF2; --critical:#8E2219; --critical-soft:#F8E9E7; --warn:#7A4F05;
+      --warn-soft:#FBF1DE; --pass:#17593F; --pass-soft:#E5F1EB; --neutral:#4F5D69;
+      --neutral-soft:#EDF0F3; --add:#17593F; --add-soft:#E5F1EB;
+    }
+    * { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
+    body { font-size:9.8pt; line-height:1.45; background:#fff; }
+    .shell { display:block; max-width:none; padding:0; }
+    .rail { display:none; }
+    .masthead { padding-top:0; }
+    h1 { font-size:24pt; } h2 { font-size:15pt; } h3 { font-size:11pt; }
+    p,ul,ol,.standfirst,.sec-sub,.note { max-width:none; }
+    section { break-before:page; padding-top:0; }
+    #s1 { break-before:auto; }
+    .sec-head,h3 { break-after:avoid; }
+    .story,.tw,.note,pre,.lede-stats { break-inside:avoid; }
+    tr,li { break-inside:avoid; }
+    thead { display:table-header-group; }
+    a { color:var(--ink); text-decoration:none; }
+  }
+</style>
+
+<div class="shell">
+  <aside class="rail">
+    <div class="rail-mark">HumAId&nbsp;·&nbsp;BA</div>
+    <nav>
+      <a href="#s1">01 · Before you read</a>
+      <div class="grp">Part A — amend</div>
+      <a href="#s2">02 · New criteria, existing stories</a>
+      <div class="grp">Part B — add</div>
+      <a href="#s3">03 · New stories</a>
+      <div class="grp">Part C</div>
+      <a href="#s4">04 · Blocked on decisions</a>
+      <a href="#s5">05 · How to load into ADO</a>
+    </nav>
+  </aside>
+
+  <main>
+    <header class="masthead">
+      <div class="eyebrow">Genius Hacks Q3 2026 · Risk Assessment Workbench</div>
+      <h1>User Story Revision Draft</h1>
+      <p class="standfirst">Proposed changes to the backlog, derived from the eleven open defects and the requirement gaps found during QA. <strong>Nothing here has been written to Azure DevOps</strong> — this is for your review first.</p>
+      <dl class="meta">
+        <div><dt>Prepared by</dt><dd>Shanthi Subramanian · BA&nbsp;/&nbsp;QA</dd></div>
+        <div><dt>Date</dt><dd>17 September 2026</dd></div>
+        <div><dt>Status</dt><dd>Draft — awaiting confirmation</dd></div>
+        <div><dt>Days to submit</dt><dd>13</dd></div>
+      </dl>
+      <div class="lede-stats">
+        <div><div class="v">9</div><div class="k">New criteria</div></div>
+        <div><div class="v">7</div><div class="k">New stories</div></div>
+        <div><div class="v">0</div><div class="k">Stories deleted</div></div>
+        <div><div class="v">3</div><div class="k">Blocked on decisions</div></div>
+      </div>
+    </header>
+
+    <!-- ══ 01 ══ -->
+    <section id="s1">
+      <div class="sec-head">
+        <h2>Before you read this</h2>
+        <p class="sec-sub">Two things you need to know about how this draft was produced.</p>
+      </div>
+
+      <div class="note crit">
+        <span class="lbl">I cannot see your Azure DevOps board</span>
+        <p>There is no Azure DevOps connector available to me in this session, and the Azure CLI is not installed on this machine. <strong>This draft was written against <code>docs/requirements/user-stories.md</code> in the repository</strong>, which I have read in full. If the board has diverged from that document, the draft needs reconciling against the board before anything is applied — and you are the one who can see both.</p>
+      </div>
+
+      <h3>What I changed, and why only this much</h3>
+      <p>Every amendment below traces to something concrete — an open defect, or a gap the existing document names as its own next step. I have <strong>not</strong> rewritten stories that are working, and I have <strong>not</strong> invented requirements to look thorough. Nine new acceptance criteria and seven new stories, each with a stated origin.</p>
+
+      <p>The existing document is good. Its Given/When/Then criteria are directly testable, the assumptions are called out inline, and the traceability matrix at the end is more than most teams produce. The gaps are the ones it already admits to, plus the ones our testing exposed.</p>
+
+      <h3>Reading the markup</h3>
+      <div class="tw"><table>
+        <thead><tr><th>Marker</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td><span class="pill p-warn">Amend</span></td><td>Existing story, new acceptance criteria appended. Nothing existing is removed.</td></tr>
+          <tr><td><span class="pill p-pass">New</span></td><td>A story that does not exist today.</td></tr>
+          <tr><td style="background:var(--add-soft); padding:6px 10px">＋ highlighted line</td><td>The specific new criterion to add.</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- ══ 02 ══ -->
+    <section id="s2">
+      <div class="sec-head">
+        <h2>Part A — new criteria on existing stories</h2>
+        <p class="sec-sub">Five stories, nine new acceptance criteria. Each closes a defect our tests found.</p>
+      </div>
+
+      <div class="story edit">
+        <div class="st-head">
+          <div class="st-id">US-6.3 · Epic 6</div>
+          <p class="st-title">Finalize the assessment</p>
+          <div class="st-tags"><span class="pill p-warn">Amend</span><span class="pill p-crit">DEF-004</span><span class="pill p-neut">High</span></div>
+        </div>
+        <div class="st-body">
+          <p class="narrative">As an FCRM Analyst, I want to formally mark an assessment as finalized, so that it can move to committee only once I've reviewed everything.</p>
+          <ul class="ac">
+            <li>Given an assessment has outstanding AI-drafted sections not yet reviewed, when I try to finalize, then the system blocks finalization and lists what's outstanding. <span class="pill p-neut">existing</span></li>
+            <li>Given all sections are reviewed, when I finalize, then the assessment locks and enters "Pending Committee". <span class="pill p-neut">existing</span></li>
+            <li>Given I finalize, when this occurs, then my identity and timestamp are recorded — never anonymous or "system". <span class="pill p-neut">existing</span></li>
+            <li class="is-new"><strong>Given an assessment has no risk categories mapped at all</strong>, when I try to finalize, then the system blocks it and tells me at least one category must be mapped — readiness must never be satisfied vacuously.</li>
+            <li class="is-new"><strong>Given every proposed category has been deactivated by me</strong>, when I try to finalize, then the system blocks it for the same reason.</li>
+          </ul>
+          <p class="tagline">Origin: DEF-004. Today, an assessment with zero categories, zero policy review, zero narrative and zero scores reports "Ready to finalize", finalizes, routes, and appears in the committee queue with a live vote button. Confirmed end to end.</p>
+        </div>
+      </div>
+
+      <div class="story edit">
+        <div class="st-head">
+          <div class="st-id">US-8.2 · Epic 8</div>
+          <p class="st-title">Cast a committee vote</p>
+          <div class="st-tags"><span class="pill p-warn">Amend</span><span class="pill p-crit">DEF-002</span><span class="pill p-neut">High</span></div>
+        </div>
+        <div class="st-body">
+          <p class="narrative">As a Risk Committee Member, I want to review a finalized assessment and cast a vote, so that a formal, accountable decision is recorded.</p>
+          <ul class="ac">
+            <li>Given I open an assessment in my queue, then I can see narrative, scores, cited policy and override history before voting. <span class="pill p-neut">existing</span></li>
+            <li>Given "approve-with-conditions", then conditions are mandatory structured text. <span class="pill p-neut">existing</span></li>
+            <li>Given multiple members vote, then each vote and rationale is recorded separately. <span class="pill p-neut">existing</span></li>
+            <li class="is-new"><strong>Given I do not hold the Committee Member role</strong>, when a vote is submitted in my name, then the system rejects it with an authorization error — the acting user is established from the authenticated session, never accepted from the request payload.</li>
+          </ul>
+          <p class="tagline">Origin: DEF-002. Every write endpoint currently reads the acting user from the request body and performs no role check, so any caller can act as any user.</p>
+        </div>
+      </div>
+
+      <div class="story edit">
+        <div class="st-head">
+          <div class="st-id">US-7.1 · Epic 7</div>
+          <p class="st-title">View calculated risk score with breakdown</p>
+          <div class="st-tags"><span class="pill p-warn">Amend</span><span class="pill p-warn">DEF-005</span><span class="pill p-neut">Medium</span></div>
+        </div>
+        <div class="st-body">
+          <p class="narrative">As an FCRM Analyst, I want to see the calculated risk score along with how it was derived, so that the number is explainable, not a black box.</p>
+          <ul class="ac">
+            <li>Given mapped categories, then I see inherent and residual ratings per category. <span class="pill p-neut">existing</span></li>
+            <li>Given any control applied, then residual is always greater than zero. <span class="pill p-neut">existing</span></li>
+            <li>Given a residual score, then I can trace which controls were credited and each one's weight. <span class="pill p-neut">existing</span></li>
+            <li class="is-new"><strong>Given I am scoring a category</strong>, when I open the controls picker, then I see a non-empty catalogue of named controls for that category, each with a description — so that "which controls were credited" is answerable rather than always empty.</li>
+          </ul>
+          <p class="tagline">Origin: DEF-005. The <code>control</code> table is created but never seeded, so the controls endpoint returns an empty list for every category and the third existing criterion above cannot currently be met.</p>
+        </div>
+      </div>
+
+      <div class="story edit">
+        <div class="st-head">
+          <div class="st-id">US-2.1 · Epic 2</div>
+          <p class="st-title">Auto-map request to risk categories</p>
+          <div class="st-tags"><span class="pill p-warn">Amend</span><span class="pill p-warn">DEF-006</span><span class="pill p-neut">Medium</span></div>
+        </div>
+        <div class="st-body">
+          <p class="narrative">As an FCRM Analyst, I want the system to propose which supervisory risk categories apply, so that I don't start from a blank page.</p>
+          <ul class="ac">
+            <li>Given a submitted request, then the system proposes categories from a named framework with citations. <span class="pill p-neut">existing</span></li>
+            <li>Given no framework mapping is configured, then the system flags this rather than guessing silently. <span class="pill p-neut">existing</span></li>
+            <li class="is-new"><strong>Given I open the assessment workspace for a request</strong>, when the workspace loads — including when two analysts open it simultaneously — then it opens successfully first time, without an error, and exactly one assessment exists for that request.</li>
+          </ul>
+          <p class="tagline">Origin: DEF-006. <code>func_getOrCreateAssessment</code> does a select-then-insert with no conflict handling, so concurrent callers race and one receives a 500. In practice the first click fails every time.</p>
+        </div>
+      </div>
+
+      <div class="story edit">
+        <div class="st-head">
+          <div class="st-id">US-1.3 · Epic 1</div>
+          <p class="st-title">Track my request status</p>
+          <div class="st-tags"><span class="pill p-warn">Amend</span><span class="pill p-warn">DEF-003</span><span class="pill p-neut">Medium</span></div>
+        </div>
+        <div class="st-body">
+          <p class="narrative">As a Product Owner, I want to see where my request stands, so that I don't have to email FCRM for updates.</p>
+          <ul class="ac">
+            <li>Given I have submitted a request, then I see status and days elapsed. <span class="pill p-neut">existing</span></li>
+            <li>Given a status change, then I receive a notification. <span class="pill p-neut">existing</span></li>
+            <li class="is-new"><strong>Given I request something that does not exist or no longer exists</strong>, when the system responds, then I get a clear "not found" message — the system never reports my own bad input as an internal server error.</li>
+            <li class="is-new"><strong>Given any error occurs</strong>, when it is shown to me, then it explains what went wrong and what to do next, and never exposes a database or stack-trace detail.</li>
+          </ul>
+          <p class="tagline">Origin: DEF-003. A well-formed but unknown id reaches Postgres and the foreign-key violation escapes as HTTP 500, so "you sent an id that doesn't exist" reads to the caller as "the server broke".</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ 03 ══ -->
+    <section id="s3">
+      <div class="sec-head">
+        <h2>Part B — new stories</h2>
+        <p class="sec-sub">Seven stories covering ground the backlog does not currently reach. Two are epics of their own.</p>
+      </div>
+
+      <div class="story new">
+        <div class="st-head">
+          <div class="st-id">US-11.1 · <strong>new Epic 11 — Access Control</strong></div>
+          <p class="st-title">Enforce role-based permissions on every action</p>
+          <div class="st-tags"><span class="pill p-pass">New</span><span class="pill p-crit">DEF-001, DEF-002</span><span class="pill p-neut">High</span></div>
+        </div>
+        <div class="st-body">
+          <p class="narrative">As FCRM Leadership, I want every action to be permitted only to the role that owns it, so that the accountability the audit trail records is real rather than assumed.</p>
+          <ul class="ac">
+            <li class="is-new">Given any request to a protected endpoint, when no valid credential is presented, then the request is rejected — no data of any kind is returned.</li>
+            <li class="is-new">Given an authenticated user, when they attempt an action their role does not permit, then it is refused on authorization grounds, before any record is read or written.</li>
+            <li class="is-new">Given any write action, when the acting user is determined, then it comes from the authenticated session — never from a field in the request payload.</li>
+            <li class="is-new">Given the permission model, when it is reviewed, then a documented matrix maps each of the three roles to every action, and each endpoint's behaviour matches it.</li>
+          </ul>
+          <p class="tagline">Origin: DEF-001 and DEF-002. Today the user directory is readable with no credential at all, and the UI hides screens by role while the API enforces nothing — which is worse than having no role model, because the product looks access-controlled.</p>
+        </div>
+      </div>
+
+      <div class="story new">
+        <div class="st-head">
+          <div class="st-id">US-9.3 · Epic 9</div>
+          <p class="st-title">Export an examiner-ready audit trail</p>
+          <div class="st-tags"><span class="pill p-pass">New</span><span class="pill p-neut">High</span></div>
+        </div>
+        <div class="st-body">
+          <p class="narrative">As an Auditor or FCRM Analyst preparing for examination, I want to export a request's complete history in a durable format, so that I can hand it to an examiner without reformatting it first.</p>
+          <ul class="ac">
+            <li class="is-new">Given any request id, when I export its history, then the export contains every event in order — submission, uploads, AI outputs, human overrides with reasons, policy citations relied upon, score calculations, routing, individual votes and the final decision.</li>
+            <li class="is-new">Given an export, when I open it, then each entry shows actor, exact timestamp, and the before and after state.</li>
+            <li class="is-new">Given an export, when it is produced, then it is a durable human-readable document requiring no further formatting.</li>
+            <li class="is-new">Given an assessment with AI-generated content, when exported, then both the original AI output and any human override appear, never the override alone.</li>
+          </ul>
+          <p class="tagline">Origin: US-9.1 AC3 states this requirement but no story owns the export itself, so nothing implements or tests it. This is the deliverable an examiner actually receives.</p>
+        </div>
+      </div>
+
+      <div class="story new">
+        <div class="st-head">
+          <div class="st-id">US-12.1 · <strong>new Epic 12 — Deployment &amp; Operations</strong></div>
+          <p class="st-title">Apply the database schema to a deployed environment</p>
+          <div class="st-tags"><span class="pill p-pass">New</span><span class="pill p-crit">DEF-007</span><span class="pill p-neut">Highest</span></div>
+        </div>
+        <div class="st-body">
+          <p class="narrative">As the DevOps engineer, I want the schema, stored functions and reference data applied automatically to a target environment, so that a deployed application can actually serve a request.</p>
+          <ul class="ac">
+            <li class="is-new">Given a newly provisioned database, when the release runs, then schema, all <code>func_*</code> routines and reference seed data are applied before the application containers start accepting traffic.</li>
+            <li class="is-new">Given the schema deployment runs twice, when it completes, then the second run is a safe no-op and destroys no data.</li>
+            <li class="is-new">Given schema deployment fails, when it does, then the release halts and reports which statement failed — it never proceeds to start an application against an incomplete schema.</li>
+            <li class="is-new">Given a deployed environment, when I verify it, then a documented post-deploy check confirms the expected function and seed-row counts.</li>
+          </ul>
+          <p class="tagline">Origin: DEF-007. The DB folder is not copied into either image, the application performs no bootstrap, and no pipeline applies it. On first deploy the containers will start cleanly and fail on every request.</p>
+        </div>
+      </div>
+
+      <div class="story new">
+        <div class="st-head">
+          <div class="st-id">US-12.2 · Epic 12</div>
+          <p class="st-title">Build and publish container images automatically</p>
+          <div class="st-tags"><span class="pill p-pass">New</span><span class="pill p-warn">DEF-009, DEF-011</span><span class="pill p-neut">Medium</span></div>
+        </div>
+        <div class="st-body">
+          <p class="narrative">As the DevOps engineer, I want images built, scanned and published by the pipeline, so that what reaches Azure is reproducible and has been checked.</p>
+          <ul class="ac">
+            <li class="is-new">Given a merge to the main branch, when the pipeline runs, then both service images build from the repository root and are pushed to the registry, tagged with the commit.</li>
+            <li class="is-new">Given an image is built, when it is scanned, then no HIGH or CRITICAL operating-system vulnerability is present, and the build fails if one is.</li>
+            <li class="is-new">Given a running container, when its user is inspected, then it is not root.</li>
+            <li class="is-new">Given any image, when its layers are inspected, then no local configuration file or secret is present.</li>
+          </ul>
+          <p class="tagline">Origin: DEF-009 and DEF-011. Both Dockerfiles currently omit a <code>USER</code> directive so every process runs privileged; there is no image scanning because there is no application pipeline at all.</p>
+        </div>
+      </div>
+
+      <div class="story new">
+        <div class="st-head">
+          <div class="st-id">US-12.3 · Epic 12</div>
+          <p class="st-title">Observe a running environment</p>
+          <div class="st-tags"><span class="pill p-pass">New</span><span class="pill p-warn">DEF-010</span><span class="pill p-neut">Medium</span></div>
+        </div>
+        <div class="st-body">
+          <p class="narrative">As the DevOps engineer, I want logs, traces and metrics from a deployed environment, so that a failure can be diagnosed without redeploying to reproduce it.</p>
+          <ul class="ac">
+            <li class="is-new">Given a deployed environment, when a request is served, then its trace is queryable within minutes, including outbound calls to the database, Mock Systems and the AI provider.</li>
+            <li class="is-new">Given an unhandled error, when it occurs, then it is recorded with enough context to identify the request, without recording assessment content or personal data.</li>
+            <li class="is-new">Given cost constraints, when telemetry is configured, then a sampling rate is set deliberately and documented.</li>
+          </ul>
+          <p class="tagline">Origin: DEF-010. Both services already register OpenTelemetry and activate on a connection string, but the Log Analytics workspace is commented out in Terraform — so a deployed environment would emit nothing.</p>
+        </div>
+      </div>
+
+      <div class="story new">
+        <div class="st-head">
+          <div class="st-id">US-13.1 · <strong>new Epic 13 — Non-Functional</strong></div>
+          <p class="st-title">Retain assessment records for the supervisory period</p>
+          <div class="st-tags"><span class="pill p-pass">New</span><span class="pill p-neut">Medium</span></div>
+        </div>
+        <div class="st-body">
+          <p class="narrative">As FCRM Leadership, I want assessment records and their audit trail retained for the full supervisory retention period, so that an examiner can review a decision years after it was taken.</p>
+          <ul class="ac">
+            <li class="is-new">Given a finalized assessment, when the retention period is defined, then it is at least five years and is stated in documentation rather than assumed.</li>
+            <li class="is-new">Given the database, when backup is configured, then point-in-time restore is enabled and the retention window is documented.</li>
+            <li class="is-new">Given an attached document, when the request is decisioned, then the document remains retrievable for the same period as its assessment.</li>
+          </ul>
+          <p class="tagline">Origin: the existing document names non-functional requirements as its own next step, and retention is the one with a regulatory floor. Currently undefined — no backup or retention policy exists on the database.</p>
+        </div>
+      </div>
+
+      <div class="story new">
+        <div class="st-head">
+          <div class="st-id">US-13.2 · Epic 13</div>
+          <p class="st-title">Keep model calls inside the tenant</p>
+          <div class="st-tags"><span class="pill p-pass">New</span><span class="pill p-neut">Medium</span></div>
+        </div>
+        <div class="st-body">
+          <p class="narrative">As FCRM Leadership, I want AI calls to stay within our own Azure tenant, so that assessment content never leaves our control boundary.</p>
+          <ul class="ac">
+            <li class="is-new">Given a deployed environment, when an AI call is made, then it goes to the in-tenant Azure AI Foundry deployment, not a third-party endpoint.</li>
+            <li class="is-new">Given configuration, when the environment starts, then a non-production provider cannot be selected by default in a deployed environment.</li>
+            <li class="is-new">Given any AI call, when it is logged, then the prompt and response content are not written to general application logs.</li>
+          </ul>
+          <p class="tagline">Origin: data residency was previously abstract; with Foundry now provisioned it is decidable. The provider is currently selected by a configuration value with a non-Azure default.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ 04 ══ -->
+    <section id="s4">
+      <div class="sec-head">
+        <h2>Part C — blocked on a team decision</h2>
+        <p class="sec-sub">Three criteria I have deliberately not written, because writing them would be inventing policy.</p>
+      </div>
+
+      <p>Each of these changes the design depending on the answer. I would rather bring you three open questions than three plausible-sounding criteria that turn out to be wrong.</p>
+
+      <div class="tw"><table>
+        <thead><tr><th>Question</th><th>Affects</th><th>If answered "yes"</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Q3</strong> — does a scoring override need secondary sign-off before finalization?</td><td>US-7.2, US-6.3</td><td>Adds a review state and a second actor to the finalize gate — a schema change, not just a criterion</td></tr>
+          <tr><td><strong>Q5</strong> — who may approve scoring and workflow configuration changes?</td><td>US-10.1, US-10.2</td><td>Adds an approval workflow to configuration, and a fourth permission tier to the RBAC matrix</td></tr>
+          <tr><td><strong>Q6</strong> — who owns database schema deployment? <span class="pill p-pass">new</span></td><td>US-12.1</td><td>Determines whether the schema ships in the release pipeline or as an application concern</td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="note warn">
+        <span class="lbl">Q6 is the urgent one</span>
+        <p>Q3 and Q5 can reasonably be deferred and documented as accepted scope decisions. Q6 cannot — it is an unassigned responsibility sitting between two owners, which is exactly why it fell through the gap. It needs a name against it before the first Azure deploy, not during it.</p>
+      </div>
+    </section>
+
+    <!-- ══ 05 ══ -->
+    <section id="s5">
+      <div class="sec-head">
+        <h2>How to load this into Azure DevOps</h2>
+        <p class="sec-sub">Three options, depending on how much you want automated.</p>
+      </div>
+
+      <h3>Option 1 — CSV import <span class="pill p-pass">fastest</span></h3>
+      <p>A ready-to-import file accompanies this draft at <code>docs/qa/ado-user-stories-draft.csv</code>. In Azure DevOps: <strong>Boards → Work Items → Import Work Items</strong>, then map <code>Work Item Type</code>, <code>Title</code>, <code>Description</code>, <code>Acceptance Criteria</code>, <code>Tags</code> and <code>Priority</code>.</p>
+      <p>Leave the <code>ID</code> column empty for new items so ADO creates them. To <em>amend</em> an existing story rather than create a duplicate, put its real ADO id in that column first — otherwise Part A will land as seven new work items instead of updating five.</p>
+
+      <h3>Option 2 — give me CLI access <span class="pill p-acc">best for ongoing work</span></h3>
+      <p>Install the Azure CLI and its DevOps extension, then sign in yourself:</p>
+      <pre><code>winget install Microsoft.AzureCLI
+az extension add --name azure-devops
+az login
+az devops configure --defaults organization=https://dev.azure.com/&lt;org&gt; project=&lt;project&gt;</code></pre>
+      <p>After that I can read the real board and apply changes directly with <code>az boards work-item update</code>, which removes the guesswork about what is already there. You run <code>az login</code> — I never handle your credentials.</p>
+
+      <h3>Option 3 — paste the board here</h3>
+      <p>Export the current stories and paste them in. I will reconcile this draft against what actually exists and produce a precise change list. Slowest, but it needs no tooling.</p>
+
+      <div class="note">
+        <span class="lbl">My recommendation</span>
+        <p><strong>Option 2</strong>, because this will not be the last backlog update before submission and the board is the single source of truth. Option 1 as an immediate fallback if installing tooling is a nuisance today.</p>
+      </div>
+    </section>
+
+    <p class="foot">Draft only — nothing has been written to Azure DevOps. Prepared against <code>docs/requirements/user-stories.md</code> at commit <code>a816378</code>; if the board has diverged from that document, reconcile before applying. Every amendment traces to a defect verified against a running local stack, or to a gap the existing requirements document names itself.</p>
+  </main>
+</div>
+
+</body>
+</html>

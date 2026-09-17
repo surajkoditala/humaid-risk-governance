@@ -1,0 +1,8 @@
+﻿{
+    "id":  26,
+    "rev":  1,
+    "title":  "US-8.2 - Cast a committee vote",
+    "tags":  "Committee",
+    "acceptanceCriteria":  "\u003cul\u003e\u003cli\u003eGiven I open an assessment in my queue, when I review it, then I can see the full narrative, scores, cited policy, and analyst override history before voting. \u003c/li\u003e\u003cli\u003eGiven I select \u0026quot;approve-with-conditions,\u0026quot; when I vote, then I must enter the specific conditions as structured text; this cannot be submitted blank. \u003c/li\u003e\u003cli\u003eGiven I select \u0026quot;defer,\u0026quot; when I vote, then I must state what additional information or action is needed before re-review. \u003c/li\u003e\u003cli\u003eGiven I select \u0026quot;reject,\u0026quot; when I vote, then I must state the reason. \u003c/li\u003e\u003cli\u003eGiven multiple committee members vote, when votes are cast, then each member individual vote and rationale is recorded separately; votes are never aggregated into a single anonymous outcome without preserving the individual record. \u003c/li\u003e \u003c/ul\u003e",
+    "capturedUtc":  "2026-09-17T13:12:42.5202625Z"
+}

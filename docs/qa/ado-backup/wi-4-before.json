@@ -1,0 +1,8 @@
+﻿{
+    "id":  4,
+    "rev":  1,
+    "title":  "US-1.3 - Track my request status",
+    "tags":  "Intake",
+    "acceptanceCriteria":  "\u003cul\u003e\u003cli\u003eGiven I have submitted a request, when I open my dashboard, then I see all my requests with current status and days elapsed since submission. \u003c/li\u003e\u003cli\u003eGiven a request changes status, when the change occurs, then I receive a notification (in-app and/or email). \u003c/li\u003e\u003cli\u003eGiven a request is returned to me for clarification, when I view it, then I see specifically what is being asked and by whom. \u003c/li\u003e \u003c/ul\u003e",
+    "capturedUtc":  "2026-09-17T13:12:40.3711748Z"
+}
