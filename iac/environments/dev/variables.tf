@@ -19,6 +19,13 @@ variable "location" {
   default     = "eastus2"
 }
 
+variable "location_cus" {
+  description = "Central US Azure region where the resource group will be created"
+  type        = string
+  nullable    = false
+  default     = "centralus"
+}
+
 variable "public_network_access_enabled" {
   description = "Whether public network access is enabled for the container registry"
   type        = bool

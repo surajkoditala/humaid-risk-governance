@@ -1,0 +1,78 @@
+---
+formatter: markdown table
+
+settings:
+  required: false
+
+output:
+  file: README.md
+  mode: inject
+  sort-by: name
+  header-from: README.md
+  output-values: true
+  output-variables: true
+  output-providers: true
+  output-requirements: true
+  output-resources: true
+ 
+content: |-
+  {{ .Header }}
+
+  {{ include "Intro.md" }}
+
+  #Examples
+
+  #Basic Example
+  ```hcl
+  {{ include "examples/basic/main.tf" }}
+
+  {{ include "examples/basic/variables.tf" }}
+
+  {{ include "examples/basic/outputs.tf" }}
+
+  {{ include "examples/basic/terraform.tf" }}
+
+  {{ include "examples/basic/providers.tf" }}
+  ```
+
+  #Environment variables Example
+  ```hcl
+  {{ include "examples/environment-variables/main.tf" }}
+
+  {{ include "examples/environment-variables/variables.tf" }}
+
+  {{ include "examples/environment-variables/outputs.tf" }}
+
+  {{ include "examples/environment-variables/terraform.tf" }}
+
+  {{ include "examples/environment-variables/providers.tf" }}
+  ```
+
+  #System assigned identity with role assignments Example
+  ```hcl
+  {{ include "examples/system-assigned-identity/main.tf" }}
+
+  {{ include "examples/system-assigned-identity/variables.tf" }}
+
+  {{ include "examples/system-assigned-identity/outputs.tf" }}
+
+  {{ include "examples/system-assigned-identity/terraform.tf" }}
+
+  {{ include "examples/system-assigned-identity/providers.tf" }}
+  ```
+
+  {{ .Requirements }}
+
+  {{ .Providers }}
+
+  {{ .Modules }}
+
+  {{ .Resources }}
+
+  {{ .Inputs }}
+
+  {{ .Outputs }}
+
+  {{ include "CHANGELOG.md" }}
+
+  {{ .Footer }}
