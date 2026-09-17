@@ -1,5 +1,7 @@
 # End-to-end tests (Playwright)
 
+**Owner:** Shanthi Subramanian (QA / Test Automation)
+
 API-level tests against the running Workbench. Complements — rather than overlaps —
 `tests/Humaid.RiskGovernance.AdminUI.UnitTests` (xUnit + Moq, no I/O at all).
 
@@ -28,8 +30,16 @@ Then:
 ```bash
 cd tests/e2e
 npm install
-npm run test:api
+npm run test:api    # API + authorization (needs the API only)
+npm run test:ui     # the three role journeys (also needs the webapp on :3000)
+npm test            # everything — 18 tests
 npm run report      # HTML report, including the "actual status" annotations
+```
+
+The `ui` project additionally needs the Vite dev server:
+
+```bash
+cd webapp && npm install && npm run dev
 ```
 
 Override the target with `API_BASE_URL` rather than editing `playwright.config.js`.
@@ -125,16 +135,67 @@ tests/e2e/
     └── authorization.spec.js
 ```
 
-## Next: the `ui` project
+## The `ui` project — three role journeys
 
-Three role journeys, one per actor — Product Owner submits → Analyst assesses and finalizes →
-Committee votes. That single golden path *is* the product demo and exercises the whole
-human-in-the-loop chain end to end.
+`ui/journeys.spec.js` runs the golden path as one continuous story, serial by design: a Product
+Owner raises a change → an FCRM Analyst assesses and finalizes it → the Risk Committee votes. One
+request moving through the workflow, not three unrelated fixtures.
 
-Keep it small on purpose. UI tests are the most expensive evidence per hour in this repo, they
-need the Vite dev server plus both .NET services, and a broad UI suite would mostly re-prove what
-the 62 unit tests already cover more cheaply. Three journeys, not thirty.
+Deliberately three, not thirty. UI tests are the most expensive evidence per hour in this repo —
+they need Vite plus both .NET services plus Postgres — and a broad UI suite would mostly re-prove
+what the 62 unit tests already cover far more cheaply.
 
-One thing genuinely in our favour: because `DevBypassAuthHandler` and `RequireAuth.jsx` both bypass
-Auth0 in local dev, there is **no login flow to automate** — usually the most painful part of E2E
-setup.
+Signing in needs no automation at all. While Auth0 is unconfigured, `DevUserContext.jsx` reads the
+acting user straight out of `localStorage.devUserId`, so seeding that key before first paint *is*
+the sign-in — the app's own mechanism, not a test-only backdoor.
+
+### Selector notes, learned the hard way
+
+| Thing | What works |
+|---|---|
+| Nav vs form buttons | `exact: true` is **mandatory** — the sidebar's "Submit Request" and the form's "Submit request" differ only by case, and Playwright's name matching is case-insensitive without it |
+| Change type | Not a `<select>` — a base-ui combobox. Scope to `page.locator('form').first()`, because the header carries a third combobox (the user switcher) |
+| Intake fields | Stable ids: `#title`, `#description`, `#details`, `#file`. Inputs have no `name` attributes |
+| Workspace stages | `role="tab"`, not buttons: Categories, Policy, Extraction, Narrative, Scoring, Finalize, Audit |
+
+## Two defects the UI suite proves
+
+### DEF-004 — an empty assessment reaches the committee
+
+The most serious finding in the product so far, and it was predicted by a unit test before being
+confirmed in the browser.
+
+`AssessmentService.CheckReadinessAsync` iterates over the *active mapped categories*. With none
+mapped, both readiness loops are no-ops and `IsReady` is vacuously true — so the Finalize tab
+reports **"Ready to finalize."**
+
+Verified end to end on 2026-09-12: a change request with **zero categories, zero policy reliance
+decisions, zero extracted fields, zero narrative and zero risk scores** was finalized, routed, and
+appeared in the committee queue with a live **"Submit vote"** button. The committee is being asked
+to take an accountable decision on a document containing nothing but a title.
+
+That is the exact inverse of CLAUDE.md's central rule: *"don't let an AI output reach the committee
+stage without a corresponding review gate in code."*
+
+### DEF-006 — opening a workspace fails the first time, every time
+
+`func_getOrCreateAssessment` does SELECT-then-INSERT with no `ON CONFLICT` and no lock:
+
+```sql
+SELECT id INTO v_id FROM assessment WHERE change_request_id = p_change_request_id;
+IF v_id IS NULL THEN INSERT INTO assessment ...
+```
+
+React 18 StrictMode double-invokes effects in dev, so two POSTs race. Both read `NULL`, both
+insert, and the loser violates `UNIQUE (change_request_id)` → Npgsql `23505` → **HTTP 500**. The
+row *is* created, so a second click works.
+
+**What is deliberately not tested:** a browser-level version — click Open, assert no 500 — was
+written first and removed. It only fails when the two requests genuinely overlap, and it passed on
+one full-suite run while failing in isolation. A `test.fail()` marker that oscillates is worse than
+no test, because it trains everyone to ignore the signal. The kept version drives the race directly
+with `Promise.all`, reproduces `23505` every time, and makes the stronger claim: this is a
+stored-function defect, not a React artefact. Two analysts opening the same request simultaneously
+would hit it in production, where StrictMode does not apply.
+
+Fix for both halves: `INSERT ... ON CONFLICT (change_request_id) DO NOTHING`, then re-select.

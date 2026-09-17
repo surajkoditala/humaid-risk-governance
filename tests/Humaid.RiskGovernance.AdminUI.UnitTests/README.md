@@ -1,5 +1,7 @@
 # Humaid.RiskGovernance.AdminUI.UnitTests
 
+**Owner:** Shanthi Subramanian (QA / Test Automation)
+
 xUnit + Moq. No real database, no real HTTP call, no `docker compose` needed to run this — every
 dependency is mocked via its own existing interface (`IChangeRequestRepo`, `IMockSystemsClient`,
 `IChatCompletionClient`, `IAuditService`, ...).

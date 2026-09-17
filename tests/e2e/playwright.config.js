@@ -4,6 +4,7 @@ import { defineConfig } from '@playwright/test';
 // ports ops/README.md and the root README document; override per environment rather than editing
 // this file.
 const API_BASE_URL = process.env.API_BASE_URL ?? 'http://localhost:5210';
+const WEBAPP_BASE_URL = process.env.WEBAPP_BASE_URL ?? 'http://localhost:3000';
 
 export default defineConfig({
   testDir: './',
@@ -31,9 +32,16 @@ export default defineConfig({
       },
     },
 
-    // A 'ui' project (three role journeys: Product Owner submits -> Analyst assesses and
-    // finalizes -> Committee votes) is the next step. Deliberately not scaffolded empty: it needs
-    // the Vite dev server and both .NET services running, which is a heavier orchestration story
-    // than the API project above. See README.md.
+    {
+      name: 'ui',
+      testDir: './ui',
+      use: {
+        baseURL: WEBAPP_BASE_URL,
+        // A trace on a failed journey is the difference between "step 6 failed" and seeing
+        // exactly what was on screen when it did.
+        trace: 'retain-on-failure',
+        screenshot: 'only-on-failure',
+      },
+    },
   ],
 });
