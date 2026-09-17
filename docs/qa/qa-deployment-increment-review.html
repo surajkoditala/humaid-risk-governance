@@ -1,0 +1,521 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root { color-scheme: light dark; }
+  body { margin: 0; }
+  img { max-width: 100%; }
+  [hidden] { display: none !important; }
+</style>
+<title>Deployment Increment Review</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@500;600;700&display=swap">
+<style>
+  :root {
+    --ground:#F6F7F9; --surface:#FFFFFF; --surface-2:#EFF2F5;
+    --ink:#131C26; --ink-2:#3B4956; --muted:#66757F;
+    --line:#DBE1E7; --line-2:#C7D0D8;
+    --accent:#0F4C5C; --accent-ink:#0F4C5C; --accent-soft:#E2EDF0;
+    --critical:#A02B21; --critical-soft:#F7E7E5;
+    --warn:#8A5A06; --warn-soft:#FBF0DC;
+    --pass:#1B6B4C; --pass-soft:#E2F0E9;
+    --neutral:#5D6B78; --neutral-soft:#E9EDF1;
+    --f-display:"IBM Plex Serif",Georgia,serif;
+    --f-body:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+    --measure:70ch; --radius:3px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:#0D141B; --surface:#131C25; --surface-2:#18232E;
+      --ink:#E5EBF1; --ink-2:#BDC9D4; --muted:#8B9BA8;
+      --line:#24313D; --line-2:#314250;
+      --accent:#5FB4C8; --accent-ink:#7CC5D6; --accent-soft:#10303A;
+      --critical:#E4837A; --critical-soft:#351917;
+      --warn:#D9A44E; --warn-soft:#33260F;
+      --pass:#6BC49C; --pass-soft:#122C22;
+      --neutral:#92A2AF; --neutral-soft:#1C2731;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:#0D141B; --surface:#131C25; --surface-2:#18232E;
+    --ink:#E5EBF1; --ink-2:#BDC9D4; --muted:#8B9BA8;
+    --line:#24313D; --line-2:#314250;
+    --accent:#5FB4C8; --accent-ink:#7CC5D6; --accent-soft:#10303A;
+    --critical:#E4837A; --critical-soft:#351917;
+    --warn:#D9A44E; --warn-soft:#33260F;
+    --pass:#6BC49C; --pass-soft:#122C22;
+    --neutral:#92A2AF; --neutral-soft:#1C2731;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--ground); color:var(--ink); font-family:var(--f-body); font-size:15px; line-height:1.6; -webkit-font-smoothing:antialiased; }
+  .shell { display:grid; grid-template-columns:226px minmax(0,1fr); gap:52px; max-width:1190px; margin:0 auto; padding:0 32px 90px; }
+
+  .rail { position:sticky; top:0; align-self:start; padding-top:46px; height:100vh; overflow-y:auto; }
+  .rail-mark { font-family:var(--f-mono); font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent-ink); margin-bottom:22px; }
+  .rail nav { display:flex; flex-direction:column; gap:1px; border-left:1px solid var(--line); }
+  .rail a { padding:6px 0 6px 14px; text-decoration:none; color:var(--muted); font-size:12.5px; line-height:1.35; border-left:2px solid transparent; margin-left:-1px; transition:color .12s,border-color .12s; }
+  .rail a:hover { color:var(--ink); border-left-color:var(--line-2); }
+  .rail a:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+
+  .masthead { padding:54px 0 0; }
+  .eyebrow { font-family:var(--f-mono); font-size:11px; letter-spacing:.15em; text-transform:uppercase; color:var(--muted); }
+  h1 { font-family:var(--f-display); font-weight:700; font-size:clamp(31px,4.5vw,45px); line-height:1.1; letter-spacing:-.015em; margin:14px 0 16px; text-wrap:balance; }
+  .standfirst { font-size:17px; line-height:1.6; color:var(--ink-2); max-width:var(--measure); margin:0 0 28px; }
+  .meta { display:grid; grid-template-columns:repeat(auto-fit,minmax(142px,1fr)); border-top:1px solid var(--line-2); border-bottom:1px solid var(--line-2); }
+  .meta div { padding:13px 16px 13px 0; border-right:1px solid var(--line); }
+  .meta div:last-child { border-right:0; }
+  .meta dt { font-family:var(--f-mono); font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); margin-bottom:5px; }
+  .meta dd { margin:0; font-size:13.5px; font-weight:500; }
+
+  section { padding-top:58px; scroll-margin-top:20px; }
+  .sec-head { border-top:2px solid var(--ink); padding-top:13px; margin-bottom:20px; }
+  h2 { font-family:var(--f-display); font-weight:600; font-size:clamp(21px,2.6vw,27px); line-height:1.22; margin:0; letter-spacing:-.01em; }
+  .sec-sub { color:var(--muted); font-size:14px; margin-top:6px; max-width:var(--measure); }
+  h3 { font-family:var(--f-display); font-weight:600; font-size:16.5px; margin:28px 0 9px; }
+  h4 { font-weight:600; font-size:13.5px; margin:18px 0 7px; }
+  p { max-width:var(--measure); margin:0 0 12px; }
+  ul,ol { max-width:var(--measure); padding-left:20px; margin:0 0 12px; }
+  li { margin-bottom:5px; }
+  code { font-family:var(--f-mono); font-size:.875em; background:var(--surface-2); padding:1px 5px; border-radius:var(--radius); border:1px solid var(--line); }
+  a { color:var(--accent-ink); }
+
+  .pill { display:inline-block; font-family:var(--f-mono); font-size:10px; font-weight:500; letter-spacing:.05em; text-transform:uppercase; padding:2px 7px; border-radius:2px; white-space:nowrap; }
+  .p-pass { background:var(--pass-soft); color:var(--pass); }
+  .p-crit { background:var(--critical-soft); color:var(--critical); }
+  .p-warn { background:var(--warn-soft); color:var(--warn); }
+  .p-neut { background:var(--neutral-soft); color:var(--neutral); }
+  .p-acc  { background:var(--accent-soft); color:var(--accent-ink); }
+
+  .tw { overflow-x:auto; margin:15px 0 20px; border:1px solid var(--line); border-radius:var(--radius); background:var(--surface); }
+  table { width:100%; border-collapse:collapse; font-size:12.9px; }
+  th,td { text-align:left; padding:8px 12px; border-bottom:1px solid var(--line); vertical-align:top; }
+  thead th { font-family:var(--f-mono); font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); font-weight:500; background:var(--surface-2); white-space:nowrap; }
+  tbody tr:last-child td { border-bottom:0; }
+  td.mono,th.mono { font-family:var(--f-mono); font-size:11px; }
+  td.num { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+
+  pre { font-family:var(--f-mono); font-size:11.6px; line-height:1.55; background:var(--surface-2); border:1px solid var(--line); border-radius:var(--radius); padding:11px 13px; overflow-x:auto; margin:10px 0; }
+  pre code { background:none; border:0; padding:0; font-size:inherit; }
+
+  .note { border-left:2px solid var(--accent); background:var(--accent-soft); padding:13px 17px; margin:17px 0; max-width:var(--measure); }
+  .note p:last-child { margin-bottom:0; }
+  .note .lbl { font-family:var(--f-mono); font-size:9.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--accent-ink); display:block; margin-bottom:5px; }
+  .note.warn { border-left-color:var(--warn); background:var(--warn-soft); }
+  .note.warn .lbl { color:var(--warn); }
+  .note.crit { border-left-color:var(--critical); background:var(--critical-soft); }
+  .note.crit .lbl { color:var(--critical); }
+  .note.pass { border-left-color:var(--pass); background:var(--pass-soft); }
+  .note.pass .lbl { color:var(--pass); }
+
+  .finding { background:var(--surface); border:1px solid var(--line); border-left-width:3px; border-radius:var(--radius); padding:18px 20px; margin:18px 0; }
+  .f-crit { border-left-color:var(--critical); }
+  .f-warn { border-left-color:var(--warn); }
+  .f-low  { border-left-color:var(--neutral); }
+  .f-head { display:flex; flex-wrap:wrap; gap:9px; align-items:baseline; margin-bottom:3px; }
+  .f-id { font-family:var(--f-mono); font-size:11.5px; font-weight:600; color:var(--muted); }
+  .f-title { font-family:var(--f-display); font-weight:600; font-size:16.5px; margin:0 0 9px; }
+  .finding dl { display:grid; grid-template-columns:96px 1fr; gap:4px 14px; margin:12px 0 0; font-size:13px; }
+  .finding dt { font-family:var(--f-mono); font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); padding-top:3px; }
+  .finding dd { margin:0; }
+
+  .lede-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(112px,1fr)); border:1px solid var(--line); border-radius:var(--radius); background:var(--surface); margin:20px 0 24px; }
+  .lede-stats div { padding:14px 17px; border-right:1px solid var(--line); }
+  .lede-stats div:last-child { border-right:0; }
+  .lede-stats .v { font-family:var(--f-display); font-size:26px; font-weight:700; line-height:1; font-variant-numeric:tabular-nums; }
+  .lede-stats .k { font-family:var(--f-mono); font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin-top:6px; }
+
+  .foot { margin-top:62px; padding-top:18px; border-top:1px solid var(--line-2); font-size:12.5px; color:var(--muted); max-width:var(--measure); }
+
+  @media (max-width:900px) {
+    .shell { grid-template-columns:1fr; gap:0; padding:0 18px 56px; }
+    .rail { position:static; height:auto; padding-top:24px; }
+    .rail nav { flex-direction:row; flex-wrap:wrap; gap:4px; border-left:0; }
+    .rail a { border:1px solid var(--line); border-radius:2px; padding:5px 9px; margin-left:0; }
+    .masthead { padding-top:28px; }
+    .finding dl { grid-template-columns:1fr; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition:none !important; } }
+
+  @page { size:A4; margin:16mm 15mm 18mm; }
+  @media print {
+    :root, :root[data-theme="dark"], :root:not([data-theme="light"]) {
+      --ground:#FFF; --surface:#FFF; --surface-2:#F2F5F7; --ink:#101820; --ink-2:#33414E;
+      --muted:#5A6874; --line:#D3DAE1; --line-2:#B8C2CC; --accent:#0F4C5C; --accent-ink:#0F4C5C;
+      --accent-soft:#E6EFF2; --critical:#8E2219; --critical-soft:#F8E9E7; --warn:#7A4F05;
+      --warn-soft:#FBF1DE; --pass:#17593F; --pass-soft:#E5F1EB; --neutral:#4F5D69; --neutral-soft:#EDF0F3;
+    }
+    * { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
+    body { font-size:9.8pt; line-height:1.46; background:#fff; }
+    .shell { display:block; max-width:none; padding:0; }
+    .rail { display:none; }
+    .masthead { padding-top:0; }
+    h1 { font-size:24pt; } h2 { font-size:15pt; } h3 { font-size:11pt; }
+    p,ul,ol,.standfirst,.sec-sub,.note { max-width:none; }
+    section { break-before:page; padding-top:0; }
+    #s1 { break-before:auto; }
+    .sec-head,h3,h4 { break-after:avoid; }
+    .finding,.tw,.note,pre,.lede-stats { break-inside:avoid; }
+    tr,li { break-inside:avoid; }
+    thead { display:table-header-group; }
+    a { color:var(--ink); text-decoration:none; }
+  }
+</style>
+
+<div class="shell">
+  <aside class="rail">
+    <div class="rail-mark">HumAId&nbsp;·&nbsp;QA&nbsp;&amp;&nbsp;BA</div>
+    <nav>
+      <a href="#s1">01 · What changed</a>
+      <a href="#s2">02 · Open defects: status</a>
+      <a href="#s3">03 · New findings</a>
+      <a href="#s4">04 · Testing strategy update</a>
+      <a href="#s5">05 · New test cases</a>
+      <a href="#s6">06 · BA impact</a>
+      <a href="#s7">07 · Recommendations</a>
+    </nav>
+  </aside>
+
+  <main>
+    <header class="masthead">
+      <div class="eyebrow">Genius Hacks Q3 2026 · Risk Assessment Workbench</div>
+      <h1>Deployment Increment Review</h1>
+      <p class="standfirst">QA and BA review of everything the team shipped between 12 and 17 September — two Dockerfiles and three new Terraform modules. What it means for testing, what it fixed, and the five new issues it surfaced.</p>
+      <dl class="meta">
+        <div><dt>Author</dt><dd>Shanthi Subramanian · BA&nbsp;/&nbsp;QA</dd></div>
+        <div><dt>Reviewed</dt><dd>17 September 2026</dd></div>
+        <div><dt>Range</dt><dd class="mono">f6daee2…a816378<br>693bd95…9106553</dd></div>
+        <div><dt>Days to submit</dt><dd>13</dd></div>
+      </dl>
+      <div class="lede-stats">
+        <div><div class="v">10</div><div class="k">Dev commits</div></div>
+        <div><div class="v">0</div><div class="k">of 6 defects fixed</div></div>
+        <div><div class="v">5</div><div class="k">New issues</div></div>
+        <div><div class="v">28</div><div class="k">New test cases</div></div>
+        <div><div class="v">0</div><div class="k">App CI pipelines</div></div>
+      </div>
+    </header>
+
+    <!-- ══ 01 ══ -->
+    <section id="s1">
+      <div class="sec-head">
+        <h2>What changed</h2>
+        <p class="sec-sub">Ten commits across two branches. Entirely deployment and infrastructure — no application logic was touched.</p>
+      </div>
+
+      <h3>Application branch — <code>release/1.00</code> (Suleman)</h3>
+      <div class="tw"><table>
+        <thead><tr><th>Change</th><th>What it is</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Two Dockerfiles</strong></td><td>Multi-stage builds for the Workbench (<code>1-API</code>) and Mock Systems (<code>6-MockExternalSystems</code>). SDK image publishes, <code>aspnet</code> runtime image runs, both listening on <code>:8080</code></td></tr>
+          <tr><td><code>.dockerignore</code></td><td>Excludes <code>**/bin/</code>, <code>**/obj/</code> at any depth, plus <code>appsettings.Development.json</code> and <code>webapp/.env.local</code> so no local secret can be baked into an image</td></tr>
+          <tr><td><code>ops/certs/</code></td><td>A gitignored drop-point for a corporate proxy root CA, with a well-written README, so <code>dotnet restore</code> works behind SSL inspection</td></tr>
+          <tr><td><code>ops/README.md</code></td><td>Build and local smoke-test commands, and a documented end-to-end verification dated 2026-09-15</td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="note pass">
+        <span class="lbl">Credit where it is due</span>
+        <p>Three things in this increment are genuinely good engineering. The <code>.dockerignore</code> excludes nested <code>obj/</code> at <em>every</em> depth with a written explanation of the Windows-host <code>project.assets.json</code> failure it prevents. The Workbench Dockerfile copies exactly the right project set — I verified every direct and transitive <code>ProjectReference</code> is present, and <code>webapp/</code> is excluded with a stated reason rather than by accident. And the developer recorded an actual end-to-end verification with a date, rather than asserting it works.</p>
+      </div>
+
+      <h3>Infrastructure branch — <code>main</code> (Suraj)</h3>
+      <div class="tw"><table>
+        <thead><tr><th>Module</th><th>Wired into dev?</th></tr></thead>
+        <tbody>
+          <tr><td><code>terraform-azure-virtualnetwork</code> — VNet, subnets, NSGs, route tables, peering</td><td><span class="pill p-warn">Provisioned, unused</span></td></tr>
+          <tr><td><code>terraform-azure-containerregistry</code> — ACR, Standard SKU, <code>admin_enabled = false</code></td><td><span class="pill p-pass">Yes</span></td></tr>
+          <tr><td><code>terraform-azure-containerappsenvironment</code> — CAE, system-assigned identity</td><td><span class="pill p-pass">Yes</span></td></tr>
+        </tbody>
+      </table></div>
+      <p>The dev environment now has <code>main.rg.tf</code>, <code>main.vnet.tf</code>, <code>main.acr.tf</code> and <code>main.cae.tf</code>. <code>.checkov.yml</code> gained six ACR-related suppressions, each with a written justification.</p>
+
+      <h3>What did <em>not</em> change</h3>
+      <ul>
+        <li><strong>No application code.</strong> Every <code>src/</code> file except the two new Dockerfiles is byte-for-byte identical.</li>
+        <li><strong><code>main</code> still has no application.</strong> The branch a judge lands on remains IaC-only; <code>release/1.00</code> has still never been merged.</li>
+        <li><strong>Still no application CI.</strong> Both pipelines remain path-filtered to <code>iac/environments/dev/*</code>. Nothing runs <code>dotnet test</code>, Playwright, or <code>docker build</code>.</li>
+        <li><strong>IaC scans remain soft-fail.</strong> Trivy and Checkov still warn rather than gate.</li>
+      </ul>
+    </section>
+
+    <!-- ══ 02 ══ -->
+    <section id="s2">
+      <div class="sec-head">
+        <h2>Open defects — status</h2>
+        <p class="sec-sub">Verified by diffing the defective code across the increment, not by re-running tests.</p>
+      </div>
+
+      <div class="note crit">
+        <span class="lbl">Headline</span>
+        <p><strong>None of the six open defects has been fixed.</strong> Each one's implementing code is unchanged across <code>f6daee2…a816378</code>. This is a factual statement about the diff, not an inference from test results.</p>
+      </div>
+
+      <div class="tw"><table>
+        <thead><tr><th>ID</th><th>Defect</th><th>Implementing file</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">DEF-001</td><td>User directory readable with no credential</td><td class="mono">DevBypassAuthHandler.cs</td><td><span class="pill p-crit">Unchanged</span></td></tr>
+          <tr><td class="mono">DEF-002</td><td>No role enforcement; actor self-declared in body</td><td class="mono">Controllers/*</td><td><span class="pill p-crit">Unchanged</span></td></tr>
+          <tr><td class="mono">DEF-003</td><td>Unknown ids surface as HTTP 500</td><td class="mono">BaseApiController.cs</td><td><span class="pill p-crit">Unchanged</span></td></tr>
+          <tr><td class="mono">DEF-004</td><td>Empty assessment finalizes and reaches committee</td><td class="mono">AssessmentService.cs</td><td><span class="pill p-crit">Unchanged</span></td></tr>
+          <tr><td class="mono">DEF-005</td><td><code>control</code> table never seeded</td><td class="mono">seed/</td><td><span class="pill p-crit">Unchanged</span></td></tr>
+          <tr><td class="mono">DEF-006</td><td><code>func_getOrCreateAssessment</code> race</td><td class="mono">func_getOrCreateAssessment.sql</td><td><span class="pill p-crit">Unchanged</span></td></tr>
+        </tbody>
+      </table></div>
+
+      <p>This is not a criticism of the increment — the work done was deployment work, and deployment is one of the six graded SDLC stages. But with <strong>13 days to submission</strong>, the two High-severity governance defects (DEF-002 and DEF-004) are the ones that contradict the product's own central claim, and they remain open.</p>
+
+      <h3>Regression check</h3>
+      <p>Because no application code changed, the existing 80-test suite remains valid without modification. No test needed updating for this increment, and no regression is possible from it. The suite was not re-run against <code>a816378</code> — with an empty <code>src/</code> diff there is nothing for it to detect, and claiming a fresh run would overstate the evidence.</p>
+    </section>
+
+    <!-- ══ 03 ══ -->
+    <section id="s3">
+      <div class="sec-head">
+        <h2>New findings</h2>
+        <p class="sec-sub">Five issues raised by reviewing this increment. One is a deployment blocker.</p>
+      </div>
+
+      <div class="finding f-crit">
+        <div class="f-head"><span class="f-id">DEF-007</span><span class="pill p-crit">High</span><span class="pill p-neut">Deployment</span></div>
+        <h3 class="f-title" style="margin-top:0">There is no path to apply the database schema in Azure</h3>
+        <p>The application is entirely stored-procedure driven — every repository method calls a named <code>func_*</code> routine. Those routines live in <code>src/4-Persistence/…AdminUI.DB/</code>, which is <strong>a plain SQL folder, not a compiled project</strong>. Three facts together make this a blocker:</p>
+        <ul>
+          <li>The Dockerfile never copies <code>…AdminUI.DB/</code> into the image — verified, zero references.</li>
+          <li><code>Program.cs</code> has no migration, bootstrap or <code>deploy_all.sql</code> execution on startup.</li>
+          <li>No pipeline applies it — there is no application pipeline at all.</li>
+        </ul>
+        <p><code>ops/README.md</code> says the Flexible Server uses the "same schema <code>deploy_all.sql</code> already applies locally", but names no mechanism for applying it to Azure. On first deploy the containers will start cleanly and then fail on every request, because not one function exists.</p>
+        <dl>
+          <dt>Impact</dt><dd>First deployment to Azure cannot work. Discovered on deploy day, this costs hours the team does not have</dd>
+          <dt>Fix options</dt><dd>A schema-deploy step in the release pipeline (psql against the Flexible Server), an init container, or a startup bootstrap guarded to run once</dd>
+          <dt>Owner</dt><dd>Suraj (pipeline) with Suleman (schema)</dd>
+        </dl>
+      </div>
+
+      <div class="finding f-warn">
+        <div class="f-head"><span class="f-id">DEF-008</span><span class="pill p-warn">Medium</span><span class="pill p-neut">Architecture</span></div>
+        <h3 class="f-title" style="margin-top:0">The VNet is provisioned but connected to nothing</h3>
+        <p><code>main.vnet.tf</code> creates a VNet with two purpose-built subnets:</p>
+        <ul>
+          <li><code>snet-cae-dev-01</code> — a <code>/20</code> carrying a <code>Microsoft.App/environments</code> delegation, which is exactly and only what a Container Apps Environment needs</li>
+          <li><code>snet-pep-dev-01</code> — a <code>/24</code> with service endpoints for Key Vault, Storage, SQL and Web, i.e. sized for private endpoints</li>
+        </ul>
+        <p>The Container Apps Environment module <em>accepts</em> <code>infrastructure_subnet_id</code>, <code>internal_load_balancer_enabled</code> and <code>vnets_to_link</code>. <code>main.cae.tf</code> passes <strong>none of them</strong>, and <code>module.vnet</code> is referenced by no other file and no output.</p>
+        <p>So the network designed for isolation is paid for and unused; the Container Apps Environment remains publicly reachable. There is a second-order effect worth noting: the <code>.checkov.yml</code> suppression of <code>CKV_AZURE_139</code> (ACR public network access) is justified on the grounds that "agents have no private network path to the registry" — but a private-endpoint subnet now exists, unused, which weakens that justification.</p>
+        <dl>
+          <dt>Impact</dt><dd>Cost without benefit; the network-isolation story cannot be demonstrated</dd>
+          <dt>Fix</dt><dd>Pass the delegated subnet id into the CAE module, or state explicitly that VNet integration is out of scope and defer the VNet</dd>
+          <dt>Owner</dt><dd>Suraj</dd>
+        </dl>
+      </div>
+
+      <div class="finding f-warn">
+        <div class="f-head"><span class="f-id">DEF-009</span><span class="pill p-warn">Medium</span><span class="pill p-neut">Container security</span></div>
+        <h3 class="f-title" style="margin-top:0">Both containers run as root</h3>
+        <p>Neither Dockerfile contains a <code>USER</code> directive, and <code>mcr.microsoft.com/dotnet/aspnet:10.0</code> defaults to root. Every process in both images therefore runs privileged.</p>
+        <p>This is the single most commonly flagged container finding, and both Trivy and Checkov detect it (<code>DS002</code> / <code>CKV_DOCKER_3</code>). Since the team already runs both scanners against Terraform, extending them to images would catch this automatically.</p>
+        <dl>
+          <dt>Fix</dt><dd>One line per Dockerfile — <code>USER $APP_UID</code>, which the .NET 10 base images define for exactly this purpose</dd>
+          <dt>Owner</dt><dd>Suleman</dd>
+        </dl>
+      </div>
+
+      <div class="finding f-warn">
+        <div class="f-head"><span class="f-id">DEF-010</span><span class="pill p-warn">Medium</span><span class="pill p-neut">Operations</span></div>
+        <h3 class="f-title" style="margin-top:0">Observability is wired in code but disabled in infrastructure</h3>
+        <p><code>main.cae.tf</code> carries this line:</p>
+        <pre><code># log_analytics_workspace_id = module.log_analytics_workspace... #disabled for now to avoid costs</code></pre>
+        <p>Both services already register <code>Azure.Monitor.OpenTelemetry.AspNetCore</code> and activate it whenever <code>APPLICATIONINSIGHTS_CONNECTION_STRING</code> is set. So the application side is ready and the infrastructure side is commented out — meaning a deployed environment would emit no logs, traces or metrics at all.</p>
+        <p>The cost concern is legitimate and was raised on the team's own architecture call. But <strong>Operations is one of the six graded SDLC stages</strong>, and "we wired the code and disabled the resource" is a weaker story than a free-tier workspace with sampling. Worth a deliberate decision rather than a commented line.</p>
+        <dl>
+          <dt>Owner</dt><dd>Suraj, with a team decision on cost</dd>
+        </dl>
+      </div>
+
+      <div class="finding f-low">
+        <div class="f-head"><span class="f-id">DEF-011</span><span class="pill p-neut">Low</span><span class="pill p-neut">Container hygiene</span></div>
+        <h3 class="f-title" style="margin-top:0">No HEALTHCHECK, and base images are not digest-pinned</h3>
+        <p>Neither image declares a <code>HEALTHCHECK</code>, and both reference floating tags (<code>sdk:10.0</code>, <code>aspnet:10.0</code>) rather than digests. Container Apps supplies its own probes, so the health check matters less in the target environment than it does for local smoke testing; the floating tag means two builds a week apart can differ silently.</p>
+        <dl>
+          <dt>Fix</dt><dd>Add <code>HEALTHCHECK</code> hitting <code>/api/Ping</code>; pin base images by digest once the build is stable</dd>
+          <dt>Owner</dt><dd>Suleman</dd>
+        </dl>
+      </div>
+    </section>
+
+    <!-- ══ 04 ══ -->
+    <section id="s4">
+      <div class="sec-head">
+        <h2>Testing strategy update</h2>
+        <p class="sec-sub">The increment adds two layers the existing strategy did not cover.</p>
+      </div>
+
+      <p>The strategy so far had four layers — unit, API/authorization, UI journey, AI evaluation — plus one acknowledged gap (database invariants). This increment introduces <strong>container</strong> and <strong>infrastructure</strong> as testable surfaces, and makes <strong>deployment</strong> a thing that can be verified rather than only described.</p>
+
+      <div class="tw"><table>
+        <thead><tr><th>Layer</th><th>Status before</th><th>Now</th><th>Tooling</th></tr></thead>
+        <tbody>
+          <tr><td>Unit — service invariants</td><td><span class="pill p-pass">62 tests</span></td><td>Unchanged</td><td>xUnit + Moq</td></tr>
+          <tr><td>API + authorization</td><td><span class="pill p-pass">12 tests</span></td><td>Unchanged</td><td>Playwright</td></tr>
+          <tr><td>UI journeys</td><td><span class="pill p-pass">6 tests</span></td><td>Unchanged</td><td>Playwright</td></tr>
+          <tr><td>AI evaluation</td><td><span class="pill p-warn">2 of 12</span></td><td>Still blocked on a model</td><td>Custom C# harness</td></tr>
+          <tr><td>Database invariants</td><td><span class="pill p-crit">Gap</span></td><td>Still the top gap</td><td>Testcontainers <em>(not started)</em></td></tr>
+          <tr><td><strong>Container image</strong></td><td>—</td><td><span class="pill p-acc">New — 12 cases</span></td><td>docker build/run, Trivy image scan</td></tr>
+          <tr><td><strong>Infrastructure as code</strong></td><td>partly, in the IaC pipeline</td><td><span class="pill p-acc">New — 11 cases</span></td><td>terraform validate, tflint, Checkov, Trivy</td></tr>
+          <tr><td><strong>Deployment verification</strong></td><td>—</td><td><span class="pill p-acc">New — 5 cases</span></td><td>Smoke tests against a deployed environment</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Principles carried forward</h3>
+      <p>The new layers inherit the same rules that govern the existing suites, because they solve the same failure modes:</p>
+      <ul>
+        <li><strong>Assert the correct behaviour, mark known gaps</strong> — CT-07 (non-root) and IAC-08 (VNet integration) assert the secure state and are expected to fail until DEF-008/009 are fixed, so the fix announces itself.</li>
+        <li><strong>Never let a dead environment look like a pass</strong> — every container and deployment case must first confirm the thing under test is actually reachable, exactly as <code>global-setup.js</code> does for the API suite.</li>
+        <li><strong>Keep counter-evidence</strong> — CT-06 (no secret in the image) passing is what makes the DEF-009 finding precise rather than "the containers are insecure".</li>
+      </ul>
+
+      <div class="note warn">
+        <span class="lbl">Priority has not changed</span>
+        <p>These new layers are valuable, but they do <em>not</em> displace the top recommendation. The <code>audit_event</code> append-only trigger and the <code>CHECK</code> constraints remain unreachable by all 80 existing tests and all 28 new ones — container and IaC tests do not touch application data. Testcontainers is still the single highest-value thing left to build.</p>
+      </div>
+    </section>
+
+    <!-- ══ 05 ══ -->
+    <section id="s5">
+      <div class="sec-head">
+        <h2>New test cases</h2>
+        <p class="sec-sub">28 cases covering the new surface. None executed yet — Docker Desktop was not running at review time, so these are specified and ready, not run.</p>
+      </div>
+
+      <div class="note">
+        <span class="lbl">Execution status, stated plainly</span>
+        <p>Every case below is <strong>Not run</strong>. I could not build either image because the Docker daemon was unavailable during this review. The expected results are derived from reading the Dockerfiles and Terraform, which is enough to specify a test but <em>not</em> enough to claim a result. Where I predict a failure (CT-07, CT-08, IAC-08, IAC-11) that is a prediction from static analysis, and is labelled as such.</p>
+      </div>
+
+      <h3>Container image — 12 cases</h3>
+      <div class="tw"><table>
+        <thead><tr><th class="mono">ID</th><th>Case</th><th>Steps / expected</th><th>Predicted</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">CT-01</td><td>Workbench image builds from repo root</td><td><code>docker build -f src/1-API/…/Dockerfile -t humaid-workbench .</code> → exit 0</td><td><span class="pill p-pass">Pass</span></td></tr>
+          <tr><td class="mono">CT-02</td><td>Mock Systems image builds</td><td>Same pattern → exit 0</td><td><span class="pill p-pass">Pass</span></td></tr>
+          <tr><td class="mono">CT-03</td><td>Build fails clearly from the wrong context</td><td>Build from the project folder → fails with a comprehensible error, not a silent partial image</td><td><span class="pill p-neut">Unknown</span></td></tr>
+          <tr><td class="mono">CT-04</td><td>Workbench container answers on :8080</td><td><code>docker run -p 5211:8080</code> → <code>GET /api/Ping</code> returns <code>"pong"</code></td><td><span class="pill p-pass">Pass</span></td></tr>
+          <tr><td class="mono">CT-05</td><td>Mock Systems container answers</td><td><code>GET /api/ping</code> → 200</td><td><span class="pill p-pass">Pass</span></td></tr>
+          <tr><td class="mono">CT-06</td><td>No secret is baked into the image</td><td>Inspect all layers for <code>appsettings.Development.json</code> and <code>.env.local</code> → absent</td><td><span class="pill p-pass">Pass</span></td></tr>
+          <tr><td class="mono">CT-07</td><td><strong>Container does not run as root</strong></td><td><code>docker run --rm humaid-workbench id -u</code> → not <code>0</code></td><td><span class="pill p-crit">Fail — DEF-009</span></td></tr>
+          <tr><td class="mono">CT-08</td><td><strong>Image declares a HEALTHCHECK</strong></td><td><code>docker inspect</code> → <code>Healthcheck</code> is non-null</td><td><span class="pill p-crit">Fail — DEF-011</span></td></tr>
+          <tr><td class="mono">CT-09</td><td>No HIGH/CRITICAL OS vulnerabilities</td><td><code>trivy image --severity HIGH,CRITICAL</code> → none</td><td><span class="pill p-neut">Unknown</span></td></tr>
+          <tr><td class="mono">CT-10</td><td>Workbench reaches Mock Systems over the container network</td><td>Both on <code>ops_default</code>; <code>GET /api/DataIngestion/MockCustomers</code> → 6 records</td><td><span class="pill p-pass">Pass</span></td></tr>
+          <tr><td class="mono">CT-11</td><td>Config comes only from env vars</td><td>Run with no env → fails loudly with a clear message, never silently defaults to a wrong DB</td><td><span class="pill p-neut">Unknown</span></td></tr>
+          <tr><td class="mono">CT-12</td><td>Image size is reasonable</td><td>Runtime image, not SDK → under ~350 MB</td><td><span class="pill p-pass">Pass</span></td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Infrastructure as code — 11 cases</h3>
+      <div class="tw"><table>
+        <thead><tr><th class="mono">ID</th><th>Case</th><th>Steps / expected</th><th>Predicted</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">IAC-01</td><td>Formatting is clean</td><td><code>terraform fmt -check -recursive</code> → exit 0</td><td><span class="pill p-pass">Pass</span></td></tr>
+          <tr><td class="mono">IAC-02</td><td>Dev environment validates</td><td><code>terraform init -backend=false &amp;&amp; validate</code> → success</td><td><span class="pill p-pass">Pass</span></td></tr>
+          <tr><td class="mono">IAC-03</td><td>TFLint reports no errors</td><td><code>tflint --recursive</code> → exit 0</td><td><span class="pill p-neut">Unknown</span></td></tr>
+          <tr><td class="mono">IAC-04</td><td>Every Checkov suppression carries a justification</td><td>Each <code>skip-check</code> entry has an adjacent comment → currently true for all 7</td><td><span class="pill p-pass">Pass</span></td></tr>
+          <tr><td class="mono">IAC-05</td><td>ACR admin account is disabled</td><td><code>admin_enabled = false</code> → identity-based auth only</td><td><span class="pill p-pass">Pass</span></td></tr>
+          <tr><td class="mono">IAC-06</td><td>CAE uses a managed identity, not a stored credential</td><td><code>system_assigned = true</code>; no client secret anywhere</td><td><span class="pill p-pass">Pass</span></td></tr>
+          <tr><td class="mono">IAC-07</td><td>Every resource carries the six mandatory tags</td><td>business_unit, customer, environment, product, owner, region present on all</td><td><span class="pill p-pass">Pass</span></td></tr>
+          <tr><td class="mono">IAC-08</td><td><strong>CAE is VNet-integrated</strong></td><td><code>infrastructure_subnet_id</code> resolves to the delegated <code>snet-cae-dev-01</code></td><td><span class="pill p-crit">Fail — DEF-008</span></td></tr>
+          <tr><td class="mono">IAC-09</td><td>The CAE subnet is correctly delegated and sized</td><td><code>Microsoft.App/environments</code> delegation, <code>/20</code> ≥ the required <code>/23</code></td><td><span class="pill p-pass">Pass</span></td></tr>
+          <tr><td class="mono">IAC-10</td><td>Plan contains no unexpected destroy or replace</td><td><code>terraform plan</code> → review the destroy count on every PR</td><td><span class="pill p-neut">Unknown</span></td></tr>
+          <tr><td class="mono">IAC-11</td><td><strong>Log Analytics is wired to the CAE</strong></td><td><code>log_analytics_workspace_id</code> is set</td><td><span class="pill p-crit">Fail — DEF-010</span></td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Deployment verification — 5 cases</h3>
+      <div class="tw"><table>
+        <thead><tr><th class="mono">ID</th><th>Case</th><th>Steps / expected</th><th>Predicted</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">DEP-01</td><td><strong>Schema and functions exist in the target database</strong></td><td>After deploy, <code>SELECT count(*) FROM pg_proc WHERE proname LIKE 'func_%'</code> → 40+</td><td><span class="pill p-crit">Fail — DEF-007</span></td></tr>
+          <tr><td class="mono">DEP-02</td><td>Seed data is present</td><td>6 users, 4 FFIEC categories, 1 workflow rule</td><td><span class="pill p-crit">Fail — DEF-007</span></td></tr>
+          <tr><td class="mono">DEP-03</td><td>The deployed Workbench answers</td><td><code>GET https://&lt;fqdn&gt;/api/Ping</code> → 200</td><td><span class="pill p-neut">Unknown</span></td></tr>
+          <tr><td class="mono">DEP-04</td><td>Mock Systems is not publicly reachable</td><td>It is an internal dependency; the public internet must not reach it directly</td><td><span class="pill p-neut">Unknown</span></td></tr>
+          <tr><td class="mono">DEP-05</td><td>A rollback path exists and is documented</td><td>Previous image tag redeployable without data loss</td><td><span class="pill p-crit">Not defined</span></td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- ══ 06 ══ -->
+    <section id="s6">
+      <div class="sec-head">
+        <h2>BA impact</h2>
+        <p class="sec-sub">What this increment changes for requirements, and what it now lets us pin down.</p>
+      </div>
+
+      <h3>Non-functional requirements just became concrete</h3>
+      <p>The NFR gap analysis previously had to be written in the abstract. With real infrastructure defined, four of those NFRs now have a specific, decidable answer — which is exactly the kind of requirement expansion the brief grades.</p>
+      <div class="tw"><table>
+        <thead><tr><th>NFR</th><th>Now decidable as</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Data residency</strong></td><td>All resources in <code>eastus2</code>; the AI provider is Azure AI Foundry in-tenant rather than a third-party API</td><td><span class="pill p-pass">Answered</span></td></tr>
+          <tr><td><strong>Network isolation</strong></td><td>VNet with delegated subnets exists — but nothing uses it (DEF-008)</td><td><span class="pill p-warn">Designed, not enforced</span></td></tr>
+          <tr><td><strong>Secret management</strong></td><td>No secret in any image; ACR admin disabled; system-assigned managed identity. Key Vault still referenced only in docs</td><td><span class="pill p-warn">Partly answered</span></td></tr>
+          <tr><td><strong>Observability</strong></td><td>Code instrumented; Log Analytics commented out (DEF-010)</td><td><span class="pill p-warn">Deferred on cost</span></td></tr>
+          <tr><td><strong>Availability / DR</strong></td><td>Single region, zone redundancy off, no geo-replication — all deliberate and documented in the Checkov justifications</td><td><span class="pill p-pass">Stated decision</span></td></tr>
+          <tr><td><strong>Data retention</strong></td><td>Still undefined — no backup or retention policy on the Flexible Server</td><td><span class="pill p-crit">Open</span></td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>A new open question for the team</h3>
+      <div class="note warn">
+        <span class="lbl">Q6 — who owns database schema deployment?</span>
+        <p>DEF-007 is not purely technical; it is an unassigned responsibility. The schema is a first-class deliverable of the application (every repo method depends on a named function), but applying it to a deployed environment is a pipeline concern. Neither owner has claimed it, which is precisely why it fell through. This needs a named owner before the first Azure deploy, not during it.</p>
+      </div>
+
+      <h3>Existing open questions — unchanged</h3>
+      <p>Q3 (does a scoring override need secondary sign-off?) and Q5 (who approves configuration changes?) remain genuinely open and unanswered in code. Q1, Q2 and Q4 remain resolved. Nothing in this increment touched them.</p>
+
+      <h3>Traceability</h3>
+      <p>No user story's coverage changed, because no application behaviour changed. The register still stands at <strong>12 of 22 covered, 6 partial, 4 with no coverage</strong>. Deployment work does not move those numbers — a point worth making explicitly, because shipping Dockerfiles can feel like progress against the product requirements when it is progress against a different stage entirely.</p>
+    </section>
+
+    <!-- ══ 07 ══ -->
+    <section id="s7">
+      <div class="sec-head">
+        <h2>Recommendations</h2>
+        <p class="sec-sub">Thirteen days to submission. Ordered by what protects the most score.</p>
+      </div>
+
+      <div class="tw"><table>
+        <thead><tr><th class="num">#</th><th>Action</th><th>Why now</th><th>Owner</th></tr></thead>
+        <tbody>
+          <tr><td class="num">1</td><td><strong>Fix DEF-007 — schema deployment</strong></td><td>Without it the first Azure deploy cannot work, and deploy day is the worst time to find out</td><td>Suraj + Suleman</td></tr>
+          <tr><td class="num">2</td><td><strong>Merge <code>release/1.00</code> into <code>main</code></strong></td><td>Raised on 12 Sep, still not done. Judges land on <code>main</code> and find no product. Also blocks every CI recommendation below</td><td>Suraj</td></tr>
+          <tr><td class="num">3</td><td><strong>Fix DEF-002 and DEF-004</strong></td><td>The two High governance defects. 15% of the score is human-in-the-loop, and DEF-004 lets an empty assessment reach a committee vote</td><td>Suleman</td></tr>
+          <tr><td class="num">4</td><td><strong>Application CI pipeline</strong></td><td>Testing is 1 of 6 graded SDLC stages and currently nothing runs automatically. Now also needs <code>docker build</code></td><td>Suraj</td></tr>
+          <tr><td class="num">5</td><td><strong>Testcontainers for DB invariants</strong></td><td>US-9.2 — the immutable audit trail — is the flagship claim and is proven nowhere</td><td>QA</td></tr>
+          <tr><td class="num">6</td><td>Configure the AI provider and run the evals</td><td>10% of the score rests on 2 of 12 cases actually executing</td><td>Suleman + QA</td></tr>
+          <tr><td class="num">7</td><td>DEF-008/009/010 — VNet, non-root, observability</td><td>Cheap fixes; DEF-009 is one line per Dockerfile</td><td>Suraj + Suleman</td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="note">
+        <span class="lbl">The honest read on this increment</span>
+        <p>The deployment work is good and it advances a graded stage that had nothing in it. But across five days the defect count moved from six to eleven, and none of the original six closed. Two of the top three recommendations from 12 September — merge to <code>main</code>, application CI — are untouched, and both are blocking other work rather than merely pending.</p>
+      </div>
+
+      <h3>What QA will do next, unless redirected</h3>
+      <ol>
+        <li>Build both images and execute CT-01 to CT-12 as soon as Docker is available — the container layer is specified and ready.</li>
+        <li>Start the Testcontainers suite for the audit trigger and <code>CHECK</code> constraints.</li>
+        <li>Fold these 28 cases into the main test case register once executed, so there is one register rather than two.</li>
+      </ol>
+    </section>
+
+    <p class="foot">Reviewed against <code>origin/release/1.00</code> at <code>a816378</code> and <code>origin/main</code> at <code>9106553</code>, fetched 17 September 2026. Defect status was established by diffing each implementing file across the increment. The 28 new test cases are specified but not executed — Docker was unavailable during this review, and that is stated rather than worked around. Companion documents: <em>QA &amp; BA Strategy</em>, <em>QA Codebase Walkthrough</em>, <em>QA Test Case Register</em>.</p>
+  </main>
+</div>
+
+</body>
+</html>

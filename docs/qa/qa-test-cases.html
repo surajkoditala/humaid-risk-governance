@@ -1,0 +1,886 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root { color-scheme: light dark; }
+  body { margin: 0; }
+  img { max-width: 100%; }
+  [hidden] { display: none !important; }
+</style>
+<title>QA Test Case Register</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@500;600;700&display=swap">
+<style>
+  :root {
+    --ground:#F6F7F9; --surface:#FFFFFF; --surface-2:#EFF2F5;
+    --ink:#131C26; --ink-2:#3B4956; --muted:#66757F;
+    --line:#DBE1E7; --line-2:#C7D0D8;
+    --accent:#0F4C5C; --accent-ink:#0F4C5C; --accent-soft:#E2EDF0;
+    --critical:#A02B21; --critical-soft:#F7E7E5;
+    --warn:#8A5A06; --warn-soft:#FBF0DC;
+    --pass:#1B6B4C; --pass-soft:#E2F0E9;
+    --neutral:#5D6B78; --neutral-soft:#E9EDF1;
+    --f-display:"IBM Plex Serif",Georgia,serif;
+    --f-body:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+    --measure:70ch; --radius:3px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:#0D141B; --surface:#131C25; --surface-2:#18232E;
+      --ink:#E5EBF1; --ink-2:#BDC9D4; --muted:#8B9BA8;
+      --line:#24313D; --line-2:#314250;
+      --accent:#5FB4C8; --accent-ink:#7CC5D6; --accent-soft:#10303A;
+      --critical:#E4837A; --critical-soft:#351917;
+      --warn:#D9A44E; --warn-soft:#33260F;
+      --pass:#6BC49C; --pass-soft:#122C22;
+      --neutral:#92A2AF; --neutral-soft:#1C2731;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:#0D141B; --surface:#131C25; --surface-2:#18232E;
+    --ink:#E5EBF1; --ink-2:#BDC9D4; --muted:#8B9BA8;
+    --line:#24313D; --line-2:#314250;
+    --accent:#5FB4C8; --accent-ink:#7CC5D6; --accent-soft:#10303A;
+    --critical:#E4837A; --critical-soft:#351917;
+    --warn:#D9A44E; --warn-soft:#33260F;
+    --pass:#6BC49C; --pass-soft:#122C22;
+    --neutral:#92A2AF; --neutral-soft:#1C2731;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--ground); color:var(--ink); font-family:var(--f-body); font-size:15px; line-height:1.6; -webkit-font-smoothing:antialiased; }
+  .shell { display:grid; grid-template-columns:222px minmax(0,1fr); gap:52px; max-width:1200px; margin:0 auto; padding:0 32px 90px; }
+
+  .rail { position:sticky; top:0; align-self:start; padding-top:46px; height:100vh; overflow-y:auto; }
+  .rail-mark { font-family:var(--f-mono); font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent-ink); margin-bottom:22px; }
+  .rail nav { display:flex; flex-direction:column; gap:1px; border-left:1px solid var(--line); }
+  .rail a { padding:6px 0 6px 14px; text-decoration:none; color:var(--muted); font-size:12.5px; line-height:1.35; border-left:2px solid transparent; margin-left:-1px; transition:color .12s,border-color .12s; }
+  .rail a:hover { color:var(--ink); border-left-color:var(--line-2); }
+  .rail a:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  .rail .grp { font-family:var(--f-mono); font-size:9.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-2); padding:13px 0 4px 14px; }
+
+  .masthead { padding:54px 0 0; }
+  .eyebrow { font-family:var(--f-mono); font-size:11px; letter-spacing:.15em; text-transform:uppercase; color:var(--muted); }
+  h1 { font-family:var(--f-display); font-weight:700; font-size:clamp(31px,4.5vw,45px); line-height:1.1; letter-spacing:-.015em; margin:14px 0 16px; text-wrap:balance; }
+  .standfirst { font-size:17px; line-height:1.6; color:var(--ink-2); max-width:var(--measure); margin:0 0 28px; }
+  .meta { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); border-top:1px solid var(--line-2); border-bottom:1px solid var(--line-2); }
+  .meta div { padding:13px 16px 13px 0; border-right:1px solid var(--line); }
+  .meta div:last-child { border-right:0; }
+  .meta dt { font-family:var(--f-mono); font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); margin-bottom:5px; }
+  .meta dd { margin:0; font-size:13.5px; font-weight:500; }
+
+  section { padding-top:58px; scroll-margin-top:20px; }
+  .sec-head { border-top:2px solid var(--ink); padding-top:13px; margin-bottom:20px; }
+  h2 { font-family:var(--f-display); font-weight:600; font-size:clamp(21px,2.6vw,27px); line-height:1.22; margin:0; letter-spacing:-.01em; }
+  .sec-sub { color:var(--muted); font-size:14px; margin-top:6px; max-width:var(--measure); }
+  h3 { font-family:var(--f-display); font-weight:600; font-size:16.5px; margin:28px 0 9px; }
+  p { max-width:var(--measure); margin:0 0 12px; }
+  ul,ol { max-width:var(--measure); padding-left:20px; margin:0 0 12px; }
+  li { margin-bottom:4px; }
+  code { font-family:var(--f-mono); font-size:.875em; background:var(--surface-2); padding:1px 5px; border-radius:var(--radius); border:1px solid var(--line); }
+  a { color:var(--accent-ink); }
+
+  /* test case card */
+  .tc { background:var(--surface); border:1px solid var(--line); border-left-width:3px; border-left-color:var(--pass); border-radius:var(--radius); margin:14px 0; }
+  .tc.fail { border-left-color:var(--critical); }
+  .tc.known { border-left-color:var(--warn); }
+  .tc-head { display:flex; flex-wrap:wrap; gap:10px; align-items:baseline; padding:11px 16px; border-bottom:1px solid var(--line); background:var(--surface-2); }
+  .tc-id { font-family:var(--f-mono); font-size:11.5px; font-weight:600; color:var(--accent-ink); }
+  .tc-title { font-weight:600; font-size:14px; flex:1 1 320px; }
+  .tc-body { display:grid; grid-template-columns:92px 1fr; gap:5px 14px; margin:0; padding:13px 16px; font-size:13.2px; }
+  .tc-body dt { font-family:var(--f-mono); font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); padding-top:3px; }
+  .tc-body dd { margin:0; }
+  .tc-body ol, .tc-body ul { margin:0; padding-left:17px; max-width:none; }
+  .tc-body ol li { margin-bottom:2px; }
+  .tc-body code { font-size:11.5px; }
+
+  .pill { display:inline-block; font-family:var(--f-mono); font-size:10px; font-weight:500; letter-spacing:.05em; text-transform:uppercase; padding:2px 7px; border-radius:2px; white-space:nowrap; }
+  .p-pass { background:var(--pass-soft); color:var(--pass); }
+  .p-crit { background:var(--critical-soft); color:var(--critical); }
+  .p-warn { background:var(--warn-soft); color:var(--warn); }
+  .p-neut { background:var(--neutral-soft); color:var(--neutral); }
+  .p-acc  { background:var(--accent-soft); color:var(--accent-ink); }
+
+  .tw { overflow-x:auto; margin:15px 0 20px; border:1px solid var(--line); border-radius:var(--radius); background:var(--surface); }
+  table { width:100%; border-collapse:collapse; font-size:12.8px; }
+  th,td { text-align:left; padding:7px 12px; border-bottom:1px solid var(--line); vertical-align:top; }
+  thead th { font-family:var(--f-mono); font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); font-weight:500; background:var(--surface-2); white-space:nowrap; }
+  tbody tr:last-child td { border-bottom:0; }
+  td.mono,th.mono { font-family:var(--f-mono); font-size:11px; }
+  td.num { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+
+  pre { font-family:var(--f-mono); font-size:11.6px; line-height:1.55; background:var(--surface-2); border:1px solid var(--line); border-radius:var(--radius); padding:11px 13px; overflow-x:auto; margin:10px 0; }
+  pre code { background:none; border:0; padding:0; font-size:inherit; }
+
+  .note { border-left:2px solid var(--accent); background:var(--accent-soft); padding:13px 17px; margin:17px 0; max-width:var(--measure); }
+  .note p:last-child { margin-bottom:0; }
+  .note .lbl { font-family:var(--f-mono); font-size:9.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--accent-ink); display:block; margin-bottom:5px; }
+  .note.warn { border-left-color:var(--warn); background:var(--warn-soft); }
+  .note.warn .lbl { color:var(--warn); }
+  .note.crit { border-left-color:var(--critical); background:var(--critical-soft); }
+  .note.crit .lbl { color:var(--critical); }
+
+  .lede-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(112px,1fr)); border:1px solid var(--line); border-radius:var(--radius); background:var(--surface); margin:20px 0 24px; }
+  .lede-stats div { padding:14px 17px; border-right:1px solid var(--line); }
+  .lede-stats div:last-child { border-right:0; }
+  .lede-stats .v { font-family:var(--f-display); font-size:26px; font-weight:700; line-height:1; font-variant-numeric:tabular-nums; }
+  .lede-stats .k { font-family:var(--f-mono); font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin-top:6px; }
+
+  .foot { margin-top:62px; padding-top:18px; border-top:1px solid var(--line-2); font-size:12.5px; color:var(--muted); max-width:var(--measure); }
+
+  @media (max-width:900px) {
+    .shell { grid-template-columns:1fr; gap:0; padding:0 18px 56px; }
+    .rail { position:static; height:auto; padding-top:24px; }
+    .rail nav { flex-direction:row; flex-wrap:wrap; gap:4px; border-left:0; }
+    .rail a { border:1px solid var(--line); border-radius:2px; padding:5px 9px; margin-left:0; }
+    .rail .grp { display:none; }
+    .masthead { padding-top:28px; }
+    .tc-body { grid-template-columns:1fr; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition:none !important; } }
+
+  @page { size:A4; margin:16mm 14mm 18mm; }
+  @media print {
+    :root, :root[data-theme="dark"], :root:not([data-theme="light"]) {
+      --ground:#FFF; --surface:#FFF; --surface-2:#F2F5F7; --ink:#101820; --ink-2:#33414E;
+      --muted:#5A6874; --line:#D3DAE1; --line-2:#B8C2CC; --accent:#0F4C5C; --accent-ink:#0F4C5C;
+      --accent-soft:#E6EFF2; --critical:#8E2219; --critical-soft:#F8E9E7; --warn:#7A4F05;
+      --warn-soft:#FBF1DE; --pass:#17593F; --pass-soft:#E5F1EB; --neutral:#4F5D69; --neutral-soft:#EDF0F3;
+    }
+    * { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
+    body { font-size:9.6pt; line-height:1.45; background:#fff; }
+    .shell { display:block; max-width:none; padding:0; }
+    .rail { display:none; }
+    .masthead { padding-top:0; }
+    h1 { font-size:24pt; } h2 { font-size:15pt; } h3 { font-size:11pt; }
+    p,ul,ol,.standfirst,.sec-sub,.note { max-width:none; }
+    section { break-before:page; padding-top:0; }
+    #s1 { break-before:auto; }
+    .sec-head,h3 { break-after:avoid; }
+    .tc,.tw,.note,pre,.lede-stats { break-inside:avoid; }
+    tr,li { break-inside:avoid; }
+    thead { display:table-header-group; }
+    a { color:var(--ink); text-decoration:none; }
+  }
+</style>
+
+<div class="shell">
+  <aside class="rail">
+    <div class="rail-mark">HumAId&nbsp;·&nbsp;QA</div>
+    <nav>
+      <a href="#s1">01 · How to read this</a>
+      <a href="#s2">02 · Execution report</a>
+      <div class="grp">Register</div>
+      <a href="#s3">03 · Unit — Assessment</a>
+      <a href="#s4">04 · Unit — inherited</a>
+      <a href="#s5">05 · API — smoke</a>
+      <a href="#s6">06 · API — authorization</a>
+      <a href="#s7">07 · UI — journeys</a>
+      <a href="#s8">08 · UI — governance</a>
+      <a href="#s9">09 · AI evaluation</a>
+      <div class="grp">Analysis</div>
+      <a href="#s10">10 · Observations</a>
+      <a href="#s11">11 · Traceability</a>
+    </nav>
+  </aside>
+
+  <main>
+    <header class="masthead">
+      <div class="eyebrow">Genius Hacks Q3 2026 · Risk Assessment Workbench</div>
+      <h1>QA Test Case Register</h1>
+      <p class="standfirst">All 92 test cases executed against the Risk Assessment Workbench — preconditions, steps, expected and actual results — followed by the observations that came out of running them.</p>
+      <dl class="meta">
+        <div><dt>Author</dt><dd>Shanthi Subramanian · BA&nbsp;/&nbsp;QA</dd></div>
+        <div><dt>Executed</dt><dd>12 September 2026</dd></div>
+        <div><dt>Build</dt><dd>qa/ba-qa-workstream</dd></div>
+        <div><dt>Environment</dt><dd>Local · .NET 10.0.401</dd></div>
+      </dl>
+      <div class="lede-stats">
+        <div><div class="v">92</div><div class="k">Test cases</div></div>
+        <div><div class="v">80</div><div class="k">Executed</div></div>
+        <div><div class="v">9</div><div class="k">Known-defect</div></div>
+        <div><div class="v">12</div><div class="k">Blocked</div></div>
+        <div><div class="v">6</div><div class="k">Defects raised</div></div>
+      </div>
+    </header>
+
+    <!-- ══ 01 ══ -->
+    <section id="s1">
+      <div class="sec-head">
+        <h2>How to read this</h2>
+        <p class="sec-sub">Conventions, ID scheme, and what each status actually means.</p>
+      </div>
+
+      <h3>Status vocabulary</h3>
+      <div class="tw"><table>
+        <thead><tr><th>Status</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td><span class="pill p-pass">Pass</span></td><td>Executed; actual matched expected.</td></tr>
+          <tr><td><span class="pill p-warn">Known defect</span></td><td>Executed; actual did <strong>not</strong> match expected, and that mismatch is a raised defect. Marked <code>test.fail()</code> in code so the suite stays green while the gap is open — and reports <em>"expected to fail, but passed"</em> the moment it is fixed. <strong>These are failures, deliberately recorded.</strong></td></tr>
+          <tr><td><span class="pill p-neut">Blocked</span></td><td>Could not execute. Currently only the AI eval cases, which need a configured model. Reported as <code>Skip</code>, never as <code>Pass</code> — "we did not check" is not the same claim as "it worked".</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>ID scheme</h3>
+      <div class="tw"><table>
+        <thead><tr><th>Prefix</th><th>Suite</th><th class="num">Cases</th><th>Authored by</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">UT-AS-nn</td><td>Unit — AssessmentService</td><td class="num">12</td><td>QA (new)</td></tr>
+          <tr><td class="mono">UT-xx-nn</td><td>Unit — Scoring, Committee, ChangeRequests, DataIngestion, AI clients, DocumentProcessing</td><td class="num">50</td><td>Dev (inherited, executed &amp; verified by QA)</td></tr>
+          <tr><td class="mono">API-SM-nn</td><td>Playwright — API smoke</td><td class="num">3</td><td>QA (new)</td></tr>
+          <tr><td class="mono">API-AU-nn</td><td>Playwright — authorization</td><td class="num">9</td><td>QA (new)</td></tr>
+          <tr><td class="mono">UI-JN-nn</td><td>Playwright — role journeys</td><td class="num">3</td><td>QA (new)</td></tr>
+          <tr><td class="mono">UI-GV-nn</td><td>Playwright — governance defects</td><td class="num">3</td><td>QA (new)</td></tr>
+          <tr><td class="mono">EV-xx-nn</td><td>AI evaluation datasets</td><td class="num">12</td><td>Dev (inherited, executed by QA)</td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="note">
+        <span class="lbl">On the inherited cases</span>
+        <p>Fifty unit tests and twelve eval cases existed before this QA pass. They are listed in full because QA <em>executed and verified</em> all of them — a register that only showed new work would misrepresent what has actually been checked. They are marked as inherited so authorship stays honest.</p>
+      </div>
+
+      <h3>Environment under test</h3>
+      <div class="tw"><table>
+        <thead><tr><th>Component</th><th>Version / endpoint</th></tr></thead>
+        <tbody>
+          <tr><td>.NET SDK</td><td class="mono">10.0.401 (runtime 10.0.12)</td></tr>
+          <tr><td>PostgreSQL</td><td class="mono">postgres:16 · localhost:5433</td></tr>
+          <tr><td>Azurite (blob)</td><td class="mono">localhost:10000</td></tr>
+          <tr><td>Workbench API</td><td class="mono">localhost:5210</td></tr>
+          <tr><td>Mock Systems</td><td class="mono">localhost:5220</td></tr>
+          <tr><td>webapp (Vite 7.3.6)</td><td class="mono">localhost:3000</td></tr>
+          <tr><td>Playwright</td><td class="mono">1.63.0 · Chromium 153</td></tr>
+          <tr><td>Auth</td><td>Auth0 unconfigured — <code>DevBypassAuthHandler</code> active</td></tr>
+          <tr><td>AI provider</td><td>Not configured at execution time — eval cases blocked</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- ══ 02 ══ -->
+    <section id="s2">
+      <div class="sec-head">
+        <h2>Execution report</h2>
+        <p class="sec-sub">Results as run on 12 September 2026.</p>
+      </div>
+
+      <div class="tw"><table>
+        <thead><tr><th>Suite</th><th class="num">Cases</th><th class="num">Pass</th><th class="num">Known defect</th><th class="num">Blocked</th><th>Runtime</th></tr></thead>
+        <tbody>
+          <tr><td>Unit (xUnit + Moq)</td><td class="num">62</td><td class="num">62</td><td class="num">0</td><td class="num">0</td><td class="mono">0.64 s</td></tr>
+          <tr><td>Playwright — api</td><td class="num">12</td><td class="num">6</td><td class="num">6</td><td class="num">0</td><td class="mono">3.0 s</td></tr>
+          <tr><td>Playwright — ui</td><td class="num">6</td><td class="num">3</td><td class="num">3</td><td class="num">0</td><td class="mono">41 s</td></tr>
+          <tr><td>AI evaluation</td><td class="num">12</td><td class="num">2</td><td class="num">0</td><td class="num">10</td><td class="mono">&lt;1 s</td></tr>
+          <tr><td><strong>Total</strong></td><td class="num"><strong>92</strong></td><td class="num"><strong>73</strong></td><td class="num"><strong>9</strong></td><td class="num"><strong>10</strong></td><td></td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Stability</h3>
+      <p>The Playwright suite was run three consecutive times end to end: <strong>18 passed on every run</strong>, no flakes. The unit suite was run four times across the session with identical results. One test was written and then deliberately removed for being inherently flaky — see OBS-3.</p>
+
+      <h3>Suite integrity — the mutation check</h3>
+      <p>A green suite is a claim, not evidence. The finalization gate was deliberately broken (<code>if (!readiness.IsReady)</code> → <code>if (false)</code>) and the unit suite re-run:</p>
+      <pre><code>Failed: 5, Passed: 57, Total: 62</code></pre>
+      <p>Exactly the five <code>FinalizeAsync_*</code> cases failed — UT-AS-01 through UT-AS-05 — while the seven readiness and delegation cases correctly stayed green, because they call <code>CheckReadinessAsync</code> directly and never traverse the gate. Production code was then restored byte-for-byte and the suite returned to 62/62.</p>
+    </section>
+
+    <!-- ══ 03 ══ -->
+    <section id="s3">
+      <div class="sec-head">
+        <h2>Unit — AssessmentService</h2>
+        <p class="sec-sub">12 cases · <code>tests/…/Assessment/AssessmentServiceTests.cs</code> · authored by QA. All dependencies mocked; no database, no HTTP.</p>
+      </div>
+
+      <div class="tc">
+        <div class="tc-head"><span class="tc-id">UT-AS-01</span><span class="tc-title">Finalization is blocked while a narrative section is still AI-drafted</span><span class="pill p-pass">Pass</span></div>
+        <dl class="tc-body">
+          <dt>Covers</dt><dd>US-5.1 AC2 — an AI draft cannot route to committee</dd>
+          <dt>Pre</dt><dd>One active mapped category ("Products &amp; Services") with a narrative section at status <code>AiDrafted</code>, and one policy reliance decision recorded</dd>
+          <dt>Steps</dt><dd><ol><li>Call <code>FinalizeAsync(assessmentId, analystId)</code></li></ol></dd>
+          <dt>Expected</dt><dd><code>InvalidOperationException</code> whose message contains "Narrative not yet reviewed" <em>and</em> names the category</dd>
+          <dt>Actual</dt><dd>As expected — the category is named, not just refused</dd>
+        </dl>
+      </div>
+
+      <div class="tc">
+        <div class="tc-head"><span class="tc-id">UT-AS-02</span><span class="tc-title">Finalization is blocked when a mapped category has no narrative at all</span><span class="pill p-pass">Pass</span></div>
+        <dl class="tc-body">
+          <dt>Covers</dt><dd>US-6.3 AC1</dd>
+          <dt>Pre</dt><dd>One active mapped category; <strong>no</strong> narrative sections; one reliance decision</dd>
+          <dt>Steps</dt><dd><ol><li>Call <code>FinalizeAsync</code></li></ol></dd>
+          <dt>Expected</dt><dd>Throws; the category is listed as outstanding</dd>
+          <dt>Actual</dt><dd>As expected — absence is treated the same as unreviewed, not as "nothing outstanding"</dd>
+        </dl>
+      </div>
+
+      <div class="tc">
+        <div class="tc-head"><span class="tc-id">UT-AS-03</span><span class="tc-title">Finalization is blocked when a category has no policy-reliance decision</span><span class="pill p-pass">Pass</span></div>
+        <dl class="tc-body">
+          <dt>Covers</dt><dd>US-3.2 AC2</dd>
+          <dt>Pre</dt><dd>One active category with an <code>AnalystReviewed</code> narrative; <strong>no</strong> reliance decisions</dd>
+          <dt>Steps</dt><dd><ol><li>Call <code>FinalizeAsync</code></li></ol></dd>
+          <dt>Expected</dt><dd>Throws with "No policy reviewed" naming the category</dd>
+          <dt>Actual</dt><dd>As expected</dd>
+        </dl>
+      </div>
+
+      <div class="tc">
+        <div class="tc-head"><span class="tc-id">UT-AS-04</span><span class="tc-title">A blocked finalization never reaches the repository</span><span class="pill p-pass">Pass</span></div>
+        <dl class="tc-body">
+          <dt>Covers</dt><dd>The governance assertion itself</dd>
+          <dt>Pre</dt><dd>One category, narrative <code>AiDrafted</code>, no reliance — i.e. both gates failing</dd>
+          <dt>Steps</dt><dd><ol><li>Call <code>FinalizeAsync</code> and catch</li><li>Verify <code>IAssessmentRepo.FinalizeAsync</code> invocations</li></ol></dd>
+          <dt>Expected</dt><dd><code>Times.Never</code></dd>
+          <dt>Actual</dt><dd>As expected. This is the case that matters most — throwing <em>after</em> persisting would still leave an unreviewed assessment in <code>PendingCommittee</code></dd>
+        </dl>
+      </div>
+
+      <div class="tc">
+        <div class="tc-head"><span class="tc-id">UT-AS-05</span><span class="tc-title">Every outstanding reason is listed, not just the first</span><span class="pill p-pass">Pass</span></div>
+        <dl class="tc-body">
+          <dt>Covers</dt><dd>US-6.3 AC1 — "lists what's outstanding"</dd>
+          <dt>Pre</dt><dd>Two active categories; only the first has a reviewed narrative and a reliance decision</dd>
+          <dt>Steps</dt><dd><ol><li>Call <code>FinalizeAsync</code></li><li>Inspect the exception message</li></ol></dd>
+          <dt>Expected</dt><dd>Message contains both "Narrative not yet reviewed" <em>and</em> "No policy reviewed", and names the second category</dd>
+          <dt>Actual</dt><dd>As expected — an analyst fixing one complaint will not discover a second on resubmission</dd>
+        </dl>
+      </div>
+
+      <div class="tc">
+        <div class="tc-head"><span class="tc-id">UT-AS-06</span><span class="tc-title">The finalizing analyst's identity is recorded</span><span class="pill p-pass">Pass</span></div>
+        <dl class="tc-body">
+          <dt>Covers</dt><dd>US-6.3 AC3 — "cannot be anonymous or attributed to 'system'"</dd>
+          <dt>Pre</dt><dd>One category, narrative <code>AnalystReviewed</code>, one reliance decision — all gates satisfied</dd>
+          <dt>Steps</dt><dd><ol><li>Call <code>FinalizeAsync(assessmentId, analystId)</code></li></ol></dd>
+          <dt>Expected</dt><dd>Repo called exactly once with <em>that</em> analyst id</dd>
+          <dt>Actual</dt><dd>As expected</dd>
+        </dl>
+      </div>
+
+      <div class="tc">
+        <div class="tc-head"><span class="tc-id">UT-AS-07/08</span><span class="tc-title">Both AnalystReviewed and AnalystEdited satisfy the narrative gate</span><span class="pill p-pass">Pass ×2</span></div>
+        <dl class="tc-body">
+          <dt>Covers</dt><dd>US-6.3 AC2 — "accepted as-is or edited"</dd>
+          <dt>Pre</dt><dd>One category; narrative at the parameterised status; one reliance decision</dd>
+          <dt>Steps</dt><dd><ol><li><code>[Theory]</code> over <code>AnalystReviewed</code> and <code>AnalystEdited</code></li><li>Call <code>CheckReadinessAsync</code></li></ol></dd>
+          <dt>Expected</dt><dd><code>IsReady == true</code>; no outstanding sections</dd>
+          <dt>Actual</dt><dd>As expected for both — only <code>AiDrafted</code> blocks</dd>
+        </dl>
+      </div>
+
+      <div class="tc">
+        <div class="tc-head"><span class="tc-id">UT-AS-09</span><span class="tc-title">A category the analyst deactivated is ignored</span><span class="pill p-pass">Pass</span></div>
+        <dl class="tc-body">
+          <dt>Covers</dt><dd>Epic 2 — category override</dd>
+          <dt>Pre</dt><dd>Two categories; the second has <code>IsActive = false</code> and no narrative or reliance</dd>
+          <dt>Steps</dt><dd><ol><li>Call <code>CheckReadinessAsync</code></li></ol></dd>
+          <dt>Expected</dt><dd>Ready; the deactivated category appears in neither outstanding list</dd>
+          <dt>Actual</dt><dd>As expected — a removed category cannot hold finalization hostage forever</dd>
+        </dl>
+      </div>
+
+      <div class="tc">
+        <div class="tc-head"><span class="tc-id">UT-AS-10</span><span class="tc-title">An assessment-wide policy reliance satisfies every mapped category</span><span class="pill p-pass">Pass</span></div>
+        <dl class="tc-body">
+          <dt>Covers</dt><dd>The <code>RiskCategoryId == null</code> branch</dd>
+          <dt>Pre</dt><dd>Two categories, both with reviewed narratives; a single reliance row with <code>RiskCategoryId = null</code></dd>
+          <dt>Steps</dt><dd><ol><li>Call <code>CheckReadinessAsync</code></li></ol></dd>
+          <dt>Expected</dt><dd>Ready; no category missing policy reliance</dd>
+          <dt>Actual</dt><dd>As expected</dd>
+        </dl>
+      </div>
+
+      <div class="tc known">
+        <div class="tc-head"><span class="tc-id">UT-AS-11</span><span class="tc-title">An assessment with no mapped categories reports "ready"</span><span class="pill p-warn">Characterization · DEF-004</span></div>
+        <dl class="tc-body">
+          <dt>Covers</dt><dd>Documents a defect, not a requirement</dd>
+          <dt>Pre</dt><dd>No categories, no sections, no reliance</dd>
+          <dt>Steps</dt><dd><ol><li>Call <code>CheckReadinessAsync</code></li></ol></dd>
+          <dt>Expected</dt><dd><em>Per the product's own rule:</em> should not be ready</dd>
+          <dt>Actual</dt><dd><strong><code>IsReady == true</code></strong> — both readiness loops iterate an empty list, so readiness is vacuously satisfied. Asserted as-is to pin the behaviour; raised as DEF-004 and later confirmed end to end through the UI (UI-GV-01/02)</dd>
+        </dl>
+      </div>
+
+      <div class="tc">
+        <div class="tc-head"><span class="tc-id">UT-AS-12</span><span class="tc-title">OpenWorkspaceAsync delegates to the repository</span><span class="pill p-pass">Pass</span></div>
+        <dl class="tc-body">
+          <dt>Covers</dt><dd>Delegation</dd>
+          <dt>Pre</dt><dd>Repo stubbed to return a known assessment id</dd>
+          <dt>Steps</dt><dd><ol><li>Call <code>OpenWorkspaceAsync(changeRequestId)</code></li></ol></dd>
+          <dt>Expected</dt><dd>Returns the id; <code>GetOrCreateAsync</code> called once</dd>
+          <dt>Actual</dt><dd>As expected</dd>
+        </dl>
+      </div>
+    </section>
+
+    <!-- ══ 04 ══ -->
+    <section id="s4">
+      <div class="sec-head">
+        <h2>Unit — inherited suites</h2>
+        <p class="sec-sub">50 cases authored by the development team, executed and verified by QA. All passing.</p>
+      </div>
+
+      <h3>Scoring — 11 cases <span class="pill p-pass">all pass</span></h3>
+      <p>Guards the "controls mitigate, never eliminate" invariant in C#, as defence in depth on top of the database's own <code>CHECK</code> constraints.</p>
+      <div class="tw"><table>
+        <thead><tr><th class="mono">ID</th><th>Case</th><th>Verifies</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">UT-SC-01..03</td><td>UpsertConfig rejects out-of-range mitigation factor <span class="sub">(−0.1, 1, 1.5)</span></td><td>US-10.1 AC2 — a factor ≥ 1.0 would let residual reach zero</td></tr>
+          <tr><td class="mono">UT-SC-04..06</td><td>UpsertConfig accepts in-range factor <span class="sub">(0, 0.5, 0.99)</span></td><td>The boundary is <code>&lt; 1.0</code>, not <code>≤</code></td></tr>
+          <tr><td class="mono">UT-SC-07</td><td>Calculate throws if the repo returns a non-positive residual</td><td>The C# guard fires even if the DB somehow allowed it</td></tr>
+          <tr><td class="mono">UT-SC-08</td><td>Calculate returns the score when residual is positive</td><td>Happy path</td></tr>
+          <tr><td class="mono">UT-SC-09</td><td>Override rejects a non-positive residual</td><td>An analyst cannot override risk to zero</td></tr>
+          <tr><td class="mono">UT-SC-10</td><td>Override rejects a blank reason</td><td>US-7.2 — reason is mandatory</td></tr>
+          <tr><td class="mono">UT-SC-11</td><td>Override accepts a positive residual with a reason</td><td>Happy path</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Committee — 14 cases <span class="pill p-pass">all pass</span></h3>
+      <div class="tw"><table>
+        <thead><tr><th class="mono">ID</th><th>Case</th><th>Verifies</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">UT-CM-01</td><td>Vote rejected when not yet routed to committee</td><td>The finalize gate cannot be bypassed</td></tr>
+          <tr><td class="mono">UT-CM-02</td><td>No resolution below quorum</td><td>Epic 10 <code>CommitteeQuorum</code> rule</td></tr>
+          <tr><td class="mono">UT-CM-03..09</td><td>Conservative resolution rule <span class="sub">(7 vote combinations)</span></td><td>Reject &gt; Defer &gt; ApproveWithConditions &gt; Approved — one dissenting reject blocks approval</td></tr>
+          <tr><td class="mono">UT-CM-10</td><td>Conditions text merged from every approve-with-conditions vote</td><td>US-8.2 AC2 — nothing dropped</td></tr>
+          <tr><td class="mono">UT-CM-11</td><td>An already-decided assessment is not re-resolved</td><td>Idempotence</td></tr>
+          <tr><td class="mono">UT-CM-12</td><td>Go-live <code>true</code> pushed to Mock Systems on approval</td><td>Phase 3 feedback loop</td></tr>
+          <tr><td class="mono">UT-CM-13</td><td>Go-live <code>false</code> pushed on rejection</td><td>Feedback loop, negative case</td></tr>
+          <tr><td class="mono">UT-CM-14</td><td>Feedback push skipped when no entity was linked at intake</td><td>No-op rather than error</td></tr>
+        </tbody>
+      </table></div>
+      <p><em>Note:</em> a fifteenth behaviour — a Mock Systems outage must not fail a vote — is covered within the same file and passes; it is counted inside the 14 above.</p>
+
+      <h3>Change requests — 7 cases <span class="pill p-pass">all pass</span></h3>
+      <div class="tw"><table>
+        <thead><tr><th class="mono">ID</th><th>Case</th><th>Verifies</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">UT-CR-01</td><td>Submit triggers data ingestion with the linked Mock System ids</td><td>Snapshot is taken at intake</td></tr>
+          <tr><td class="mono">UT-CR-02..04</td><td>Attach accepts PDF, DOCX, XLSX</td><td>US-1.2 — supported formats</td></tr>
+          <tr><td class="mono">UT-CR-05</td><td>Attach rejects an unsupported content type</td><td>US-1.2 — clear rejection</td></tr>
+          <tr><td class="mono">UT-CR-06</td><td>File attach rejects unsupported type <em>without touching blob storage</em></td><td>Validation precedes I/O</td></tr>
+          <tr><td class="mono">UT-CR-07</td><td>File attach uploads, extracts, then persists</td><td>Correct ordering of the three steps</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Data ingestion — 5 cases <span class="pill p-pass">all pass</span></h3>
+      <div class="tw"><table>
+        <thead><tr><th class="mono">ID</th><th>Case</th><th>Verifies</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">UT-DI-01</td><td>No-op when no entity was linked at intake</td><td>No spurious calls</td></tr>
+          <tr><td class="mono">UT-DI-02</td><td>Snapshot saved when the customer resolves</td><td>Happy path</td></tr>
+          <tr><td class="mono">UT-DI-03</td><td>Partial resolution still saves whatever resolved</td><td>A stale id does not lose the rest</td></tr>
+          <tr><td class="mono">UT-DI-04</td><td>A Mock Systems outage does not fail intake</td><td>Resilience — intake is more important than enrichment</td></tr>
+          <tr><td class="mono">UT-DI-05</td><td>GetSnapshot delegates to the repo</td><td>Delegation</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>AI clients — 11 cases <span class="pill p-pass">all pass</span></h3>
+      <p>The citation-fabrication guards. These are the closest thing the repo has to a test of "the model cannot invent things".</p>
+      <div class="tw"><table>
+        <thead><tr><th class="mono">ID</th><th>Case</th><th>Verifies</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">UT-AI-01</td><td>Category mapping never calls the model when no categories are allowed</td><td>US-2.1 AC3 — flags rather than guesses; also zero cost</td></tr>
+          <tr><td class="mono">UT-AI-02</td><td>Drops a proposal outside the allowed list</td><td><strong>Structural</strong> guard — the model cannot introduce a category</td></tr>
+          <tr><td class="mono">UT-AI-03</td><td>Parses a markdown-fenced response</td><td>Real models wrap JSON in fences</td></tr>
+          <tr><td class="mono">UT-AI-04</td><td>Degrades to empty on malformed JSON</td><td>No crash, no guess</td></tr>
+          <tr><td class="mono">UT-AI-05</td><td>Includes external context in the prompt when supplied</td><td>Mock Systems snapshot reaches the model</td></tr>
+          <tr><td class="mono">UT-AI-06</td><td>Extraction never calls the model for empty document text</td><td>Early return</td></tr>
+          <tr><td class="mono">UT-AI-07</td><td>Parses fields including the <code>needsReview</code> flag</td><td>US-4.1 — low confidence is surfaced</td></tr>
+          <tr><td class="mono">UT-AI-08</td><td>Extraction degrades to empty on malformed JSON</td><td>No silent guess</td></tr>
+          <tr><td class="mono">UT-AI-09</td><td>Narrative parses text and <code>unsupportedClaims</code> separately</td><td>US-5.1 AC3 — unsupported claims never folded into narrative</td></tr>
+          <tr><td class="mono">UT-AI-10</td><td>Narrative falls back to a reviewable result on an unparseable response</td><td>Fails toward human review</td></tr>
+          <tr><td class="mono">UT-AI-11</td><td>Regeneration feedback reaches the prompt</td><td>US-5.2</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Document processing — 2 cases <span class="pill p-pass">all pass</span></h3>
+      <div class="tw"><table>
+        <thead><tr><th class="mono">ID</th><th>Case</th><th>Verifies</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">UT-DP-01</td><td>Constructor does not throw when unconfigured</td><td>A regression guard — config is validated at call time</td></tr>
+          <tr><td class="mono">UT-DP-02</td><td>Upload throws only at call time when unconfigured</td><td>The app still starts without blob config</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- ══ 05 ══ -->
+    <section id="s5">
+      <div class="sec-head">
+        <h2>API — smoke</h2>
+        <p class="sec-sub">3 cases · <code>tests/e2e/api/smoke.spec.js</code> · authored by QA. Pre-req: API on :5210 with a seeded database.</p>
+      </div>
+
+      <div class="tc">
+        <div class="tc-head"><span class="tc-id">API-SM-01</span><span class="tc-title">Every response uses the OperationResult envelope</span><span class="pill p-pass">Pass</span></div>
+        <dl class="tc-body">
+          <dt>Pre</dt><dd>API reachable</dd>
+          <dt>Steps</dt><dd><ol><li><code>GET /api/Ping</code></li><li>Parse the JSON body</li></ol></dd>
+          <dt>Expected</dt><dd>200; body has <code>isSuccessful: true</code> and a <code>data</code> property</dd>
+          <dt>Actual</dt><dd>As expected — the contract both the webapp and these tests rely on</dd>
+        </dl>
+      </div>
+
+      <div class="tc">
+        <div class="tc-head"><span class="tc-id">API-SM-02</span><span class="tc-title">The seeded users cover all four roles</span><span class="pill p-pass">Pass</span></div>
+        <dl class="tc-body">
+          <dt>Pre</dt><dd><code>seed_dev_users.sql</code> applied</dd>
+          <dt>Steps</dt><dd><ol><li><code>GET /api/User</code></li><li>Group by role</li></ol></dd>
+          <dt>Expected</dt><dd>≥ 6 users, with at least one each of ProductOwner, Analyst, CommitteeMember, Admin</dd>
+          <dt>Actual</dt><dd>6 users, 4 roles — Priya Owens, Amara Chen, Sam Okafor, Jordan Blake, Riley Voss, Taylor Finch</dd>
+        </dl>
+      </div>
+
+      <div class="tc">
+        <div class="tc-head"><span class="tc-id">API-SM-03</span><span class="tc-title">The FFIEC framework is seeded with its four categories</span><span class="pill p-pass">Pass</span></div>
+        <dl class="tc-body">
+          <dt>Covers</dt><dd>CLAUDE.md — decomposition must use a real, citable framework</dd>
+          <dt>Steps</dt><dd><ol><li><code>GET /api/CategoryMapping/Categories</code></li><li>Extract the <code>code</code> of each</li></ol></dd>
+          <dt>Expected</dt><dd>Contains <code>PRODUCTS_SERVICES</code>, <code>CUSTOMERS_ENTITIES</code>, <code>GEOGRAPHIC_LOCATIONS</code>, <code>DELIVERY_CHANNELS</code></dd>
+          <dt>Actual</dt><dd>All four present — a partial seed would silently weaken every mapping downstream</dd>
+        </dl>
+      </div>
+    </section>
+
+    <!-- ══ 06 ══ -->
+    <section id="s6">
+      <div class="sec-head">
+        <h2>API — authorization</h2>
+        <p class="sec-sub">9 cases · <code>tests/e2e/api/authorization.spec.js</code> · authored by QA. Six record live defects.</p>
+      </div>
+
+      <div class="tc known">
+        <div class="tc-head"><span class="tc-id">API-AU-01</span><span class="tc-title">The user directory is not readable without a credential</span><span class="pill p-crit">Known defect · DEF-001</span></div>
+        <dl class="tc-body">
+          <dt>Pre</dt><dd>API running; no Authorization header sent</dd>
+          <dt>Steps</dt><dd><ol><li><code>GET /api/User</code> with no credential of any kind</li></ol></dd>
+          <dt>Expected</dt><dd><strong>401 Unauthorized</strong></dd>
+          <dt>Actual</dt><dd><strong>200 OK</strong> returning all six users with display names, email addresses and roles. <code>DevBypassAuthHandler</code> authenticates every request as <code>system-dev</code>, so the blanket <code>[Authorize]</code> on every controller proves nothing</dd>
+        </dl>
+      </div>
+
+      <div class="tc">
+        <div class="tc-head"><span class="tc-id">API-AU-02</span><span class="tc-title">Ping stays deliberately open</span><span class="pill p-pass">Pass</span></div>
+        <dl class="tc-body">
+          <dt>Steps</dt><dd><ol><li><code>GET /api/Ping</code></li></ol></dd>
+          <dt>Expected</dt><dd>200 with <code>data: "pong"</code></dd>
+          <dt>Actual</dt><dd>As expected. Deliberate counter-example: <code>PingController</code> carries no <code>[Authorize]</code> <em>by design</em>, so "everything is open" and "this one is open on purpose" stay distinguishable</dd>
+        </dl>
+      </div>
+
+      <div class="tc known">
+        <div class="tc-head"><span class="tc-id">API-AU-03</span><span class="tc-title">A Product Owner cannot be recorded as a committee voter</span><span class="pill p-crit">Known defect · DEF-002</span></div>
+        <dl class="tc-body">
+          <dt>Covers</dt><dd>US-8.2 AC5</dd>
+          <dt>Pre</dt><dd>Product Owner's user id resolved from <code>/api/User</code></dd>
+          <dt>Steps</dt><dd><ol><li><code>POST /api/Committee/Vote</code> with <code>committeeMemberUserId</code> = the Product Owner's id</li></ol></dd>
+          <dt>Expected</dt><dd><strong>403 Forbidden</strong> — refused on authorization grounds before any lookup</dd>
+          <dt>Actual</dt><dd><strong>400</strong> — rejected for workflow reasons; the role was never consulted</dd>
+        </dl>
+      </div>
+
+      <div class="tc known">
+        <div class="tc-head"><span class="tc-id">API-AU-04</span><span class="tc-title">A Product Owner cannot finalize an assessment</span><span class="pill p-crit">Known defect · DEF-002</span></div>
+        <dl class="tc-body">
+          <dt>Covers</dt><dd>US-6.3</dd>
+          <dt>Steps</dt><dd><ol><li><code>POST /api/Assessment/{id}/Finalize</code> with <code>actorUserId</code> = Product Owner</li></ol></dd>
+          <dt>Expected</dt><dd>403</dd>
+          <dt>Actual</dt><dd><strong>500</strong></dd>
+        </dl>
+      </div>
+
+      <div class="tc known">
+        <div class="tc-head"><span class="tc-id">API-AU-05</span><span class="tc-title">A Product Owner cannot change scoring configuration</span><span class="pill p-crit">Known defect · DEF-002</span></div>
+        <dl class="tc-body">
+          <dt>Covers</dt><dd>US-10.1</dd>
+          <dt>Steps</dt><dd><ol><li><code>POST /api/Scoring/Config</code> with <code>actorUserId</code> = Product Owner</li></ol></dd>
+          <dt>Expected</dt><dd>403</dd>
+          <dt>Actual</dt><dd><strong>500</strong></dd>
+        </dl>
+      </div>
+
+      <div class="note warn">
+        <span class="lbl">Scope of API-AU-03/04/05 — state this when presenting</span>
+        <p>All three used a deliberately non-existent id, so each was rejected (or crashed) on <em>data</em> grounds before role could have mattered. They prove the role check does not run <strong>first</strong>. They do <strong>not</strong> prove a request against a valid, committee-routed assessment would be accepted — confirming that needs a seeded <code>PendingCommittee</code> assessment and remains open work. API-AU-01 carries no such caveat and is the stronger evidence.</p>
+      </div>
+
+      <div class="tc">
+        <div class="tc-head"><span class="tc-id">API-AU-06</span><span class="tc-title">A scoring config that would zero out residual risk is rejected</span><span class="pill p-pass">Pass</span></div>
+        <dl class="tc-body">
+          <dt>Covers</dt><dd>US-10.1 AC2</dd>
+          <dt>Steps</dt><dd><ol><li><code>POST /api/Scoring/Config</code> with <code>maxMitigationFactor: 1.0</code></li></ol></dd>
+          <dt>Expected</dt><dd>Not 200</dd>
+          <dt>Actual</dt><dd>Rejected. Kept deliberately: proves the API <em>does</em> validate, so the finding above stays an authorization gap rather than "the API accepts anything"</dd>
+        </dl>
+      </div>
+
+      <div class="tc">
+        <div class="tc-head"><span class="tc-id">API-AU-07</span><span class="tc-title">A malformed GUID is rejected by routing</span><span class="pill p-pass">Pass</span></div>
+        <dl class="tc-body">
+          <dt>Steps</dt><dd><ol><li><code>GET /api/Assessment/not-a-guid/Readiness</code></li></ol></dd>
+          <dt>Expected</dt><dd>404 — the route constraint rejects it before any handler runs</dd>
+          <dt>Actual</dt><dd>As expected</dd>
+        </dl>
+      </div>
+
+      <div class="tc known">
+        <div class="tc-head"><span class="tc-id">API-AU-08</span><span class="tc-title">An unknown risk category is a client error, not a server error</span><span class="pill p-warn">Known defect · DEF-003</span></div>
+        <dl class="tc-body">
+          <dt>Steps</dt><dd><ol><li><code>POST /api/Scoring/Config</code> with a well-formed but non-existent <code>riskCategoryId</code></li></ol></dd>
+          <dt>Expected</dt><dd>Any 4xx</dd>
+          <dt>Actual</dt><dd><strong>500.</strong> Server log: <code>Npgsql.PostgresException 23503 … violates foreign key constraint scoring_config_risk_category_id_fkey</code>. <code>OperationResult</code> already has <code>NotFound</code> / <code>BadRequest</code> shapes for exactly this</dd>
+        </dl>
+      </div>
+
+      <div class="tc known">
+        <div class="tc-head"><span class="tc-id">API-AU-09</span><span class="tc-title">Finalizing an unknown assessment is a client error</span><span class="pill p-warn">Known defect · DEF-003</span></div>
+        <dl class="tc-body">
+          <dt>Steps</dt><dd><ol><li><code>POST /api/Assessment/{unknown-guid}/Finalize</code></li></ol></dd>
+          <dt>Expected</dt><dd>404</dd>
+          <dt>Actual</dt><dd><strong>500</strong></dd>
+        </dl>
+      </div>
+    </section>
+
+    <!-- ══ 07 ══ -->
+    <section id="s7">
+      <div class="sec-head">
+        <h2>UI — role journeys</h2>
+        <p class="sec-sub">3 cases · <code>tests/e2e/ui/journeys.spec.js</code> · serial. Pre-req: full stack including the Vite dev server on :3000.</p>
+      </div>
+
+      <p>Sign-in needs no automation: while Auth0 is unconfigured, <code>DevUserContext.jsx</code> reads the acting user from <code>localStorage.devUserId</code>, so seeding that key before first paint <em>is</em> the sign-in. Each journey then clicks through the dev-auth gate.</p>
+
+      <div class="tc">
+        <div class="tc-head"><span class="tc-id">UI-JN-01</span><span class="tc-title">A Product Owner raises a change request</span><span class="pill p-pass">Pass</span></div>
+        <dl class="tc-body">
+          <dt>Covers</dt><dd>US-1.1 AC4, US-1.3</dd>
+          <dt>Pre</dt><dd>Stack running; acting user = Priya Owens (ProductOwner)</dd>
+          <dt>Steps</dt><dd><ol>
+            <li>Open the app; dismiss "Continue without signing in"</li>
+            <li>Click nav <strong>Submit Request</strong></li>
+            <li>Open the change-type combobox <em>inside the first form</em>; choose <strong>Product</strong></li>
+            <li>Fill <code>#title</code> with a timestamped wire-transfer product title</li>
+            <li>Fill <code>#description</code> and <code>#details</code> (JSON)</li>
+            <li>Click <strong>Submit request</strong></li>
+            <li>Click nav <strong>My Requests</strong></li>
+          </ol></dd>
+          <dt>Expected</dt><dd>A confirmation matching <code>Submitted as CR-\d{4}-\d{5}</code>; the request appears in My Requests with type <em>Product</em> and status <em>Submitted</em></dd>
+          <dt>Actual</dt><dd>As expected — <code>CR-2026-00001</code> assigned and listed</dd>
+        </dl>
+      </div>
+
+      <div class="tc">
+        <div class="tc-head"><span class="tc-id">UI-JN-02</span><span class="tc-title">An FCRM Analyst assesses and finalizes it</span><span class="pill p-pass">Pass</span></div>
+        <dl class="tc-body">
+          <dt>Covers</dt><dd>US-1.1, US-9.1, US-6.3</dd>
+          <dt>Pre</dt><dd>UI-JN-01 completed; acting user = Amara Chen (Analyst)</dd>
+          <dt>Steps</dt><dd><ol>
+            <li>Click nav <strong>Assessments</strong>; locate the request row</li>
+            <li>Click <strong>Open</strong>; <em>retry once</em> — see DEF-006</li>
+            <li>Assert all seven workspace tabs are present</li>
+            <li>Open the <strong>Audit</strong> tab</li>
+            <li>Open the <strong>Finalize</strong> tab; click <strong>Finalize</strong></li>
+            <li>Click <strong>Route to committee</strong></li>
+          </ol></dd>
+          <dt>Expected</dt><dd>The request reaches the analyst inbox; Categories / Policy / Extraction / Narrative / Scoring / Finalize / Audit all reachable; the audit trail already shows <code>ChangeRequest.Created by Priya Owens</code>; status becomes Finalized</dd>
+          <dt>Actual</dt><dd>As expected. <strong>Note:</strong> step 2 needs a retry because of DEF-006 — asserted separately in UI-GV-03 rather than silently absorbed here</dd>
+        </dl>
+      </div>
+
+      <div class="tc">
+        <div class="tc-head"><span class="tc-id">UI-JN-03</span><span class="tc-title">The Risk Committee reviews and votes</span><span class="pill p-pass">Pass</span></div>
+        <dl class="tc-body">
+          <dt>Covers</dt><dd>US-8.1, US-8.2 AC5</dd>
+          <dt>Pre</dt><dd>UI-JN-02 completed; acting user = Jordan Blake (CommitteeMember)</dd>
+          <dt>Steps</dt><dd><ol>
+            <li>Click nav <strong>Committee Queue</strong>; locate the request row</li>
+            <li>Click <strong>Review</strong></li>
+            <li>Select <strong>Approve</strong> in the vote combobox</li>
+            <li>Click <strong>Submit vote</strong></li>
+          </ol></dd>
+          <dt>Expected</dt><dd>The finalized assessment is in the queue; the vote is recorded against the member <em>by name</em>; "No votes yet." disappears</dd>
+          <dt>Actual</dt><dd>As expected — the individual voter is named, never aggregated anonymously</dd>
+        </dl>
+      </div>
+    </section>
+
+    <!-- ══ 08 ══ -->
+    <section id="s8">
+      <div class="sec-head">
+        <h2>UI — governance defects</h2>
+        <p class="sec-sub">3 cases · <code>tests/e2e/ui/governance.spec.js</code>. All three record live defects.</p>
+      </div>
+
+      <div class="tc known">
+        <div class="tc-head"><span class="tc-id">UI-GV-01</span><span class="tc-title">The Finalize tab refuses an assessment with nothing reviewed</span><span class="pill p-crit">Known defect · DEF-004</span></div>
+        <dl class="tc-body">
+          <dt>Covers</dt><dd>CLAUDE.md — "don't let an AI output reach the committee stage without a review gate in code"</dd>
+          <dt>Pre</dt><dd>A fresh change request created via the API; acting user = Analyst</dd>
+          <dt>Steps</dt><dd><ol>
+            <li>Open the assessment workspace for that request</li>
+            <li><strong>Categories</strong> tab — confirm "No categories mapped yet."</li>
+            <li><strong>Finalize</strong> tab — read the readiness panel</li>
+          </ol></dd>
+          <dt>Expected</dt><dd>"Ready to finalize" is <strong>not</strong> shown</dd>
+          <dt>Actual</dt><dd><strong>"Ready to finalize."</strong> is displayed with zero categories, zero policy reliance, zero extracted fields, zero narrative and zero scores</dd>
+        </dl>
+      </div>
+
+      <div class="tc known">
+        <div class="tc-head"><span class="tc-id">UI-GV-02</span><span class="tc-title">An unreviewed assessment cannot be routed to the committee queue</span><span class="pill p-crit">Known defect · DEF-004</span></div>
+        <dl class="tc-body">
+          <dt>Pre</dt><dd>A fresh change request; nothing assessed</dd>
+          <dt>Steps</dt><dd><ol>
+            <li>As Analyst: open the workspace, go to <strong>Finalize</strong></li>
+            <li>Click <strong>Finalize</strong>, then <strong>Route to committee</strong></li>
+            <li>Switch to Jordan Blake (CommitteeMember)</li>
+            <li>Open <strong>Committee Queue</strong> and look for the request</li>
+          </ol></dd>
+          <dt>Expected</dt><dd>The request is <strong>absent</strong> from the queue</dd>
+          <dt>Actual</dt><dd><strong>Present</strong>, openable, with a live "Submit vote" button. The committee is asked for an accountable decision on a document containing nothing but a title. <strong>This is the most serious finding in the product.</strong></dd>
+        </dl>
+      </div>
+
+      <div class="tc known">
+        <div class="tc-head"><span class="tc-id">UI-GV-03</span><span class="tc-title">Two concurrent opens of the same request both succeed</span><span class="pill p-warn">Known defect · DEF-006</span></div>
+        <dl class="tc-body">
+          <dt>Pre</dt><dd>A fresh change request with no assessment row yet</dd>
+          <dt>Steps</dt><dd><ol>
+            <li>Fire two simultaneous <code>POST /api/Assessment/OpenWorkspace/{id}</code> via <code>Promise.all</code></li>
+            <li>Collect both status codes</li>
+          </ol></dd>
+          <dt>Expected</dt><dd><code>[200, 200]</code> — the function must be idempotent under concurrent callers</dd>
+          <dt>Actual</dt><dd>One returns <strong>500</strong>. <code>func_getOrCreateAssessment</code> does SELECT-then-INSERT with no <code>ON CONFLICT</code>; both callers read <code>NULL</code>, both insert, the loser violates <code>UNIQUE (change_request_id)</code> → Npgsql <code>23505</code>. Because React StrictMode double-invokes effects, an analyst hits this on <em>every</em> first click</dd>
+        </dl>
+      </div>
+    </section>
+
+    <!-- ══ 09 ══ -->
+    <section id="s9">
+      <div class="sec-head">
+        <h2>AI evaluation cases</h2>
+        <p class="sec-sub">12 cases · <code>evals/datasets/*.json</code> · inherited, executed by QA. 2 pass, 10 blocked.</p>
+      </div>
+
+      <p>The harness scores the three production AI clients against fixed datasets. Without a configured provider, the two deterministic cases still run; the rest report <strong>Skip</strong> rather than Fail — a missing key is not the same claim as "the model got it wrong".</p>
+
+      <div class="tw"><table>
+        <thead><tr><th class="mono">ID</th><th>Case</th><th>Scoring method</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">EV-CM-01</td><td>Wire transfer product → Products &amp; Services</td><td>Set-overlap on FFIEC codes</td><td><span class="pill p-neut">Blocked</span></td></tr>
+          <tr><td class="mono">EV-CM-02</td><td>KYC vendor onboarding → Customers &amp; Entities</td><td>Set-overlap</td><td><span class="pill p-neut">Blocked</span></td></tr>
+          <tr><td class="mono">EV-CM-03</td><td>Geographic expansion into a FATF-monitored jurisdiction</td><td>Set-overlap</td><td><span class="pill p-neut">Blocked</span></td></tr>
+          <tr><td class="mono">EV-CM-04</td><td>MSB customer segment → Customers &amp; Entities</td><td>Set-overlap</td><td><span class="pill p-neut">Blocked</span></td></tr>
+          <tr><td class="mono">EV-CM-05</td><td><strong>No framework mapping</strong> — empty allowed list must return empty</td><td>Deterministic, no model call</td><td><span class="pill p-pass">Pass</span></td></tr>
+          <tr><td class="mono">EV-DE-01</td><td>Vendor document, clear fields</td><td>Exact/substring match</td><td><span class="pill p-neut">Blocked</span></td></tr>
+          <tr><td class="mono">EV-DE-02</td><td>Geography document</td><td>Exact/substring match</td><td><span class="pill p-neut">Blocked</span></td></tr>
+          <tr><td class="mono">EV-DE-03</td><td>Ambiguous jurisdiction must set <code>needsReview</code></td><td>Flag assertion</td><td><span class="pill p-neut">Blocked</span></td></tr>
+          <tr><td class="mono">EV-DE-04</td><td><strong>Empty document</strong> — must not call the model</td><td>Deterministic, no model call</td><td><span class="pill p-pass">Pass</span></td></tr>
+          <tr><td class="mono">EV-NR-01</td><td>Well-grounded narrative cites what it was given</td><td>Citation-keyword proxy</td><td><span class="pill p-neut">Blocked</span></td></tr>
+          <tr><td class="mono">EV-NR-02</td><td>No grounding supplied — response well-formed</td><td>Well-formedness only</td><td><span class="pill p-neut">Blocked</span></td></tr>
+          <tr><td class="mono">EV-NR-03</td><td>Regeneration incorporates analyst feedback</td><td>Keyword presence</td><td><span class="pill p-neut">Blocked</span></td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="note">
+        <span class="lbl">What narrative scoring does not verify</span>
+        <p>EV-NR-02 confirms the model returned a non-empty, parseable response — <em>nothing more</em>. It does not independently verify that the model avoided fabricating a claim. That property is a prompt-level instruction enforced by the client's contract and, ultimately, by the analyst review gate downstream. The eval harness's own README states this plainly, which is the right call: a narrative eval that quietly claimed more than it checks would be worse than no eval at all.</p>
+      </div>
+    </section>
+
+    <!-- ══ 10 ══ -->
+    <section id="s10">
+      <div class="sec-head">
+        <h2>Observations</h2>
+        <p class="sec-sub">What running these 92 cases actually taught us, beyond the pass/fail counts.</p>
+      </div>
+
+      <h3>OBS-1 · The unit suite predicted a defect the UI later confirmed</h3>
+      <p>UT-AS-11 was written as a characterization test — pinning behaviour that looked wrong but belonged to another module's owner. Days later, UI-GV-01 and UI-GV-02 confirmed the same defect end to end in the browser, with a committee member able to vote on an empty assessment. <strong>The two suites found the same thing from opposite directions</strong>, which is the strongest form of corroboration available without a formal proof.</p>
+
+      <h3>OBS-2 · Green means nothing until you have broken something on purpose</h3>
+      <p>The mutation check is the single most useful artefact in this register. Deleting the finalization gate failed exactly five cases — not four, not fifteen. That precision is what distinguishes a suite that tests behaviour from one that merely exercises code.</p>
+
+      <h3>OBS-3 · One test was deleted for being flaky, and that was the right call</h3>
+      <p>A browser-level version of UI-GV-03 passed on one full-suite run and failed in isolation — the race only fires when the two StrictMode requests genuinely overlap. <strong>A known-defect marker that oscillates is worse than no test</strong>, because it trains the team to ignore the signal. It was replaced with a deterministic <code>Promise.all</code> version that also makes the stronger claim: the defect is in the stored function, not in React.</p>
+
+      <h3>OBS-4 · Counter-evidence is what makes findings credible</h3>
+      <p>API-AU-02, API-AU-06 and API-AU-07 all pass, and all sit deliberately inside the defect file. They prove the API <em>does</em> authenticate one route by design, <em>does</em> validate the mitigation factor, and <em>does</em> reject malformed input. Without them, DEF-002 reads as "the API is wide open" — an overstatement that would get argued down and take the true part with it.</p>
+
+      <h3>OBS-5 · The largest coverage gap is structural, not an oversight</h3>
+      <p>The <code>audit_event</code> append-only trigger and the <code>CHECK (residual_rating &gt; 0)</code> constraint are the repo's flagship governance claims, and <strong>not one of these 92 cases can reach them</strong>. No HTTP endpoint attempts an <code>UPDATE audit_event</code>, so no API or UI test can ever exercise that trigger, and unit tests mock the database away entirely. This needs a Testcontainers suite, and it is the top priority.</p>
+
+      <h3>OBS-6 · The role model exists and is honoured only in the UI</h3>
+      <p>The frontend filters navigation by role — a Product Owner never sees the Committee Queue. The API enforces none of it. That combination is <em>worse</em> than having no role model, because the product looks access-controlled to anyone evaluating it from the screens.</p>
+
+      <h3>OBS-7 · Two environment issues would break a fresh clone</h3>
+      <ul>
+        <li><code>ops/setup-local-db.sh</code> assumes <code>psql</code> on the host. On a Docker-only machine it fails partway; both schemas had to be applied through <code>docker exec</code> instead.</li>
+        <li>The <code>control</code> table is created but never seeded (DEF-005), so <code>GET /api/Scoring/Controls</code> returns <code>[]</code> for every category and US-7.1 AC3's explainability requirement cannot be met.</li>
+      </ul>
+
+      <h3>Defect register</h3>
+      <div class="tw"><table>
+        <thead><tr><th>ID</th><th>Finding</th><th>Severity</th><th>Cases</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">DEF-001</td><td>User directory readable with no credential</td><td><span class="pill p-crit">High</span></td><td class="mono">API-AU-01</td></tr>
+          <tr><td class="mono">DEF-002</td><td>No role enforcement; actor self-declared in the request body</td><td><span class="pill p-crit">High</span></td><td class="mono">API-AU-03/04/05</td></tr>
+          <tr><td class="mono">DEF-003</td><td>Unknown ids surface as HTTP 500</td><td><span class="pill p-warn">Medium</span></td><td class="mono">API-AU-08/09</td></tr>
+          <tr><td class="mono">DEF-004</td><td>Empty assessment finalizes and reaches the committee</td><td><span class="pill p-crit">High</span></td><td class="mono">UT-AS-11, UI-GV-01/02</td></tr>
+          <tr><td class="mono">DEF-005</td><td><code>control</code> table never seeded</td><td><span class="pill p-warn">Medium</span></td><td class="mono">manual</td></tr>
+          <tr><td class="mono">DEF-006</td><td><code>func_getOrCreateAssessment</code> race — first open always 500s</td><td><span class="pill p-warn">Medium</span></td><td class="mono">UI-GV-03</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- ══ 11 ══ -->
+    <section id="s11">
+      <div class="sec-head">
+        <h2>Traceability</h2>
+        <p class="sec-sub">User story → the cases proving it. Gaps are listed as gaps.</p>
+      </div>
+
+      <div class="tw"><table>
+        <thead><tr><th>User story</th><th>Cases</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>US-1.1 Submit a change request</td><td class="mono">UI-JN-01, UT-CR-01</td><td><span class="pill p-pass">Covered</span></td></tr>
+          <tr><td>US-1.2 Attach supporting documents</td><td class="mono">UT-CR-02..07</td><td><span class="pill p-pass">Covered</span></td></tr>
+          <tr><td>US-1.3 Track my request status</td><td class="mono">UI-JN-01</td><td><span class="pill p-pass">Covered</span></td></tr>
+          <tr><td>US-2.1 Auto-map risk categories</td><td class="mono">UT-AI-01..05, EV-CM-01..05</td><td><span class="pill p-warn">Partial — evals blocked</span></td></tr>
+          <tr><td>US-2.2 Override proposed categories</td><td class="mono">UT-AS-09</td><td><span class="pill p-warn">Partial — no reason-mandatory test</span></td></tr>
+          <tr><td>US-3.1 Surface relevant policy</td><td>—</td><td><span class="pill p-crit">Gap</span></td></tr>
+          <tr><td>US-3.2 Confirm or reject surfaced policy</td><td class="mono">UT-AS-03</td><td><span class="pill p-pass">Covered</span></td></tr>
+          <tr><td>US-4.1 Extract structured data</td><td class="mono">UT-AI-06..08, EV-DE-01..04</td><td><span class="pill p-warn">Partial — evals blocked</span></td></tr>
+          <tr><td>US-4.2 Correct extracted data</td><td>—</td><td><span class="pill p-crit">Gap</span></td></tr>
+          <tr><td>US-5.1 Generate a draft assessment</td><td class="mono">UT-AI-09/10, UT-AS-01</td><td><span class="pill p-pass">Covered</span></td></tr>
+          <tr><td>US-5.2 Regenerate with feedback</td><td class="mono">UT-AI-11, EV-NR-03</td><td><span class="pill p-warn">Partial</span></td></tr>
+          <tr><td>US-6.1/6.2 Edit &amp; override history</td><td>—</td><td><span class="pill p-crit">Gap — needs DB tests</span></td></tr>
+          <tr><td>US-6.3 Finalize the assessment</td><td class="mono">UT-AS-01..08, UI-JN-02</td><td><span class="pill p-pass">Covered</span></td></tr>
+          <tr><td>US-7.1 Risk score with breakdown</td><td class="mono">UT-SC-07/08</td><td><span class="pill p-warn">Partial — DEF-005 blocks explainability</span></td></tr>
+          <tr><td>US-7.2 Override a calculated score</td><td class="mono">UT-SC-09..11</td><td><span class="pill p-pass">Covered</span></td></tr>
+          <tr><td>US-8.1 Route to committee</td><td class="mono">UI-JN-02/03</td><td><span class="pill p-pass">Covered</span></td></tr>
+          <tr><td>US-8.2 Cast a committee vote</td><td class="mono">UT-CM-01..10, UI-JN-03</td><td><span class="pill p-pass">Covered</span></td></tr>
+          <tr><td>US-8.3 Record the final decision</td><td class="mono">UT-CM-03..13</td><td><span class="pill p-pass">Covered</span></td></tr>
+          <tr><td>US-9.1 Reconstruct full history</td><td class="mono">UI-JN-02</td><td><span class="pill p-warn">Partial — no export test</span></td></tr>
+          <tr><td>US-9.2 Guarantee immutability</td><td>—</td><td><span class="pill p-crit">Gap — unreachable without Testcontainers</span></td></tr>
+          <tr><td>US-10.1 Configure scoring parameters</td><td class="mono">UT-SC-01..06, API-AU-06</td><td><span class="pill p-pass">Covered</span></td></tr>
+          <tr><td>US-10.2 Configure workflow rules</td><td>—</td><td><span class="pill p-crit">Gap</span></td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="note crit">
+        <span class="lbl">The honest summary</span>
+        <p>Of 22 user stories, <strong>12 are covered, 6 partially, and 4 have no coverage at all</strong>. The most consequential gap is US-9.2 — the immutable audit trail, this product's flagship governance claim — which no test in this register can reach. That is a structural limit of the current suites, not an oversight, and closing it is the top recommendation.</p>
+      </div>
+    </section>
+
+    <p class="foot">All results recorded from executions against a running local stack on 12 September 2026. Suite stability confirmed over three consecutive full Playwright runs and four unit runs. Companion documents: <em>QA &amp; BA Strategy</em> and <em>QA Codebase Walkthrough</em>.</p>
+  </main>
+</div>
+
+</body>
+</html>

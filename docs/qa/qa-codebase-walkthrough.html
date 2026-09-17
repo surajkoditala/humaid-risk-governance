@@ -1,0 +1,728 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root { color-scheme: light dark; }
+  body { margin: 0; }
+  img { max-width: 100%; }
+  [hidden] { display: none !important; }
+</style>
+<title>QA Codebase Walkthrough</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@500;600;700&display=swap">
+<style>
+  :root {
+    --ground: #F6F7F9; --surface: #FFFFFF; --surface-2: #EFF2F5;
+    --ink: #131C26; --ink-2: #3B4956; --muted: #66757F;
+    --line: #DBE1E7; --line-2: #C7D0D8;
+    --accent: #0F4C5C; --accent-ink: #0F4C5C; --accent-soft: #E2EDF0;
+    --critical: #A02B21; --critical-soft: #F7E7E5;
+    --warn: #8A5A06; --warn-soft: #FBF0DC;
+    --pass: #1B6B4C; --pass-soft: #E2F0E9;
+    --neutral: #5D6B78; --neutral-soft: #E9EDF1;
+    --f-display: "IBM Plex Serif", Georgia, serif;
+    --f-body: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --f-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+    --measure: 70ch; --radius: 3px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0D141B; --surface: #131C25; --surface-2: #18232E;
+      --ink: #E5EBF1; --ink-2: #BDC9D4; --muted: #8B9BA8;
+      --line: #24313D; --line-2: #314250;
+      --accent: #5FB4C8; --accent-ink: #7CC5D6; --accent-soft: #10303A;
+      --critical: #E4837A; --critical-soft: #351917;
+      --warn: #D9A44E; --warn-soft: #33260F;
+      --pass: #6BC49C; --pass-soft: #122C22;
+      --neutral: #92A2AF; --neutral-soft: #1C2731;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0D141B; --surface: #131C25; --surface-2: #18232E;
+    --ink: #E5EBF1; --ink-2: #BDC9D4; --muted: #8B9BA8;
+    --line: #24313D; --line-2: #314250;
+    --accent: #5FB4C8; --accent-ink: #7CC5D6; --accent-soft: #10303A;
+    --critical: #E4837A; --critical-soft: #351917;
+    --warn: #D9A44E; --warn-soft: #33260F;
+    --pass: #6BC49C; --pass-soft: #122C22;
+    --neutral: #92A2AF; --neutral-soft: #1C2731;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ground); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.62; -webkit-font-smoothing: antialiased; }
+  .shell { display: grid; grid-template-columns: 236px minmax(0,1fr); gap: 54px; max-width: 1190px; margin: 0 auto; padding: 0 32px 96px; }
+
+  .rail { position: sticky; top: 0; align-self: start; padding-top: 48px; height: 100vh; overflow-y: auto; }
+  .rail-mark { font-family: var(--f-mono); font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--accent-ink); margin-bottom: 24px; }
+  .rail nav { display: flex; flex-direction: column; gap: 1px; border-left: 1px solid var(--line); }
+  .rail a { padding: 6px 0 6px 14px; text-decoration: none; color: var(--muted); font-size: 12.5px; line-height: 1.35; border-left: 2px solid transparent; margin-left: -1px; transition: color .12s, border-color .12s; }
+  .rail a:hover { color: var(--ink); border-left-color: var(--line-2); }
+  .rail a.file { font-family: var(--f-mono); font-size: 11.5px; padding-left: 26px; }
+  .rail a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .rail .grp { font-family: var(--f-mono); font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-2); padding: 14px 0 4px 14px; }
+
+  .masthead { padding: 56px 0 0; }
+  .eyebrow { font-family: var(--f-mono); font-size: 11px; letter-spacing: .15em; text-transform: uppercase; color: var(--muted); }
+  h1 { font-family: var(--f-display); font-weight: 700; font-size: clamp(32px,4.6vw,46px); line-height: 1.1; letter-spacing: -.015em; margin: 14px 0 16px; text-wrap: balance; }
+  .standfirst { font-size: 17px; line-height: 1.6; color: var(--ink-2); max-width: var(--measure); margin: 0 0 30px; }
+  .meta { display: grid; grid-template-columns: repeat(auto-fit,minmax(148px,1fr)); border-top: 1px solid var(--line-2); border-bottom: 1px solid var(--line-2); }
+  .meta div { padding: 14px 18px 14px 0; border-right: 1px solid var(--line); }
+  .meta div:last-child { border-right: 0; }
+  .meta dt { font-family: var(--f-mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-bottom: 5px; }
+  .meta dd { margin: 0; font-size: 13.5px; font-weight: 500; }
+
+  section { padding-top: 62px; scroll-margin-top: 20px; }
+  .sec-head { border-top: 2px solid var(--ink); padding-top: 13px; margin-bottom: 22px; }
+  h2 { font-family: var(--f-display); font-weight: 600; font-size: clamp(21px,2.6vw,28px); line-height: 1.22; margin: 0; letter-spacing: -.01em; }
+  .sec-sub { color: var(--muted); font-size: 14px; margin-top: 6px; max-width: var(--measure); }
+  h3 { font-family: var(--f-display); font-weight: 600; font-size: 17px; margin: 30px 0 9px; }
+  h4 { font-weight: 600; font-size: 13.5px; margin: 20px 0 7px; font-family: var(--f-body); }
+  p { max-width: var(--measure); margin: 0 0 13px; }
+  ul, ol { max-width: var(--measure); padding-left: 20px; margin: 0 0 13px; }
+  li { margin-bottom: 5px; }
+  code { font-family: var(--f-mono); font-size: .875em; background: var(--surface-2); padding: 1px 5px; border-radius: var(--radius); border: 1px solid var(--line); }
+  a { color: var(--accent-ink); }
+
+  /* file block */
+  .file { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); margin: 26px 0; overflow: hidden; }
+  .file-head { border-bottom: 1px solid var(--line); padding: 14px 20px; background: var(--surface-2); }
+  .file-path { font-family: var(--f-mono); font-size: 13px; font-weight: 600; color: var(--accent-ink); word-break: break-all; }
+  .file-facts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  .file-body { padding: 4px 20px 20px; }
+  .file-body > :is(h3,h4):first-child { margin-top: 16px; }
+
+  .pill { display: inline-block; font-family: var(--f-mono); font-size: 10px; font-weight: 500; letter-spacing: .05em; text-transform: uppercase; padding: 2px 7px; border-radius: 2px; white-space: nowrap; }
+  .p-pass { background: var(--pass-soft); color: var(--pass); }
+  .p-crit { background: var(--critical-soft); color: var(--critical); }
+  .p-warn { background: var(--warn-soft); color: var(--warn); }
+  .p-neut { background: var(--neutral-soft); color: var(--neutral); }
+  .p-acc { background: var(--accent-soft); color: var(--accent-ink); }
+
+  .tw { overflow-x: auto; margin: 16px 0 20px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+  .file .tw { background: var(--ground); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 8px 13px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  thead th { font-family: var(--f-mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 500; background: var(--surface-2); white-space: nowrap; }
+  tbody tr:last-child td { border-bottom: 0; }
+  td.mono, th.mono { font-family: var(--f-mono); font-size: 11.5px; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  pre { font-family: var(--f-mono); font-size: 11.8px; line-height: 1.58; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; overflow-x: auto; margin: 11px 0; }
+  .file pre { background: var(--ground); }
+  pre code { background: none; border: 0; padding: 0; font-size: inherit; }
+
+  .note { border-left: 2px solid var(--accent); background: var(--accent-soft); padding: 13px 17px; margin: 18px 0; max-width: var(--measure); }
+  .note p:last-child { margin-bottom: 0; }
+  .note .lbl { font-family: var(--f-mono); font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent-ink); display: block; margin-bottom: 5px; }
+  .note.warn { border-left-color: var(--warn); background: var(--warn-soft); }
+  .note.warn .lbl { color: var(--warn); }
+
+  .lede-stats { display: grid; grid-template-columns: repeat(auto-fit,minmax(118px,1fr)); border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); margin: 20px 0 24px; }
+  .lede-stats div { padding: 15px 18px; border-right: 1px solid var(--line); }
+  .lede-stats div:last-child { border-right: 0; }
+  .lede-stats .v { font-family: var(--f-display); font-size: 26px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+  .lede-stats .k { font-family: var(--f-mono); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-top: 6px; }
+
+  .foot { margin-top: 66px; padding-top: 18px; border-top: 1px solid var(--line-2); font-size: 12.5px; color: var(--muted); max-width: var(--measure); }
+
+  @media (max-width: 900px) {
+    .shell { grid-template-columns: 1fr; gap: 0; padding: 0 18px 60px; }
+    .rail { position: static; height: auto; padding-top: 26px; }
+    .rail nav { flex-direction: row; flex-wrap: wrap; gap: 4px; border-left: 0; }
+    .rail a, .rail a.file { border: 1px solid var(--line); border-radius: 2px; padding: 5px 9px; margin-left: 0; }
+    .rail .grp { display: none; }
+    .masthead { padding-top: 30px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+  @page { size: A4; margin: 16mm 15mm 18mm; }
+  @media print {
+    :root, :root[data-theme="dark"], :root:not([data-theme="light"]) {
+      --ground:#FFF; --surface:#FFF; --surface-2:#F2F5F7; --ink:#101820; --ink-2:#33414E;
+      --muted:#5A6874; --line:#D3DAE1; --line-2:#B8C2CC; --accent:#0F4C5C; --accent-ink:#0F4C5C;
+      --accent-soft:#E6EFF2; --critical:#8E2219; --critical-soft:#F8E9E7; --warn:#7A4F05;
+      --warn-soft:#FBF1DE; --pass:#17593F; --pass-soft:#E5F1EB; --neutral:#4F5D69; --neutral-soft:#EDF0F3;
+    }
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    body { font-size: 10pt; line-height: 1.48; background: #fff; }
+    .shell { display: block; max-width: none; padding: 0; }
+    .rail { display: none; }
+    .masthead { padding-top: 0; }
+    h1 { font-size: 25pt; } h2 { font-size: 15pt; } h3 { font-size: 11.5pt; }
+    p, ul, ol, .standfirst, .sec-sub, .note { max-width: none; }
+    section { break-before: page; padding-top: 0; }
+    #s1 { break-before: auto; }
+    .sec-head, h3, h4 { break-after: avoid; }
+    .file, .tw, .note, pre, .lede-stats { break-inside: avoid; }
+    tr, li { break-inside: avoid; }
+    thead { display: table-header-group; }
+    a { color: var(--ink); text-decoration: none; }
+  }
+</style>
+
+<div class="shell">
+  <aside class="rail">
+    <div class="rail-mark">HumAId&nbsp;·&nbsp;QA&nbsp;&amp;&nbsp;BA</div>
+    <nav>
+      <a href="#s1">01 · Overview</a>
+      <div class="grp">02 · Unit tests</div>
+      <a class="file" href="#f-assessment">AssessmentServiceTests.cs</a>
+      <div class="grp">03 · Playwright harness</div>
+      <a class="file" href="#f-config">playwright.config.js</a>
+      <a class="file" href="#f-global">global-setup.js</a>
+      <a class="file" href="#f-users">fixtures/users.js</a>
+      <a class="file" href="#f-app">fixtures/app.js</a>
+      <div class="grp">04 · API specs</div>
+      <a class="file" href="#f-smoke">api/smoke.spec.js</a>
+      <a class="file" href="#f-auth">api/authorization.spec.js</a>
+      <div class="grp">05 · UI specs</div>
+      <a class="file" href="#f-journeys">ui/journeys.spec.js</a>
+      <a class="file" href="#f-gov">ui/governance.spec.js</a>
+      <div class="grp">06 · Tooling &amp; docs</div>
+      <a class="file" href="#f-pdf">tools/make-report-pdf.mjs</a>
+      <a class="file" href="#f-readme">tests/e2e/README.md</a>
+      <a class="file" href="#f-report">docs/qa/qa-ba-strategy.*</a>
+      <div class="grp">07 · Techniques</div>
+      <a href="#s7">Why it is built this way</a>
+      <a href="#s8">08 · Handover</a>
+    </nav>
+  </aside>
+
+  <main>
+    <header class="masthead">
+      <div class="eyebrow">Genius Hacks Q3 2026 · Risk Assessment Workbench</div>
+      <h1>QA Codebase Walkthrough</h1>
+      <p class="standfirst">Every file added by QA and BA, what each one is for, how it works internally, and what it proves. Written so any team member can read, run, extend or challenge the test suite without a handover conversation.</p>
+      <dl class="meta">
+        <div><dt>Author</dt><dd>Shanthi Subramanian · BA&nbsp;/&nbsp;QA</dd></div>
+        <div><dt>Date</dt><dd>12 September 2026</dd></div>
+        <div><dt>Branch</dt><dd>qa/ba-qa-workstream</dd></div>
+        <div><dt>Companion</dt><dd>QA &amp; BA Strategy</dd></div>
+      </dl>
+      <div class="lede-stats">
+        <div><div class="v">13</div><div class="k">Files added</div></div>
+        <div><div class="v">80</div><div class="k">Automated tests</div></div>
+        <div><div class="v">6</div><div class="k">Defects raised</div></div>
+        <div><div class="v">0</div><div class="k">Production files changed</div></div>
+      </div>
+    </header>
+
+    <!-- ═════════════ 01 ═════════════ -->
+    <section id="s1">
+      <div class="sec-head">
+        <h2>Overview</h2>
+        <p class="sec-sub">What was added, where it sits, and how the pieces relate.</p>
+      </div>
+
+      <div class="note">
+        <span class="lbl">The one-line summary</span>
+        <p><strong>Nothing under <code>src/</code> was modified.</strong> Every file below is new, and lives in <code>tests/</code> or <code>docs/</code>. QA found six defects without changing a line of production code — the fixes are the developers' to make, and the tests are waiting to confirm them.</p>
+      </div>
+
+      <h3>File map</h3>
+      <pre><code>tests/
+├── Humaid.RiskGovernance.AdminUI.UnitTests/
+│   ├── Assessment/AssessmentServiceTests.cs   NEW  12 tests — the finalization gate
+│   └── README.md                              edited — owner line
+└── e2e/                                       NEW  the whole Playwright project
+    ├── package.json  package-lock.json  .gitignore
+    ├── playwright.config.js                   two projects: api, ui
+    ├── global-setup.js                        aborts if the API is down
+    ├── fixtures/
+    │   ├── users.js                           seeded users by role (API specs)
+    │   └── app.js                             sign-in, nav, tabs (UI specs)
+    ├── api/
+    │   ├── smoke.spec.js                      3 tests — harness + contract
+    │   └── authorization.spec.js              9 tests — DEF-001/002/003
+    ├── ui/
+    │   ├── journeys.spec.js                   3 tests — the golden path
+    │   └── governance.spec.js                 3 tests — DEF-004/006
+    ├── tools/make-report-pdf.mjs              regenerates the strategy PDF
+    └── README.md                              how and why
+
+docs/qa/
+├── qa-ba-strategy.html                        the strategy report, standalone
+└── qa-ba-strategy.pdf                         26 pages, A4</code></pre>
+
+      <h3>The three suites, and why there are three</h3>
+      <div class="tw"><table>
+        <thead><tr><th>Suite</th><th class="num">Tests</th><th>Runs against</th><th>Reaches what the others cannot</th></tr></thead>
+        <tbody>
+          <tr><td><strong>xUnit</strong> <span class="sub">tests/…UnitTests</span></td><td class="num">62</td><td>Nothing — all mocked</td><td>Service logic in milliseconds, no stack required</td></tr>
+          <tr><td><strong>Playwright api</strong></td><td class="num">12</td><td>API + Postgres</td><td>HTTP status mapping and authorization, invisible to a mocked test</td></tr>
+          <tr><td><strong>Playwright ui</strong></td><td class="num">6</td><td>Full stack + browser</td><td>Whether the screens actually compose into a working workflow</td></tr>
+        </tbody>
+      </table></div>
+      <p><strong>80 tests total.</strong> Still unreachable by all three: the <code>audit_event</code> append-only trigger and the <code>CHECK</code> constraints, because no HTTP endpoint attempts an <code>UPDATE</code>. That needs a Testcontainers suite and remains the top gap.</p>
+
+      <h3>Running everything</h3>
+      <pre><code># 1. stack
+bash ops/setup-local-db.sh                     # Postgres + Azurite
+dotnet run --project src/6-MockExternalSystems/Humaid.RiskGovernance.MockSystems
+dotnet run --project src/1-API/Humaid.RiskGovernance.AdminUI.Web
+cd webapp && npm run dev                       # :3000, needed by the ui project only
+
+# 2. tests
+dotnet test tests/Humaid.RiskGovernance.AdminUI.UnitTests   # 62 passed
+cd tests/e2e && npm install && npm test                     # 18 passed
+npm run report                                              # HTML report + traces</code></pre>
+    </section>
+
+    <!-- ═════════════ 02 ═════════════ -->
+    <section id="s2">
+      <div class="sec-head">
+        <h2>Unit tests</h2>
+        <p class="sec-sub">The only file added to the existing xUnit project.</p>
+      </div>
+
+      <div class="file" id="f-assessment">
+        <div class="file-head">
+          <div class="file-path">tests/Humaid.RiskGovernance.AdminUI.UnitTests/Assessment/AssessmentServiceTests.cs</div>
+          <div class="file-facts">
+            <span class="pill p-neut">295 lines</span>
+            <span class="pill p-pass">12 tests</span>
+            <span class="pill p-acc">xUnit + Moq</span>
+            <span class="pill p-acc">US-6.3</span>
+          </div>
+        </div>
+        <div class="file-body">
+          <h3>Why it exists</h3>
+          <p><code>AssessmentService.FinalizeAsync</code> is the single chokepoint enforcing CLAUDE.md's central rule. <code>CommitteeService.CastVoteAsync</code> refuses a vote unless the request is already <code>PendingCommittee</code>, so finalization is the <em>only</em> route to a committee decision. It had <strong>no test at all</strong>. That made it the highest-value thing in the repo to cover.</p>
+
+          <h3>Internals</h3>
+          <h4>1. Type aliases, to dodge a real C# collision</h4>
+          <p>The model class and its namespace share a name (<code>…Models.CategoryMapping.CategoryMapping</code>), which makes an unqualified reference ambiguous. The alias keeps the test body readable:</p>
+          <pre><code>using CategoryMappingRecord =
+    Humaid.RiskGovernance.AdminUI.Infrastructure.Models.CategoryMapping.CategoryMapping;</code></pre>
+
+          <h4>2. Four mocked repos, one system under test</h4>
+          <pre><code>private readonly Mock&lt;IAssessmentRepo&gt; _assessmentRepo = new();
+private readonly Mock&lt;ICategoryMappingRepo&gt; _categoryMappingRepo = new();
+private readonly Mock&lt;INarrativeSectionRepo&gt; _narrativeSectionRepo = new();
+private readonly Mock&lt;IPolicyResearchRepo&gt; _policyResearchRepo = new();
+private readonly AssessmentService _sut;</code></pre>
+
+          <h4>3. A <code>Given(...)</code> helper that makes each test one readable sentence</h4>
+          <p>Readiness depends on three collections agreeing with each other. Setting all three inline in every test would bury the point, so one helper arranges the world and each test states only what it is varying:</p>
+          <pre><code>private void Given(
+    IReadOnlyList&lt;CategoryMappingRecord&gt; categories,
+    IReadOnlyList&lt;NarrativeSection&gt; sections,
+    IReadOnlyList&lt;PolicyReliance&gt; reliance)
+{
+    _categoryMappingRepo.Setup(r =&gt; r.GetMappingAsync(AssessmentId)).ReturnsAsync(categories);
+    _narrativeSectionRepo.Setup(r =&gt; r.GetSectionsAsync(AssessmentId)).ReturnsAsync(sections);
+    _policyResearchRepo.Setup(r =&gt; r.GetRelianceAsync(AssessmentId)).ReturnsAsync(reliance);
+}</code></pre>
+          <p>Plus three small builders — <code>Category(...)</code>, <code>Section(...)</code>, <code>Reliance(...)</code> — so a test reads as domain language rather than object construction.</p>
+
+          <h3>The twelve tests</h3>
+          <div class="tw"><table>
+            <thead><tr><th>Test</th><th>Proves</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">FinalizeAsync_BlocksAndNamesTheCategoryWhenItsNarrativeIsStillAiDrafted</td><td>US-5.1 AC2 — an AI draft cannot route to committee</td></tr>
+              <tr><td class="mono">FinalizeAsync_BlocksWhenAMappedCategoryHasNoNarrativeSectionAtAll</td><td>Absence ≠ "nothing outstanding"</td></tr>
+              <tr><td class="mono">FinalizeAsync_BlocksWhenAMappedCategoryHasNoPolicyRelianceDecision</td><td>US-3.2 AC2</td></tr>
+              <tr><td class="mono">FinalizeAsync_NeverFinalizesTheAssessmentWhenBlocked</td><td>The repo is never reached — throwing <em>after</em> persisting would still let it through</td></tr>
+              <tr><td class="mono">FinalizeAsync_ListsEveryOutstandingReasonNotJustTheFirst</td><td>US-6.3 AC1 — one message lists everything</td></tr>
+              <tr><td class="mono">FinalizeAsync_RecordsTheFinalizingAnalystWhenEveryGateIsSatisfied</td><td>US-6.3 AC3 — never anonymous</td></tr>
+              <tr><td class="mono">CheckReadinessAsync_TreatsAReviewedOrEditedSectionAsSatisfied</td><td>US-6.3 AC2 (a <code>[Theory]</code>, 2 cases)</td></tr>
+              <tr><td class="mono">CheckReadinessAsync_IgnoresACategoryTheAnalystDeactivated</td><td>A removed category must not block forever</td></tr>
+              <tr><td class="mono">CheckReadinessAsync_AcceptsAnAssessmentWideRelianceForEveryMappedCategory</td><td>The <code>RiskCategoryId == null</code> branch</td></tr>
+              <tr><td class="mono">CheckReadinessAsync_ReportsReadyWhenNoCategoriesAreMappedAtAll</td><td><strong>DEF-004</strong> — characterization, see below</td></tr>
+              <tr><td class="mono">OpenWorkspaceAsync_DelegatesToTheRepo</td><td>Delegation</td></tr>
+            </tbody>
+          </table></div>
+
+          <div class="note warn">
+            <span class="lbl">The characterization test — read this one carefully</span>
+            <p>The last readiness test <em>asserts behaviour that is arguably wrong</em>, and says so in its own comment. With zero active categories both readiness loops are no-ops, so <code>IsReady</code> is vacuously true. Rather than quietly "fixing" someone else's module, QA pinned the current behaviour so that any future change to it is deliberate and visible — and raised it as DEF-004. It was later confirmed end to end through the UI.</p>
+          </div>
+
+          <h3>How we know these tests actually work</h3>
+          <p>A green suite is a claim, not evidence. The gate condition was temporarily replaced with <code>if (false)</code> — effectively deleting the rule — and the suite re-run:</p>
+          <pre><code>Failed: 5, Passed: 57, Total: 62</code></pre>
+          <p>Exactly the five <code>FinalizeAsync_*</code> tests failed. The other seven stayed green because they call <code>CheckReadinessAsync</code> directly and never pass through the gate. That selectivity is the signal: a blunt suite would have failed more, or fewer, and told us nothing. Production code was then restored byte-for-byte (<code>git diff -- src/</code> empty).</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═════════════ 03 ═════════════ -->
+    <section id="s3">
+      <div class="sec-head">
+        <h2>The Playwright harness</h2>
+        <p class="sec-sub">Configuration, safety guard, and the two fixture modules everything else builds on.</p>
+      </div>
+
+      <div class="file" id="f-config">
+        <div class="file-head">
+          <div class="file-path">tests/e2e/playwright.config.js</div>
+          <div class="file-facts"><span class="pill p-neut">47 lines</span><span class="pill p-acc">2 projects</span></div>
+        </div>
+        <div class="file-body">
+          <h3>Purpose</h3>
+          <p>Defines two independent projects so the cheap suite does not inherit the expensive one's dependencies. <code>api</code> needs only the API; <code>ui</code> additionally needs the Vite dev server.</p>
+          <pre><code>projects: [
+  { name: 'api', testDir: './api', use: { baseURL: API_BASE_URL,
+      extraHTTPHeaders: { Accept: 'application/json' } } },
+  { name: 'ui',  testDir: './ui',  use: { baseURL: WEBAPP_BASE_URL,
+      trace: 'retain-on-failure', screenshot: 'only-on-failure' } },
+]</code></pre>
+          <h3>Decisions worth knowing</h3>
+          <ul>
+            <li><code>forbidOnly: !!process.env.CI</code> — a stray <code>.only</code> silently narrows the suite. Fine locally, never in CI.</li>
+            <li><code>retries: CI ? 1 : 0</code> — no retries locally, so flakiness is visible rather than masked.</li>
+            <li><code>trace: 'retain-on-failure'</code> on <code>ui</code> only — a trace is the difference between "step 6 failed" and seeing exactly what was on screen. Too heavy for the API project, which has nothing visual to show.</li>
+            <li>Base URLs come from <code>API_BASE_URL</code> / <code>WEBAPP_BASE_URL</code> so CI overrides config without editing the file.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="file" id="f-global">
+        <div class="file-head">
+          <div class="file-path">tests/e2e/global-setup.js</div>
+          <div class="file-facts"><span class="pill p-neut">29 lines</span><span class="pill p-crit">load-bearing</span></div>
+        </div>
+        <div class="file-body">
+          <h3>Purpose — and why it is not merely politeness</h3>
+          <p>Pings <code>/api/Ping</code> before any test runs and aborts the whole run with setup instructions if it fails.</p>
+          <div class="note">
+            <span class="lbl">The reason this file exists</span>
+            <p>Several tests use <code>test.fail()</code> to record known defects. <strong>A <code>test.fail()</code> test "passes" when it fails for <em>any</em> reason — including a refused connection.</strong> Without this guard, running the suite with nothing listening on :5210 would produce a fully green board that proves absolutely nothing. The guard converts that silent lie into a loud, actionable error.</p>
+          </div>
+          <p>Verified: with the stack down the run exits 255 and prints the three commands needed to start it. <code>/api/Ping</code> is the right probe because <code>PingController</code> deliberately carries no <code>[Authorize]</code>.</p>
+        </div>
+      </div>
+
+      <div class="file" id="f-users">
+        <div class="file-head">
+          <div class="file-path">tests/e2e/fixtures/users.js</div>
+          <div class="file-facts"><span class="pill p-neut">37 lines</span><span class="pill p-acc">API specs</span></div>
+        </div>
+        <div class="file-body">
+          <h3>Purpose</h3>
+          <p>Resolves the six seeded users <strong>by role, never by hardcoded id</strong> — ids are generated by <code>seed_dev_users.sql</code>, so pinning them would break on every re-seed.</p>
+          <pre><code>const byRole = (role) =&gt; users.find((user) =&gt; (user.role ?? user.Role) === role);
+return { all: users, productOwner: byRole('ProductOwner'), analyst: byRole('Analyst'),
+         committeeMember: byRole('CommitteeMember'), admin: byRole('Admin') };</code></pre>
+          <p>It throws a diagnostic error rather than returning empty when the table looks unseeded — so "the DB was not set up" never masquerades as "the endpoint returned nothing".</p>
+          <p>Also exports <code>NON_EXISTENT_ID</code>: a well-formed GUID that deliberately matches no record, used by probes that must be rejected on <em>authorization</em> grounds before any lookup happens.</p>
+        </div>
+      </div>
+
+      <div class="file" id="f-app">
+        <div class="file-head">
+          <div class="file-path">tests/e2e/fixtures/app.js</div>
+          <div class="file-facts"><span class="pill p-neut">86 lines</span><span class="pill p-acc">UI specs</span></div>
+        </div>
+        <div class="file-body">
+          <h3>Purpose</h3>
+          <p>Everything the browser journeys need: signing in as a role, two selector helpers, and an API shortcut for arranging preconditions.</p>
+
+          <h4><code>openAppAs(browser, role)</code> — there is no login to automate</h4>
+          <p>While Auth0 is unconfigured, <code>DevUserContext.jsx</code> reads the acting user straight out of <code>localStorage.devUserId</code>. Seeding that key before first paint <em>is</em> the sign-in — faster and far less brittle than driving a user-picker, and it uses the app's own mechanism rather than a test-only backdoor.</p>
+          <pre><code>await context.addInitScript((id) =&gt; window.localStorage.setItem('devUserId', id), user.id);
+await page.goto(WEBAPP_BASE_URL, { waitUntil: 'domcontentloaded' });
+
+const bypass = page.getByRole('button', { name: /Continue without signing in/i });
+if (await bypass.count()) await bypass.click();
+
+// Proves the role took effect before any assertion depends on it.
+await expect(page.getByText(`${user.displayName} — ${role}`)).toBeVisible();</code></pre>
+          <p>That final assertion matters: without it, a failure to switch user would surface later as a confusing "element not found" in whatever screen the test expected.</p>
+
+          <h4><code>nav(page, label)</code> — a one-line fix for a real trap</h4>
+          <pre><code>export function nav(page, label) {
+  return page.getByRole('button', { name: label, exact: true });
+}</code></pre>
+          <p>The sidebar has <strong>"Submit Request"</strong>; the intake form has <strong>"Submit request"</strong>. Playwright's accessible-name matching is case-insensitive unless <code>exact</code> is set, so without this <em>every</em> nav click is a strict-mode violation resolving to two elements. This cost real debugging time and is exactly the kind of thing worth centralising.</p>
+
+          <h4><code>createChangeRequest(title)</code> — arrange via API, assert via UI</h4>
+          <p>Returns the created record (<code>{ id, requestNumber, … }</code>). Tests whose subject is a <em>later</em> stage use this instead of re-driving intake through the browser: faster, independent of journey ordering, and it keeps each test's failure pointing at the thing it actually tests.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═════════════ 04 ═════════════ -->
+    <section id="s4">
+      <div class="sec-head">
+        <h2>API specs</h2>
+        <p class="sec-sub">Twelve tests at the HTTP boundary — where authorization actually lives.</p>
+      </div>
+
+      <div class="file" id="f-smoke">
+        <div class="file-head">
+          <div class="file-path">tests/e2e/api/smoke.spec.js</div>
+          <div class="file-facts"><span class="pill p-neut">51 lines</span><span class="pill p-pass">3 tests</span></div>
+        </div>
+        <div class="file-body">
+          <h3>Purpose</h3>
+          <p>Proves the harness itself works and pins the API's contract. <strong>If these fail, the problem is the stack — not the thing any other spec is measuring.</strong> That separation is the whole point of the file.</p>
+          <div class="tw"><table>
+            <thead><tr><th>Test</th><th>Pins</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">every response uses the OperationResult envelope</td><td><code>BaseApiController.ExecuteAsync</code> wraps every action, so <code>data</code> — not a bare body — is the contract both the webapp and these tests rely on</td></tr>
+              <tr><td class="mono">the seeded users cover all four roles</td><td>Six users across ProductOwner / Analyst / CommitteeMember / Admin. Every role journey depends on this</td></tr>
+              <tr><td class="mono">the FFIEC risk framework is seeded with its four categories</td><td><code>PRODUCTS_SERVICES</code>, <code>CUSTOMERS_ENTITIES</code>, <code>GEOGRAPHIC_LOCATIONS</code>, <code>DELIVERY_CHANNELS</code> — a partial seed would silently weaken every category-mapping result downstream</td></tr>
+            </tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <div class="file" id="f-auth">
+        <div class="file-head">
+          <div class="file-path">tests/e2e/api/authorization.spec.js</div>
+          <div class="file-facts">
+            <span class="pill p-neut">185 lines</span><span class="pill p-pass">9 tests</span>
+            <span class="pill p-crit">DEF-001</span><span class="pill p-crit">DEF-002</span><span class="pill p-warn">DEF-003</span>
+          </div>
+        </div>
+        <div class="file-body">
+          <h3>Purpose</h3>
+          <p>Records the access-control findings. Structured as four <code>describe</code> blocks so the file reads as an argument rather than a list.</p>
+
+          <div class="tw"><table>
+            <thead><tr><th>Block</th><th class="num">Tests</th><th>What it establishes</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Authentication</strong></td><td class="num">2</td><td>The user directory is readable with no credential (<span class="pill p-crit">fails</span>), and <code>/api/Ping</code> is open <em>by design</em> (<span class="pill p-pass">passes</span>)</td></tr>
+              <tr><td><strong>Role enforcement</strong></td><td class="num">3</td><td>A Product Owner is not refused when voting, finalizing or changing scoring config (<span class="pill p-crit">all fail</span>)</td></tr>
+              <tr><td><strong>Input validation still holds</strong></td><td class="num">2</td><td>A mitigation factor of <code>1.0</code> <em>is</em> refused; a malformed GUID 404s (<span class="pill p-pass">both pass</span>)</td></tr>
+              <tr><td><strong>Error handling</strong></td><td class="num">2</td><td>Unknown ids surface as 500 rather than 4xx (<span class="pill p-warn">fails</span>)</td></tr>
+            </tbody>
+          </table></div>
+
+          <div class="note">
+            <span class="lbl">Why two passing tests sit in a defect file</span>
+            <p>The "Input validation still holds" block is deliberate and load-bearing. It proves the API is <em>not</em> simply accepting everything — so the finding stays precisely an <strong>authorization</strong> gap and is never overstated into "the API is wide open". Keeping the counter-evidence in the same file is what makes the rest of it credible.</p>
+          </div>
+
+          <h3>The <code>test.fail()</code> pattern</h3>
+          <p>Every defect test asserts the <strong>secure</strong> behaviour and is annotated <code>test.fail()</code>:</p>
+          <pre><code>test('the user directory is not readable without a credential', async ({ request }) =&gt; {
+  test.fail(); // DevBypassAuthHandler authenticates every request; returns 200 + all six users.
+
+  const response = await request.get('/api/User');
+  test.info().annotations.push({ type: 'actual status', description: String(response.status()) });
+
+  expect(response.status(), 'unauthenticated read of /api/User should be rejected').toBe(401);
+});</code></pre>
+          <p>Three things happen at once. The board stays green while the gap is open. The moment somebody implements role checks, Playwright reports <em>"expected to fail, but passed"</em> — <strong>the fix announces itself</strong>. And the annotation records the <em>actual</em> status in the HTML report, so the evidence travels with the test.</p>
+          <p class="note-after"><strong>When a defect is fixed, delete the annotation — not the test.</strong></p>
+
+          <h3>Verified results</h3>
+          <div class="tw"><table>
+            <thead><tr><th>Probe</th><th class="num">Expected</th><th class="num">Actual</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">GET /api/User — no credential</td><td class="num">401</td><td class="num"><strong>200</strong></td></tr>
+              <tr><td class="mono">POST /api/Committee/Vote as PO</td><td class="num">403</td><td class="num">400</td></tr>
+              <tr><td class="mono">POST /api/Assessment/{id}/Finalize as PO</td><td class="num">403</td><td class="num">500</td></tr>
+              <tr><td class="mono">POST /api/Scoring/Config as PO</td><td class="num">403</td><td class="num">500</td></tr>
+            </tbody>
+          </table></div>
+          <p><strong>No endpoint returned 403.</strong> Stated honestly in the file's own comments: the last three used a non-existent id, so each was rejected on <em>data</em> grounds before role could have mattered — they prove the role check does not run <em>first</em>, not that a valid request would be accepted.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═════════════ 05 ═════════════ -->
+    <section id="s5">
+      <div class="sec-head">
+        <h2>UI specs</h2>
+        <p class="sec-sub">Six browser tests: the golden path, and the two defects only the UI could reveal.</p>
+      </div>
+
+      <div class="file" id="f-journeys">
+        <div class="file-head">
+          <div class="file-path">tests/e2e/ui/journeys.spec.js</div>
+          <div class="file-facts"><span class="pill p-neut">139 lines</span><span class="pill p-pass">3 tests</span><span class="pill p-acc">serial</span></div>
+        </div>
+        <div class="file-body">
+          <h3>Purpose</h3>
+          <p>The golden path as <strong>one continuous story</strong>, not three unrelated fixtures: one change request moving through the workflow, exactly as an examiner would reconstruct it from the audit trail.</p>
+          <pre><code>test.describe.configure({ mode: 'serial' });
+
+const change = { title: `Launch same-day international wire transfer service ${Date.now()}`,
+                 requestNumber: null };</code></pre>
+          <p>Serial is the right call here: journey 2 has nothing to assess until journey 1 has submitted something. If journey 1 fails, 2 and 3 skip rather than producing three confusing failures with one cause. The timestamped title keeps runs independent as the database accumulates data.</p>
+
+          <h3>What each journey asserts</h3>
+          <div class="tw"><table>
+            <thead><tr><th>Journey</th><th>Steps</th><th>Acceptance criteria</th></tr></thead>
+            <tbody>
+              <tr><td><strong>1 — Product Owner</strong></td><td>Pick change type from the combobox, fill title / description / type-specific details, submit</td><td>US-1.1 AC4 — a unique immutable <code>CR-2026-00001</code> is assigned<br>US-1.3 — status visible without emailing FCRM</td></tr>
+              <tr><td><strong>2 — FCRM Analyst</strong></td><td>Find it in the inbox, open the workspace, walk all seven tabs, finalize, route</td><td>US-1.1 — reaches the analyst inbox<br>US-9.1 — intake is already on the audit trail, attributed to a named human, before the analyst touches anything</td></tr>
+              <tr><td><strong>3 — Risk Committee</strong></td><td>Find it in the queue, open, cast an Approve vote</td><td>US-8.1 — a finalized assessment reaches the queue<br>US-8.2 AC5 — the vote is recorded against the member <em>by name</em>, never anonymised</td></tr>
+            </tbody>
+          </table></div>
+
+          <div class="note warn">
+            <span class="lbl">One deliberate workaround, openly marked</span>
+            <p>Journey 2 retries the Open click, because DEF-006 makes the first attempt fail. That is what an analyst does today, so the journey does it too — but the defect is asserted <em>separately</em> in <code>governance.spec.js</code> rather than being silently absorbed here. A journey that quietly works around a bug, with no test naming it, is how bugs become permanent.</p>
+          </div>
+
+          <h3>Selector notes, learned the hard way</h3>
+          <div class="tw"><table>
+            <thead><tr><th>Thing</th><th>What works, and why</th></tr></thead>
+            <tbody>
+              <tr><td>Nav vs form buttons</td><td><code>exact: true</code> is <strong>mandatory</strong> — "Submit Request" and "Submit request" differ only by case</td></tr>
+              <tr><td>Change type</td><td>Not a <code>&lt;select&gt;</code> — a base-ui combobox. Scope to <code>page.locator('form').first()</code>, because the header carries a third combobox (the user switcher)</td></tr>
+              <tr><td>Intake fields</td><td>Stable ids <code>#title</code>, <code>#description</code>, <code>#details</code>, <code>#file</code>. Inputs have no <code>name</code> attributes</td></tr>
+              <tr><td>Workspace stages</td><td><code>role="tab"</code>, not buttons: Categories, Policy, Extraction, Narrative, Scoring, Finalize, Audit</td></tr>
+            </tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <div class="file" id="f-gov">
+        <div class="file-head">
+          <div class="file-path">tests/e2e/ui/governance.spec.js</div>
+          <div class="file-facts"><span class="pill p-neut">128 lines</span><span class="pill p-pass">3 tests</span><span class="pill p-crit">DEF-004</span><span class="pill p-warn">DEF-006</span></div>
+        </div>
+        <div class="file-body">
+          <h3>DEF-004 — an empty assessment reaches the committee</h3>
+          <p><strong>The most serious finding in the product so far</strong>, and the clearest example of the unit suite and the UI suite working together: it was <em>predicted</em> by a characterization unit test, then <em>confirmed</em> in the browser.</p>
+          <p><code>CheckReadinessAsync</code> iterates over the active mapped categories. With none mapped, both loops are no-ops and <code>IsReady</code> is vacuously true — so the Finalize tab reports <strong>"Ready to finalize."</strong></p>
+          <p>Verified end to end on 2026-09-12: a change request with <strong>zero categories, zero policy reliance decisions, zero extracted fields, zero narrative and zero risk scores</strong> was finalized, routed, and appeared in the committee queue with a live <strong>"Submit vote"</strong> button. The committee is being asked to take an accountable decision on a document containing nothing but a title.</p>
+          <p>Two tests cover it: one asserts the Finalize tab refuses it; one asserts it never reaches the queue.</p>
+
+          <h3>DEF-006 — opening a workspace fails the first time, every time</h3>
+          <p><code>func_getOrCreateAssessment</code> does SELECT-then-INSERT with no <code>ON CONFLICT</code> and no lock:</p>
+          <pre><code>SELECT id INTO v_id FROM assessment WHERE change_request_id = p_change_request_id;
+IF v_id IS NULL THEN INSERT INTO assessment ...</code></pre>
+          <p>React 18 StrictMode double-invokes effects in dev, so two POSTs race. Both read <code>NULL</code>, both insert, and the loser violates <code>UNIQUE (change_request_id)</code> → Npgsql <code>23505</code> → <strong>HTTP 500</strong>. The row <em>is</em> created, so a second click works.</p>
+
+          <div class="note">
+            <span class="lbl">A test that was written, then deliberately deleted</span>
+            <p>A browser-level version — click Open, assert no 500 — was written first and <strong>removed</strong>. It only fails when the two requests genuinely overlap, and it passed on one full-suite run while failing in isolation. <strong>A <code>test.fail()</code> marker that oscillates is worse than no test, because it trains everyone to ignore the signal.</strong></p>
+            <p>The kept version drives the race directly with <code>Promise.all</code>, reproduces <code>23505</code> every time, and makes the stronger claim anyway: this is a stored-function defect, not a React dev-mode artefact. Two analysts opening the same request simultaneously would hit it in production, where StrictMode does not apply.</p>
+          </div>
+          <pre><code>const open = () =&gt; fetch(`${API_BASE_URL}/api/Assessment/OpenWorkspace/${change.id}`,
+                        { method: 'POST' });
+const [first, second] = await Promise.all([open(), open()]);
+
+expect([first.status, second.status],
+  'func_getOrCreateAssessment must be idempotent under concurrent callers').toEqual([200, 200]);</code></pre>
+          <p>Fix for both halves: <code>INSERT … ON CONFLICT (change_request_id) DO NOTHING</code>, then re-select.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═════════════ 06 ═════════════ -->
+    <section id="s6">
+      <div class="sec-head">
+        <h2>Tooling &amp; documentation</h2>
+        <p class="sec-sub">The three non-test artefacts.</p>
+      </div>
+
+      <div class="file" id="f-pdf">
+        <div class="file-head">
+          <div class="file-path">tests/e2e/tools/make-report-pdf.mjs</div>
+          <div class="file-facts"><span class="pill p-neut">57 lines</span><span class="pill p-acc">reproducibility</span></div>
+        </div>
+        <div class="file-body">
+          <h3>Purpose</h3>
+          <p>Regenerates the strategy report's standalone HTML and PDF from one source, using the Chromium already installed for Playwright — so the PDF never becomes a stale binary nobody can rebuild.</p>
+          <pre><code>node tools/make-report-pdf.mjs &lt;src.html&gt; &lt;out.pdf&gt; &lt;out.html&gt;</code></pre>
+          <h3>Two details that matter</h3>
+          <ul>
+            <li><strong>It wraps the fragment.</strong> The artifact source has no <code>&lt;html&gt;/&lt;head&gt;</code> — the Artifact runtime supplies that at publish time. A standalone file must carry its own, or it misrenders when opened from disk or attached to an email.</li>
+            <li><strong>It waits on <code>document.fonts.ready</code>.</strong> Without this the export silently falls back off IBM Plex and the entire type system is lost — a failure you would only notice by comparing side by side.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="file" id="f-readme">
+        <div class="file-head">
+          <div class="file-path">tests/e2e/README.md</div>
+          <div class="file-facts"><span class="pill p-neut">201 lines</span></div>
+        </div>
+        <div class="file-body">
+          <h3>Purpose</h3>
+          <p>The in-repo entry point for anyone who opens <code>tests/e2e</code> and asks "what is this and how do I run it". Covers: why there are two test stacks and which layer each belongs to; how to run each project; how to read <code>test.fail()</code> results; both findings with verified status codes; the selector traps; and the layout.</p>
+          <p>It deliberately states <strong>what the suite does not prove</strong> — the scoping caveat on DEF-002, and the fact that no HTTP test can ever reach the <code>audit_event</code> trigger. A README that only lists strengths is a sales document, not a handover.</p>
+        </div>
+      </div>
+
+      <div class="file" id="f-report">
+        <div class="file-head">
+          <div class="file-path">docs/qa/qa-ba-strategy.html &nbsp;·&nbsp; qa-ba-strategy.pdf</div>
+          <div class="file-facts"><span class="pill p-neut">26 pages</span><span class="pill p-acc">BA + QA</span></div>
+        </div>
+        <div class="file-body">
+          <h3>Purpose</h3>
+          <p>The companion strategy report — nine sections: the problem statement, requirement analysis, the solution, the testing this project needs, BA approach, testing approach, automation strategy, work completed, and the defect register with runnable reproduction steps and a five-minute demo script.</p>
+          <p>Published in three forms from one source — a live link, standalone HTML, and A4 PDF — so they cannot drift. A print stylesheet forces the light palette (a PDF has no viewer theme), keeps <code>print-color-adjust: exact</code> so severity colours survive export, and holds findings and tables together across page breaks.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═════════════ 07 ═════════════ -->
+    <section id="s7">
+      <div class="sec-head">
+        <h2>Why it is built this way</h2>
+        <p class="sec-sub">Five techniques used throughout, each solving a specific failure mode. Worth understanding before extending the suite.</p>
+      </div>
+
+      <h3>1 · <code>test.fail()</code> for known defects</h3>
+      <p>Assert the <em>correct</em> behaviour, mark the test expected-to-fail. The board stays green while the gap is open; when the fix lands, Playwright reports "expected to fail, but passed" and the fix announces itself. The alternative — deleting the test, or weakening it to match the bug — loses the requirement permanently.</p>
+
+      <h3>2 · Characterization tests for behaviour that is not ours to change</h3>
+      <p>Where current behaviour is arguably wrong but the fix belongs to another module's owner, pin it with a clearly-commented test. Future change becomes deliberate and visible rather than accidental. DEF-004 was found exactly this way.</p>
+
+      <h3>3 · Mutation checks, because green means nothing on its own</h3>
+      <p>Break the rule deliberately, confirm the right tests fail, revert. Done for the finalize gate: five failures, precisely the five guarding it. This is the single most useful thing to show a reviewer who asks whether a green suite means anything.</p>
+
+      <h3>4 · A guard against false greens</h3>
+      <p><code>global-setup.js</code> exists solely because <code>test.fail()</code> and a dead server are indistinguishable without it. Any suite mixing expected-failures with real infrastructure needs this, or it will eventually report success while testing nothing.</p>
+
+      <h3>5 · Counter-evidence kept alongside findings</h3>
+      <p>Passing validation tests sit inside the defect file; the "Ping stays deliberately open" test sits inside the authentication block. Both exist so the findings stay precise. Scope claims honestly — the DEF-002 caveat is written into the test file, the README and the report, because a finding that overstates itself gets argued down and takes the true part with it.</p>
+
+      <div class="note">
+        <span class="lbl">If you extend this suite, keep these</span>
+        <p>Prefer edge cases over golden-path duplicates. Keep the UI suite at three journeys. Name the user story every test proves, in the test's own comment — that is what makes a traceability matrix mechanical rather than a separate invention. And never let a test pass for a reason you have not checked.</p>
+      </div>
+    </section>
+
+    <!-- ═════════════ 08 ═════════════ -->
+    <section id="s8">
+      <div class="sec-head">
+        <h2>Handover</h2>
+        <p class="sec-sub">Current state, what is owned by whom, and what comes next.</p>
+      </div>
+
+      <h3>Defect register</h3>
+      <div class="tw"><table>
+        <thead><tr><th>ID</th><th>Finding</th><th>Severity</th><th>Proven by</th><th>Owner</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">DEF-001</td><td>User directory readable with no credential</td><td><span class="pill p-crit">High</span></td><td>api/authorization</td><td>Suleman</td></tr>
+          <tr><td class="mono">DEF-002</td><td>No role enforcement; actor is self-declared in the body</td><td><span class="pill p-crit">High</span></td><td>api/authorization</td><td>Suleman</td></tr>
+          <tr><td class="mono">DEF-003</td><td>Unknown ids surface as HTTP 500</td><td><span class="pill p-warn">Medium</span></td><td>api/authorization</td><td>Suleman</td></tr>
+          <tr><td class="mono">DEF-004</td><td>Empty assessment finalizes and reaches the committee</td><td><span class="pill p-crit">High</span></td><td>unit + ui/governance</td><td>Suleman</td></tr>
+          <tr><td class="mono">DEF-005</td><td><code>control</code> table never seeded — scores cannot be explained</td><td><span class="pill p-warn">Medium</span></td><td>manual + API</td><td>Suleman + BA</td></tr>
+          <tr><td class="mono">DEF-006</td><td><code>func_getOrCreateAssessment</code> race — first open always 500s</td><td><span class="pill p-warn">Medium</span></td><td>ui/governance</td><td>Suleman</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Next, in priority order</h3>
+      <ol>
+        <li><strong>Testcontainers suite</strong> — the <code>audit_event</code> append-only trigger and the <code>CHECK</code> constraints are the repo's flagship governance claims and are <em>unreachable</em> by all 80 current tests. Needs no API key; Docker is already a prerequisite.</li>
+        <li><strong>App CI pipeline</strong> — both existing Azure DevOps pipelines are path-filtered to <code>iac/environments/dev/*</code>, so nothing in CI runs <code>dotnet test</code> or Playwright. Testing is one of six graded SDLC stages.</li>
+        <li><strong>Adversarial eval cases</strong> — 10 of 12 cases are still skipped for want of a configured model; the evaluation framework is 10% of the score.</li>
+        <li><strong>BA documents</strong> — RBAC matrix (now backed by DEF-002 evidence), non-functional requirements, traceability matrix.</li>
+      </ol>
+
+      <div class="note">
+        <span class="lbl">Two things to raise with the team</span>
+        <p><strong>Suleman —</strong> the six defects above, plus decisions on open questions Q3 (does a scoring override need secondary sign-off?) and Q5 (who approves configuration changes?).<br>
+        <strong>Suraj —</strong> <code>release/1.00</code> still needs merging into <code>main</code> before application CI is possible at all; and <code>ops/setup-local-db.sh</code> assumes <code>psql</code> on the host, which breaks a fresh clone on a Docker-only machine.</p>
+      </div>
+    </section>
+
+    <p class="foot">All test results, status codes and defect reproductions in this document were observed against a running local stack on 12 September 2026 — Postgres and Azurite in Docker, Mock Systems on :5220, the API on :5210 and the Vite dev server on :3000. Where a claim is unverified or scoped, it is marked as such. Companion document: <em>QA &amp; BA Strategy</em>.</p>
+  </main>
+</div>
+
+</body>
+</html>
