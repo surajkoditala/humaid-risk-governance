@@ -1,6 +1,3 @@
-# To access the configuration of the AzureRM provider such as tenant_id and subscription_id
-data "azurerm_client_config" "this" {}
-
 # Random password
 resource "random_password" "this" {
   length           = 16
@@ -56,7 +53,7 @@ module "pgsql" {
     admin2 = {
       tenant_id      = data.azurerm_client_config.this.tenant_id
       object_id      = "7a749552-c684-4bdb-bdfa-4d913640613d"
-      principal_name = "Suraj.Koditala@myridius.com"
+      principal_name = "skoditala@gmail.com"
       principal_type = "User"
     }
     admin3 = {
