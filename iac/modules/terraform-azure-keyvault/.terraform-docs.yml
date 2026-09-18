@@ -1,0 +1,104 @@
+---
+formatter: markdown table
+
+settings:
+  required: false
+
+output:
+  file: README.md
+  mode: inject
+  sort-by: name
+  header-from: README.md
+  output-values: true
+  output-variables: true
+  output-providers: true
+  output-requirements: true
+  output-resources: true
+ 
+content: |-
+  {{ .Header }}
+
+  {{ include "Intro.md" }}
+
+  #Examples
+
+  #Basic Example
+  ```hcl
+  {{ include "examples/basic/main.tf" }}
+
+  {{ include "examples/basic/variables.tf" }}
+
+  {{ include "examples/basic/outputs.tf" }}
+
+  {{ include "examples/basic/terraform.tf" }}
+
+  {{ include "examples/basic/providers.tf" }}
+  ```
+
+  #Default Example
+  ```hcl
+  {{ include "examples/default/main.tf" }}
+
+  {{ include "examples/default/variables.tf" }}
+
+  {{ include "examples/default/outputs.tf" }}
+
+  {{ include "examples/default/terraform.tf" }}
+
+  {{ include "examples/default/providers.tf" }}
+  ```
+
+  #Diagnostic Settings Example
+  ```hcl
+  {{ include "examples/diagnostic-settings/main.tf" }}
+
+  {{ include "examples/diagnostic-settings/variables.tf" }}
+
+  {{ include "examples/diagnostic-settings/outputs.tf" }}
+
+  {{ include "examples/diagnostic-settings/terraform.tf" }}
+
+  {{ include "examples/diagnostic-settings/providers.tf" }}
+  ```
+
+  #Monitoring Alerts Example
+  ```hcl
+  {{ include "examples/monitoring-alerts/main.tf" }}
+
+  {{ include "examples/monitoring-alerts/variables.tf" }} 
+
+  {{ include "examples/monitoring-alerts/outputs.tf" }}
+
+  {{ include "examples/monitoring-alerts/terraform.tf" }}
+
+  {{ include "examples/monitoring-alerts/providers.tf" }}
+  ```
+
+  #Private Endpoint and DNS Example
+  ```hcl
+  {{ include "examples/private-endpoint-and-dns/main.tf" }}
+
+  {{ include "examples/private-endpoint-and-dns/variables.tf" }}
+
+  {{ include "examples/private-endpoint-and-dns/outputs.tf" }}
+
+  {{ include "examples/private-endpoint-and-dns/terraform.tf" }}
+
+  {{ include "examples/private-endpoint-and-dns/providers.tf" }}
+  ```
+
+  {{ .Requirements }}
+
+  {{ .Providers }}
+
+  {{ .Modules }}
+
+  {{ .Resources }}
+
+  {{ .Inputs }}
+
+  {{ .Outputs }}
+
+  {{ include "CHANGELOG.md" }}
+
+  {{ .Footer }}
