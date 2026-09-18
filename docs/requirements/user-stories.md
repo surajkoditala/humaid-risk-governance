@@ -21,14 +21,17 @@
 **Goal:** Replace email/SharePoint intake with a structured, trackable entry point.
 
 ### US-1.1 — Submit a change request
-*As a Product Owner, I want to submit a change request through a structured form, so that FCRM has everything needed to start an assessment without back-and-forth email.*
+*As a Product Owner, I want to submit a change request through a structured form that pulls in what the bank's systems already know, so that FCRM has everything needed to start an assessment without back-and-forth email or me re-typing data that already exists elsewhere.*
 
 **Acceptance Criteria**
 - Given I am a logged-in Product Owner, when I start a new request, then I must select exactly one change type: Product, Feature, Process, Vendor, Geography, or Customer Segment.
-- Given I select a change type, when the form loads, then I see fields specific to that type (e.g. Vendor requests require vendor name, jurisdiction, and data access scope; Geography requests require target country/region).
+- Given I select a change type with a corresponding system of record (Customer Segment → CRM, Product/Feature/Geography → Core Banking, Vendor → Vendor Management), when I identify the relevant customer, product, or vendor, then the system retrieves that record from the bank's system of record and automatically populates the type-specific risk fields (e.g. vendor jurisdiction, data access scope, and risk rating; customer segment and KYC status; product features and geography) — I don't manually re-key data the bank already has.
+- Given the change type is Process, or a Vendor request names a vendor not yet in the system of record, when the form loads, then I provide the relevant details directly, since no existing record applies.
 - Given I have not filled all mandatory fields, when I try to submit, then the system blocks submission and lists missing fields.
-- Given I submit successfully, when the request is created, then it receives a unique, immutable request ID and timestamp, and enters status "Submitted."
+- Given I submit successfully, when the request is created, then it receives a unique, immutable request ID and timestamp, links to the retrieved system-of-record snapshot (where one was pulled), and enters status "Submitted."
 - Given a request is submitted, when I view it later, then I can see its current status (Submitted / In Assessment / Pending Committee / Decisioned) at all times.
+
+> Assumption: a Vendor request naming a vendor not yet in Vendor Management falls back to manual entry rather than blocking submission until the vendor is pre-registered — new-vendor onboarding is a legitimate use of this change type. Confirm this stays the desired fallback.
 
 ### US-1.2 — Attach supporting documents
 *As a Product Owner, I want to attach supporting documents (product specs, vendor contracts, process diagrams) to my request, so that the analyst has source material without a separate email thread.*
@@ -59,6 +62,7 @@
 
 **Acceptance Criteria**
 - Given a request is submitted, when the system processes it, then it proposes applicable risk categories drawn from a configured, named framework (e.g. FFIEC BSA/AML Examination Manual categories, FATF risk categories).
+- Given the request has a linked system-of-record snapshot (pulled at intake per US-1.1), when categories are proposed, then the mapping is grounded against that retrieved data (e.g. actual vendor jurisdiction, actual product geography) rather than only the free-text description — reducing the chance of a plausible-sounding but factually wrong proposal.
 - Given the system proposes categories, when I view the proposal, then each category shows a citation back to the specific framework section it came from.
 - Given no framework mapping is configured for a change type, when the system cannot propose categories, then it flags this explicitly rather than guessing silently.
 
