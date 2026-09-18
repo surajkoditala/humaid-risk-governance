@@ -18,7 +18,7 @@ module "container_app_gh_riskgovernance_ui" {
 
   # Can be used for Prod resource
   # lock = {
-  #   name = "lock-ca-${var.tags.product}-${var.tags.environment}" # optional
+  #   name = "lock-ca-${var.tags.product}-${var.tags.environment}" # optional lock
   #   kind = "CanNotDelete"
   # }
 
