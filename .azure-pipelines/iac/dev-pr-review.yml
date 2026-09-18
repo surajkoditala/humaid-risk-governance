@@ -229,27 +229,34 @@ steps:
         TFPLAN_TEXT=$(cat "$STAGING/tfplan.txt" 2>/dev/null | head -c 40000 || echo "(no plan available — init or plan failed, see pipeline log)")
 
         PROMPT_FILE=$(mktemp)
-        {
-          echo "You are reviewing Trivy and Checkov scan results plus a Terraform plan for a pull request under iac/environments/dev, before it merges to main."
-          echo ""
-          echo "Produce a concise PR-review comment with:"
-          echo "1. A one-line verdict: LOOKS_GOOD, NEEDS_ATTENTION, or BLOCKING_ISSUES."
-          echo "2. A short summary of what the Terraform plan changes (resources added/changed/destroyed), flagging anything surprising (e.g. unexpected destroys/replacements) or any indication the plan failed."
-          echo "3. A short bulleted list of the scan findings that are actual risks worth fixing before merge (reference the specific resource/check ID)."
-          echo "4. A short bulleted list of findings that look like noise or false positives, with a one-line reason why."
-          echo "Be specific and terse — this will be posted directly as a PR comment. Keep it under 350 words. Use markdown. Answer directly in text — do not read, write, or run anything."
-          echo ""
-          echo "Note: Checkov reporting resource_count: 0 / passed: 0 / failed: 0 is EXPECTED and not a scan failure when the diff only touches resource types Checkov has no applicable policies for (e.g. azurerm_resource_group — verified by isolating it: Checkov genuinely has zero built-in checks for that resource type, unlike e.g. aws_s3_bucket which returns real findings). Do not flag this as BLOCKING or as evidence Checkov didn't run — only treat it as suspicious if the diff includes resource types that normally have Checkov coverage (storage, compute, networking, etc.) and still shows 0."
-          echo ""
-          echo "--- TERRAFORM PLAN ---"
-          echo "$TFPLAN_TEXT"
-          echo ""
-          echo "--- TRIVY FINDINGS (JSON) ---"
-          echo "$TRIVY_JSON"
-          echo ""
-          echo "--- CHECKOV FINDINGS (JSON) ---"
-          echo "$CHECKOV_JSON"
-        } > "$PROMPT_FILE"
+        cat > "$PROMPT_FILE" <<PROMPT_EOF
+        You are reviewing Trivy and Checkov scan results plus a Terraform plan for a pull request under iac/environments/dev, before it merges to main.
+
+        Repo context: this is a cost-conscious hackathon dev environment (single region for most resources, Standard/Burstable SKUs, minimal replicas, Premium-only features intentionally skipped, diagnostic settings mostly disabled to avoid cost). Don't flag these as risks by themselves -- they're deliberate tradeoffs for this environment, not oversights. One known exception: the PostgreSQL server intentionally runs in centralus while everything else is in eastus2 (this subscription is blocked from provisioning PostgreSQL Flexible Server in eastus2 -- a Free Trial subscription restriction) -- do not flag this region split as an anomaly.
+
+        IMPORTANT -- diff-awareness: Trivy and Checkov scan the ENTIRE current config, not just this PR's diff, so most findings are almost always on resources this plan isn't touching. Only let a finding drive the verdict (NEEDS_ATTENTION/BLOCKING_ISSUES) if it's on a resource this plan is actually creating or modifying (shown with + or ~ in the plan's resource actions). Findings on resources with no planned action in this plan are pre-existing conditions unrelated to this PR -- list those separately under 'Pre-existing findings (not from this PR)' as informational only, and they must NOT affect the verdict. A plan showing no changes at all should essentially never be anything other than LOOKS_GOOD on scan findings alone, regardless of what Trivy/Checkov report, since nothing in this PR could have introduced those findings.
+
+        Severity weighting: HIGH/CRITICAL findings on resources this plan touches should be the primary driver of NEEDS_ATTENTION or BLOCKING_ISSUES. MEDIUM findings (e.g. audit-logging/hardening gaps like missing log_connections or soft-delete retention) are worth listing but should rarely justify anything above LOOKS_GOOD on their own unless several compound on a single newly-created resource -- treat them as track-and-fix-soon, not merge-blocking.
+
+        Produce a concise PR-review comment with:
+        1. A one-line verdict: LOOKS_GOOD, NEEDS_ATTENTION, or BLOCKING_ISSUES.
+        2. A short summary of what the Terraform plan changes (resources added/changed/destroyed), flagging anything surprising (e.g. unexpected destroys/replacements) or any indication the plan failed.
+        3. A short bulleted list of scan findings that are actual risks worth fixing before merge AND are on a resource this plan creates/modifies (reference the specific resource/check ID).
+        4. A short bulleted list of pre-existing findings on resources this plan does NOT touch -- informational only, does not affect the verdict.
+        5. A short bulleted list of findings that look like noise or false positives, with a one-line reason why.
+        Be specific and terse -- this will be posted directly as a PR comment. Keep the ENTIRE response under 400 words and under roughly 2000 tokens combined. The verdict itself must be a single line. Use markdown. Answer directly in text -- do not read, write, or run anything.
+
+        Note: Checkov reporting resource_count: 0 / passed: 0 / failed: 0 is EXPECTED and not a scan failure when the diff only touches resource types Checkov has no applicable policies for (e.g. azurerm_resource_group -- verified by isolating it: Checkov genuinely has zero built-in checks for that resource type, unlike e.g. aws_s3_bucket which returns real findings). Do not flag this as BLOCKING or as evidence Checkov didn't run -- only treat it as suspicious if the diff includes resource types that normally have Checkov coverage (storage, compute, networking, etc.) and still shows 0.
+
+        --- TERRAFORM PLAN ---
+        $TFPLAN_TEXT
+
+        --- TRIVY FINDINGS (JSON) ---
+        $TRIVY_JSON
+
+        --- CHECKOV FINDINGS (JSON) ---
+        $CHECKOV_JSON
+        PROMPT_EOF
 
         set +e
         REVIEW_TEXT=$(claude -p --output-format text --max-turns 1 < "$PROMPT_FILE")
