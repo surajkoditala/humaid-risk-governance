@@ -1,5 +1,5 @@
 # Environment variables
-variable "container_app_service_name" {
+variable "container_app_ui_name" {
   description = "Name of the container app service"
   type        = string
   default     = "gh-riskgovernance-ui"
