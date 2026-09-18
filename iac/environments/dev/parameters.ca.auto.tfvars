@@ -19,9 +19,6 @@ ingress = {
   ]
 }
 
-#Backend app variables
-container_app_backend_app_name = "gh-riskgovernance-app"
-
 backend_app_min_replicas = 1
 backend_app_max_replicas = 1
 

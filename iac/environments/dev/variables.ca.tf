@@ -2,7 +2,7 @@
 variable "container_app_ui_name" {
   description = "Name of the container app service"
   type        = string
-  default     = "gh-riskgovernance-ui"
+  default     = "gh-hrg-workbench"
 }
 
 variable "min_replicas" {
@@ -56,7 +56,7 @@ variable "ingress" {
 variable "container_app_backend_app_name" {
   description = "Name of the backend app container app service"
   type        = string
-  default     = "gh-riskgovernance-backend-app"
+  default     = "gh-hrg-mockapi"
 }
 
 variable "backend_app_min_replicas" {
