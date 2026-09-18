@@ -71,7 +71,7 @@ module "pgsql" {
     admin5 = {
       tenant_id      = data.azurerm_client_config.this.tenant_id
       object_id      = module.container_app_gh_riskgovernance_ui.container_app_system_assigned_identity_principal_id
-      principal_name = "ca-${var.container_app_service_name}-${var.tags.environment}"
+      principal_name = "ca-${var.container_app_ui_name}-${var.tags.environment}"
       principal_type = "ServicePrincipal"
     }
     admin6 = {

@@ -22,7 +22,7 @@ module "container_app_gh_riskgovernance_ui" {
   #   kind = "CanNotDelete"
   # }
 
-  container_app_service_name   = var.container_app_service_name
+  container_app_service_name   = var.container_app_ui_name
   container_app_environment_id = module.container_app_env.container_app_environment_id
   resource_group_name          = module.rg.resource_group_name
   ingress                      = var.ingress
@@ -34,14 +34,22 @@ module "container_app_gh_riskgovernance_ui" {
     max_replicas = var.max_replicas
     container = [
       {
-        name   = "ca-${var.container_app_service_name}-${var.tags.environment}"
+        name   = "ca-${var.container_app_ui_name}-${var.tags.environment}"
         memory = "2"
         cpu    = 1
         image  = "${module.acr.login_server}/hello-dotnet-http:v1" #Only a test image for the initial deployment to be successful, actual image deployment happens via ADO pipeline
         env = [
           {
+            name  = "PEP_KEY_VAULT"
+            value = local.PEP_KEY_VAULT
+          },
+          {
             name  = "ENV"
             value = var.tags.environment
+          },
+          {
+            name  = "BLOB_STORAGE_SERVICE_URI"
+            value = local.BLOB_STORAGE_SERVICE_URI
           }
         ]
       }
@@ -60,35 +68,28 @@ module "container_app_gh_riskgovernance_ui" {
     }
   ]
 
-  /*
   role_assignments = { #Role assignments for the system identity - to access KV and Storage
     "kv1" = {
       role_definition_id_or_name = "Key Vault Secrets User"
-      principal_id               = module.container_app_erc_integration_service.container_app_system_assigned_identity_principal_id
+      principal_id               = module.container_app_gh_riskgovernance_ui.container_app_system_assigned_identity_principal_id
       scope                      = local.kv_scope #Key vault
     }
     "kv2" = {
       role_definition_id_or_name = "Key Vault Certificate User"
-      principal_id               = module.container_app_erc_integration_service.container_app_system_assigned_identity_principal_id
+      principal_id               = module.container_app_gh_riskgovernance_ui.container_app_system_assigned_identity_principal_id
       scope                      = local.kv_scope #Key vault
-    }
-    "storage_blob_reader" = {
-      role_definition_id_or_name = "Storage Blob Data Reader"
-      principal_id               = module.container_app_erc_integration_service.container_app_system_assigned_identity_principal_id
-      scope                      = local.storage_account_scope #Storage account
     }
     "storage_blob_contributor" = {
       role_definition_id_or_name = "Storage Blob Data Contributor"
-      principal_id               = module.container_app_erc_integration_service.container_app_system_assigned_identity_principal_id
+      principal_id               = module.container_app_gh_riskgovernance_ui.container_app_system_assigned_identity_principal_id
       scope                      = local.storage_account_scope #Storage account
     }
     "storage_queue_contributor" = {
       role_definition_id_or_name = "Storage Queue Data Contributor"
-      principal_id               = module.container_app_erc_integration_service.container_app_system_assigned_identity_principal_id
+      principal_id               = module.container_app_gh_riskgovernance_ui.container_app_system_assigned_identity_principal_id
       scope                      = local.storage_account_scope #Storage account
     }
   }
-*/
 }
 
 # container app for backend app
@@ -120,8 +121,20 @@ module "container_app_gh_riskgovernance_backend_app" {
         image  = "${module.acr.login_server}/hello-dotnet-http:v1" #Only a test image for the initial deployment to be successful, actual image deployment happens via ADO pipeline
         env = [
           {
+            name  = "PEP_KEY_VAULT"
+            value = local.PEP_KEY_VAULT
+          },
+          {
+            name  = "AZURE_POSTGRESQL_ENDPOINT"
+            value = local.AZURE_POSTGRESQL_ENDPOINT
+          },
+          {
             name  = "ENV"
             value = var.tags.environment
+          },
+          {
+            name  = "BLOB_STORAGE_SERVICE_URI"
+            value = local.BLOB_STORAGE_SERVICE_URI
           }
         ]
       }
@@ -140,33 +153,26 @@ module "container_app_gh_riskgovernance_backend_app" {
     }
   ]
 
-  /*
   role_assignments = { #Role assignments for the system identity - to access KV and Storage
     "kv1" = {
       role_definition_id_or_name = "Key Vault Secrets User"
-      principal_id               = module.container_app_erc_integration_service.container_app_system_assigned_identity_principal_id
+      principal_id               = module.container_app_gh_riskgovernance_backend_app.container_app_system_assigned_identity_principal_id
       scope                      = local.kv_scope #Key vault
     }
     "kv2" = {
       role_definition_id_or_name = "Key Vault Certificate User"
-      principal_id               = module.container_app_erc_integration_service.container_app_system_assigned_identity_principal_id
+      principal_id               = module.container_app_gh_riskgovernance_backend_app.container_app_system_assigned_identity_principal_id
       scope                      = local.kv_scope #Key vault
-    }
-    "storage_blob_reader" = {
-      role_definition_id_or_name = "Storage Blob Data Reader"
-      principal_id               = module.container_app_erc_integration_service.container_app_system_assigned_identity_principal_id
-      scope                      = local.storage_account_scope #Storage account
     }
     "storage_blob_contributor" = {
       role_definition_id_or_name = "Storage Blob Data Contributor"
-      principal_id               = module.container_app_erc_integration_service.container_app_system_assigned_identity_principal_id
+      principal_id               = module.container_app_gh_riskgovernance_backend_app.container_app_system_assigned_identity_principal_id
       scope                      = local.storage_account_scope #Storage account
     }
     "storage_queue_contributor" = {
       role_definition_id_or_name = "Storage Queue Data Contributor"
-      principal_id               = module.container_app_erc_integration_service.container_app_system_assigned_identity_principal_id
+      principal_id               = module.container_app_gh_riskgovernance_backend_app.container_app_system_assigned_identity_principal_id
       scope                      = local.storage_account_scope #Storage account
     }
   }
-*/
 }
