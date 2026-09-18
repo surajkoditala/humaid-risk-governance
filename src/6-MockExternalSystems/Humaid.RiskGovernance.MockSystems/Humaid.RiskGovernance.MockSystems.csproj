@@ -21,6 +21,7 @@
     <!-- Phase 4 - observability. Registered conditionally in Program.cs only when
          APPLICATIONINSIGHTS_CONNECTION_STRING is set - see ops/README.md. -->
     <PackageReference Include="Azure.Monitor.OpenTelemetry.AspNetCore" Version="1.6.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="10.2.3" />
   </ItemGroup>
 
 </Project>
