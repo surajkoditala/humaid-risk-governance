@@ -47,13 +47,13 @@ steps:
     workingDirectory: $(System.DefaultWorkingDirectory)/iac/environments/dev
 
   # ---------------------------------------------------------------------------
-  # Hard gates vs. informational steps
-  # Every step from here on uses `condition: succeededOrFailed()` so that a
-  # failing hard gate never hides the rest of the report: all scans still run,
-  # the AI review comment is still posted, and artifacts are still published.
-  # The build still ends Failed (=> the required GitHub check fails) if any
-  # hard gate failed. Hard gates: fmt, init, validate, TFLint (errors only),
-  # Trivy HIGH/CRITICAL, Terraform Plan, AI verdict BLOCKING_ISSUES.
+  # Hard gates (fail-fast): a failing gate fails the build and skips the steps
+  # after it, so the required GitHub check goes red and blocks the merge; the
+  # pipeline log shows the error. Ordered cheapest-first so bad PRs fail in
+  # seconds. Hard gates: fmt, init, validate, TFLint (errors only), Trivy
+  # HIGH/CRITICAL, Terraform Plan, and AI verdict BLOCKING_ISSUES.
+  # Informational only (never fail the build): Trivy MEDIUM, Checkov (soft-fail),
+  # TFLint warnings.
   # ---------------------------------------------------------------------------
 
   # Initialize Terraform and download private modules
@@ -63,7 +63,6 @@ steps:
         -input=false \
         -no-color
     displayName: 'Terraform Init'
-    condition: succeededOrFailed()
     workingDirectory: $(System.DefaultWorkingDirectory)/iac/environments/dev
 
   # HARD GATE: static validation. Fast, needs no cloud credentials, and catches
@@ -72,7 +71,6 @@ steps:
   - script: |
       terraform validate -no-color
     displayName: 'Terraform Validate'
-    condition: succeededOrFailed()
     workingDirectory: $(System.DefaultWorkingDirectory)/iac/environments/dev
 
   # Install and Run TFLint to check for issues in Terraform code
@@ -100,7 +98,6 @@ steps:
         exit "${TFLINT_EXIT_CODE}"
       fi
     displayName: 'Terraform Lint (TFLint)'
-    condition: succeededOrFailed()
     workingDirectory: $(System.DefaultWorkingDirectory)/iac/environments/dev
 
   # Install Trivy
@@ -115,7 +112,6 @@ steps:
 
       trivy --version
     displayName: 'Install Trivy'
-    condition: succeededOrFailed()
 
   # Scan Terraform configuration using Trivy
   # NOTE: writes JSON alongside the human-readable table so the AI review
@@ -142,7 +138,6 @@ steps:
         exit "${TRIVY_EXIT_CODE}"
       fi
     displayName: 'Terraform Security Scan (Trivy)'
-    condition: succeededOrFailed()
     workingDirectory: $(System.DefaultWorkingDirectory)/iac/environments/dev
 
   # HARD GATE: any HIGH or CRITICAL Trivy finding fails the build. Trivy scans
@@ -153,7 +148,6 @@ steps:
       set -euo pipefail
       trivy config . --severity HIGH,CRITICAL --exit-code 1
     displayName: 'Terraform Security Gate (Trivy HIGH/CRITICAL)'
-    condition: succeededOrFailed()
     workingDirectory: $(System.DefaultWorkingDirectory)/iac/environments/dev
 
   # Running Checkov through custom install because the Microsoft DevOps
@@ -177,7 +171,6 @@ steps:
         --output json \
         --output-file-path console,$(Build.ArtifactStagingDirectory)/checkov-results.json
     displayName: 'Terraform Security Scan (Checkov)'
-    condition: succeededOrFailed()
     workingDirectory: $(System.DefaultWorkingDirectory)/iac/environments/dev
 
   # Terraform Plan — authenticates via Workload Identity Federation using the
@@ -192,7 +185,6 @@ steps:
   # deployed by dev-tf-deploy either.
   - task: AzureCLI@2
     displayName: 'Terraform Plan'
-    condition: succeededOrFailed()
     inputs:
       azureSubscription: 'azure-cloud'
       scriptType: bash
@@ -238,7 +230,6 @@ steps:
   # installs the requested version correctly — verified working.
   - task: NodeTool@0
     displayName: 'Install Node.js'
-    condition: succeededOrFailed()
     inputs:
       versionSpec: '20.x'
 
@@ -250,13 +241,11 @@ steps:
       npm install -g @anthropic-ai/claude-code
       claude --version
     displayName: 'Install Claude Code CLI'
-    condition: succeededOrFailed()
 
   # AI review of the Trivy + Checkov findings and the Terraform plan —
   # summarizes and prioritizes what actually needs attention before merge.
   - task: Bash@3
     displayName: 'AI Review (Claude) — Trivy, Checkov & Terraform Plan'
-    condition: succeededOrFailed()
     env:
       CLAUDE_CODE_OAUTH_TOKEN: $(CLAUDE_CODE_OAUTH_TOKEN)
     inputs:
@@ -339,7 +328,7 @@ steps:
   # Only runs when this build was actually triggered by a GitHub PR.
   - task: Bash@3
     displayName: 'Post AI review to GitHub PR'
-    condition: and(succeededOrFailed(), eq(variables['Build.Reason'], 'PullRequest'))
+    condition: and(succeeded(), eq(variables['Build.Reason'], 'PullRequest'))
     env:
       GITHUB_PAT: $(GITHUB_PAT)
     inputs:
@@ -371,12 +360,13 @@ steps:
   - publish: $(Build.ArtifactStagingDirectory)
     artifact: 'pr-review-$(Build.BuildId)'
     displayName: 'Publish scan & AI review artifacts'
-    condition: succeededOrFailed()
+    condition: succeededOrFailed()  # cheap; keeps tfplan/scan JSON available to debug failed builds
 
   # HARD GATE: fail the build on an AI BLOCKING_ISSUES verdict. Runs last so
-  # the PR comment and artifacts are always published before this can fail.
-  # If the AI step didn't run or produced no verdict, AI_VERDICT is unset and
-  # this is a no-op (an AI outage must not block PRs).
+  # the PR comment and artifacts are published before this can fail. Only
+  # reached when every earlier step passed. If the AI step produced no verdict
+  # (e.g. an AI outage), AI_VERDICT is unset and this is a no-op -- an AI
+  # outage must not block PRs.
   - script: |
       if [ "$AI_VERDICT" = "BLOCKING_ISSUES" ]; then
         echo "##vso[task.logissue type=error]AI review verdict is BLOCKING_ISSUES -- see the PR comment / ai-review.md artifact."
@@ -384,6 +374,5 @@ steps:
       fi
       echo "AI review verdict: ${AI_VERDICT:-not available} -- not blocking."
     displayName: 'Enforce AI review verdict'
-    condition: succeededOrFailed()
     env:
       AI_VERDICT: $(AI_VERDICT)
