@@ -244,6 +244,16 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    // Interactive UI over the same OpenAPI doc above - lets a developer call any real endpoint
+    // (e.g. POST /api/ChangeRequest/Submit) directly, through the same controller/service/stored-
+    // function path the webapp uses, so demo/test data gets a real audit trail. Never mount this
+    // outside Development - it's a way to exercise the API, not a bypass of it, and it has no
+    // reason to be reachable once a real Auth0 tenant is configured.
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/openapi/v1.json", "Humaid.RiskGovernance.AdminUI.Web v1");
+        options.RoutePrefix = "swagger";
+    });
 }
 
 // Serves the webapp's production build (index.html, assets — copied into wwwroot by the
