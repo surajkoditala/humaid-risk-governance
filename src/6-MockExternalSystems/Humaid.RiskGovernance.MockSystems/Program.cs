@@ -29,7 +29,15 @@ builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>
 }));
 
 var app = builder.Build();
-if (app.Environment.IsDevelopment()) app.MapOpenApi();
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/openapi/v1.json", "Humaid.RiskGovernance.MockSystems v1");
+        options.RoutePrefix = "swagger";
+    });
+}
 app.UseCors();
 
 // Every query below calls a named SQL function (db/functions/) - no ad-hoc SQL, same convention
