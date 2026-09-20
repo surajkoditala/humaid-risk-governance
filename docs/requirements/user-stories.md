@@ -2,14 +2,14 @@
 
 **Prepared for:** Financial Crimes Risk Management (FCRM)
 **Document type:** User Stories & Acceptance Criteria (Agile/BRD input)
-**Actors:** Product Owner (requestor), FCRM Analyst, Risk Committee Member, System (AI), Platform Engineer (mock systems)
+**Actors:** Product Owner (requestor), FCRM Analyst, Risk Committee Member, System (AI), Platform Engineer (mock systems), DevOps Engineer (deployment and operations)
 
 ---
 
 ## How to read this document
 
-- Stories are grouped into epics. Epics 1–10 map to the functional requirements in the problem statement; Epic 14 (mock external systems and data ingestion) was added from the Platform Ecosystem Diagram (`docs/architecture/ecosystem-diagram.md`) and is deterministic integration, not an AI touchpoint.
-- Numbering note: Epics 11–13 (Access Control, Deployment and Operations, Non-Functional Requirements) and US-9.3 (examiner-ready audit export) are tracked in Azure Boards but are not yet written up in this document, which is why Epic 14 follows Epic 10 here.
+- Stories are grouped into epics. Epics 1–10 map to the functional requirements in the problem statement. Epics 11–13 (Access Control, Deployment and Operations, Non-Functional Requirements) and US-9.3 (examiner-ready audit export) were raised by QA on 17 Sep 2026 after reviewing the built increment, and are cross-cutting rather than feature epics. Epic 14 (mock external systems and data ingestion) was added from the Platform Ecosystem Diagram (`docs/architecture/ecosystem-diagram.md`) and is deterministic integration, not an AI touchpoint.
+- Numbering note: Epic 14 follows Epic 13 because 11–13 were already taken in Azure Boards when the mock-systems epic was written up. The IDs here match the Boards work items one-to-one.
 - Each story follows: *As a [actor], I want [capability], so that [outcome].*
 - Acceptance criteria use **Given / When / Then** so they're directly testable.
 - Stories tagged **[AI]** involve an AI-assisted step — these always pair with a human review/override story, since no output is allowed to go live without a human decision.
@@ -239,6 +239,17 @@
 
 > Assumption: "Immutable" means write-once/append-only at the data layer, not merely restricted by application-level permissions. This is a technical/architecture implication worth flagging to the engineering team explicitly, since it affects the data store choice.
 
+### US-9.3 — Export an examiner-ready audit trail
+*As an Auditor or FCRM Analyst preparing for examination, I want to export a request's complete history in a durable format, so that I can hand it to an examiner without reformatting it first.*
+
+**Acceptance Criteria**
+- Given any request ID, when I export its history, then the export contains every event in order: submission, uploads, AI outputs, human overrides with reasons, policy citations relied upon, score calculations, routing, individual votes, and the final decision.
+- Given an export, when I open it, then each entry shows actor, exact timestamp, and the before and after state.
+- Given an export, when it is produced, then it is a durable, human-readable document requiring no further formatting.
+- Given an assessment with AI-generated content, when it is exported, then both the original AI output and any human override appear, never the override alone.
+
+> Origin: raised by QA on 17 Sep 2026 — the third criterion of US-9.1 states the export requirement, but no story owned the export itself. US-9.1 covers reconstructing the history; this story covers producing it as a document.
+
 ---
 
 ## Epic 10 — Platform Configuration (Analyst-Owned)
@@ -260,6 +271,91 @@
 - Given a workflow rule change is saved, when it takes effect, then in-flight requests follow the rules that were active when they were submitted (unless the change is explicitly marked retroactive) — so no request's process silently changes mid-flight.
 
 > Open question: Who has authority to approve configuration changes to scoring/workflow — is analyst self-service sufficient, or does this need a second-analyst/manager approval step given it affects every future assessment? Worth confirming given how consequential these parameters are.
+
+---
+
+## Epic 11 — Access Control
+
+**Goal:** Make the three-role model real at the API, not just in the UI.
+
+> Origin: raised by QA on 17 Sep 2026 from DEF-001 and DEF-002. The user directory is currently readable with no credential at all, and the UI hides screens by role while the API enforces nothing. The role model exists and is honoured only in the frontend, which is worse than having none, because the product looks access-controlled.
+
+### US-11.1 — Enforce role-based permissions on every action
+*As FCRM Leadership, I want every action to be permitted only to the role that owns it, so that the accountability the audit trail records is real rather than assumed.*
+
+**Acceptance Criteria**
+- Given any request to a protected endpoint, when no valid credential is presented, then the request is rejected and no data of any kind is returned.
+- Given an authenticated user, when they attempt an action their role does not permit, then it is refused on authorization grounds before any record is read or written.
+- Given any write action, when the acting user is determined, then it comes from the authenticated session and never from a field in the request payload.
+- Given the permission model, when it is reviewed, then a documented matrix maps each of the three roles (Product Owner, FCRM Analyst, Risk Committee Member) to every action, and each endpoint behaviour matches it.
+
+---
+
+## Epic 12 — Deployment & Operations
+
+**Goal:** Get the product into a running Azure environment and keep it observable. Deployment and Operations are two of the six graded SDLC stages.
+
+> Origin: raised by QA on 17 Sep 2026 after reviewing the 12–17 Sep deployment increment. Covers schema deployment (DEF-007, a first-deploy blocker), container build and scanning (DEF-009, DEF-011), and observability (DEF-010).
+
+### US-12.1 — Apply the database schema to a deployed environment
+*As the DevOps Engineer, I want the schema, stored functions, and reference data applied automatically to a target environment, so that a deployed application can actually serve a request.*
+
+**Acceptance Criteria**
+- Given a newly provisioned database, when the release runs, then schema, all `func_` routines, and reference seed data are applied before the application containers start accepting traffic.
+- Given the schema deployment runs twice, when it completes, then the second run is a safe no-op and destroys no data.
+- Given schema deployment fails, when it does, then the release halts and reports which statement failed, and never proceeds to start an application against an incomplete schema.
+- Given a deployed environment, when I verify it, then a documented post-deploy check confirms the expected function and seed-row counts.
+
+> Origin: DEF-007 — **first-deploy blocker.** The DB folder is not copied into either container image, `Program.cs` performs no bootstrap, and no pipeline applies it. On first deploy the containers would start cleanly and fail on every request.
+
+### US-12.2 — Build and publish container images automatically
+*As the DevOps Engineer, I want images built, scanned, and published by the pipeline, so that what reaches Azure is reproducible and has been checked.*
+
+**Acceptance Criteria**
+- Given a merge to the main branch, when the pipeline runs, then both service images build from the repository root and are pushed to the registry tagged with the commit.
+- Given an image is built, when it is scanned, then no HIGH or CRITICAL operating-system vulnerability is present, and the build fails if one is.
+- Given a running container, when its user is inspected, then it is not root.
+- Given any image, when its layers are inspected, then no local configuration file or secret is present.
+
+> Origin: DEF-009 and DEF-011.
+
+### US-12.3 — Observe a running environment
+*As the DevOps Engineer, I want logs, traces, and metrics from a deployed environment, so that a failure can be diagnosed without redeploying to reproduce it.*
+
+**Acceptance Criteria**
+- Given a deployed environment, when a request is served, then its trace is queryable within minutes, including outbound calls to the database, Mock Systems, and the AI provider.
+- Given an unhandled error, when it occurs, then it is recorded with enough context to identify the request, without recording assessment content or personal data.
+- Given cost constraints, when telemetry is configured, then a sampling rate is set deliberately and documented.
+
+> Origin: DEF-010 — both services register OpenTelemetry and activate on a connection string, but the Log Analytics workspace is commented out in Terraform.
+
+---
+
+## Epic 13 — Non-Functional Requirements
+
+**Goal:** Define the non-functional requirements this document previously named as its own next step and left undefined: data retention, data residency, access control, observability, performance, and availability. Access control is covered by Epic 11 and observability by US-12.3; the stories below cover retention and data residency.
+
+> Origin: raised by QA on 17 Sep 2026. With Azure infrastructure now provisioned, several of these became decidable rather than abstract. Performance and availability targets are still undefined and have no story yet.
+
+### US-13.1 — Retain assessment records for the supervisory period
+*As FCRM Leadership, I want assessment records and their audit trail retained for the full supervisory retention period, so that an examiner can review a decision years after it was taken.*
+
+**Acceptance Criteria**
+- Given a finalized assessment, when the retention period is defined, then it is at least five years and is stated in documentation rather than assumed.
+- Given the database, when backup is configured, then point-in-time restore is enabled and the retention window is documented.
+- Given an attached document, when the request is decisioned, then the document remains retrievable for the same period as its assessment.
+
+> Origin: currently undefined — no backup or retention policy exists on the database.
+
+### US-13.2 — Keep model calls inside the tenant
+*As FCRM Leadership, I want AI calls to stay within our own Azure tenant, so that assessment content never leaves our control boundary.*
+
+**Acceptance Criteria**
+- Given a deployed environment, when an AI call is made, then it goes to the in-tenant Azure AI Foundry deployment and not a third-party endpoint.
+- Given configuration, when the environment starts, then a non-production provider cannot be selected by default in a deployed environment.
+- Given any AI call, when it is logged, then the prompt and response content are not written to general application logs.
+
+> Origin: with Azure AI Foundry now provisioned this became decidable; the provider is currently selected by a configuration value with a non-Azure default.
 
 ---
 
@@ -349,6 +445,10 @@
 | Route to committee, recorded vote | Epic 8 |
 | Full immutable audit trail | Epic 9 |
 | Tunable scoring/workflow configuration | Epic 10 |
+| Actions permitted only to the role that owns them (three roles) — *raised by QA, 17 Sep 2026* | Epic 11 |
+| Production deployment and operations (two of the six SDLC stages the brief requires demonstrated) — *raised by QA, 17 Sep 2026* | Epic 12 |
+| Examiner-ready reconstruction of any past rating — *US-9.3 makes the export a story of its own* | Epic 9 (US-9.1, US-9.3) |
+| Retention, data residency, and other non-functional requirements — *raised by QA, 17 Sep 2026* | Epic 13 (with Epics 11 and 12) |
 | Source intake data from, and return decisions to, the bank's existing systems (mock CRM / Core Banking / Vendor Management) — *from the Platform Ecosystem Diagram, not the original brief; the brief's "synthetic data only, no real system" constraint is what requires them to be mocks* | Epic 14 |
 
 ## Open Questions Requiring Stakeholder Input (consolidated)
@@ -364,4 +464,4 @@
 
 ---
 
-*Next suggested steps: non-functional requirements (performance, security, data retention, access control), a data model / entity relationship diagram, and role-based permission matrix.*
+*Next suggested steps: performance and availability targets (the remaining Epic 13 gaps), a data model / entity relationship diagram, and the role-based permission matrix that US-11.1 calls for.*
