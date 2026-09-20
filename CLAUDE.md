@@ -127,7 +127,7 @@ New product → Products/Services + Customers · Feature → Products/Services �
 
 ## User Stories — see `docs/requirements/user-stories.md`
 
-Prepared by the team's BA. 10 epics, Given/When/Then acceptance criteria throughout. Structure:
+Prepared by the team's BA (epics 1–10), plus Epic 14 added from the Platform Ecosystem Diagram (Epics 11–13 — Access Control, Deployment & Operations, Non-Functional Requirements — are tracked in Azure Boards and not yet written up in that file). Given/When/Then acceptance criteria throughout. Structure:
 
 1. Change Request Intake
 2. Risk Categorization & Framework Mapping **[AI]**
@@ -139,6 +139,7 @@ Prepared by the team's BA. 10 epics, Given/When/Then acceptance criteria through
 8. Committee Review & Voting
 9. Immutable Audit Trail (append-only at data layer)
 10. Platform Configuration (analyst-owned, no-code scoring/workflow tuning)
+14. Mock External Systems & Data Ingestion (mock CRM/Core Banking/Vendor Management as a separate service; Data Ingestion Layer is the only path to it; committee decisions push back to the source system — deterministic, no AI call)
 
 **Open questions logged by the BA — resolve with team before locking design:**
 1. Do Product Owners see analyst scoring rationale, or only status?
