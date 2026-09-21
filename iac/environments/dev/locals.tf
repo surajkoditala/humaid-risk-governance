@@ -4,7 +4,14 @@ locals {
   storage_account_scope = module.storage.storage_account_resource_id
 
   # Environment variables for the CAs
-  PEP_KEY_VAULT             = module.keyvault.key_vault_uri #URI is used as alias for the private FQDN - this is used in the CAs to access the Key Vault
-  AZURE_POSTGRESQL_ENDPOINT = "Server=${module.pgsql.postgresql_server_fqdn};Database=postgres;Port=5432;Ssl Mode=Require;User Id=ca-${var.container_app_backend_app_name}-${var.tags.environment};"
-  BLOB_STORAGE_SERVICE_URI  = "https://${module.storage.storage_account_blob_public_fqdn}" #Azure will resolve this to the private IP via the Private DNS Zone using the private endpoint;this way DNS name matches the certificate and traffic still routes privately
+
+  PEP_KEY_VAULT            = module.keyvault.key_vault_uri                                #URI is used as alias for the private FQDN - this is used in the CAs to access the Key Vault
+  BLOB_STORAGE_SERVICE_URI = "https://${module.storage.storage_account_blob_public_fqdn}" #Azure will resolve this to the private IP via the Private DNS Zone using the private endpoint;this way DNS name matches the certificate and traffic still routes privately
+
+  # workbench variables
+  AZURE_POSTGRESQL_ENDPOINT = "Server=${module.pgsql.postgresql_server_fqdn};Database=postgres;Port=5432;Ssl Mode=Require;User Id=ca-${var.container_app_ui_name}-${var.tags.environment};"
+
+  # mockapi variables - backend_app
+  BACKEND_APP_AZURE_POSTGRESQL_ENDPOINT = "Server=${module.pgsql.postgresql_server_fqdn};Database=postgres;Port=5432;Ssl Mode=Require;User Id=ca-${var.container_app_backend_app_name}-${var.tags.environment};"
+
 }
