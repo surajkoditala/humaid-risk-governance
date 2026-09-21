@@ -113,6 +113,17 @@ steps:
         forceUpdate=true
         forceUpdate.failBuildOnPolicyViolation=false
 
+  # Mend writes its connection config (API/user keys, ADO job token) and a JSON
+  # scan report into the workspace. Remove them so Semgrep does not print the
+  # token into the log and the AI review (Read/Grep/Glob) cannot see them.
+  - script: |
+      find "$(System.DefaultWorkingDirectory)" -maxdepth 3 \
+        -not -path '*/node_modules/*' -not -path '*/.git/*' -type f \
+        \( -name 'wss-unified-agent*.config' -o -name "*_$(Build.BuildId).json" \) \
+        -print -delete
+    displayName: 'Remove Mend scan artifacts from workspace'
+    condition: always()
+
   # Semgrep SAST Scan
   # NOTE: also writes JSON so the AI review step below has structured findings
   # to triage. `--config auto` fetches rules from semgrep.dev (needs metrics on).
@@ -268,11 +279,18 @@ steps:
         # ---- 4. Run Claude ----------------------------------------------------
         SCHEMA='{"type":"object","properties":{"summary":{"type":"string"},"read_access":{"type":"boolean"},"findings":{"type":"array","items":{"type":"object","properties":{"severity":{"type":"string","enum":["critical","major","minor","nit"]},"confidence":{"type":"string","enum":["high","medium","low"]},"file":{"type":"string"},"line":{"type":"integer"},"title":{"type":"string"},"body":{"type":"string"}},"required":["severity","confidence","file","line","title","body"]}}},"required":["summary","findings","read_access"]}'
 
-        # Deny reading system paths: the OAuth token lives in this process's
-        # environment (/proc/self/environ) and must not be readable.
-        # DO NOT deny //home: the agent workspace is /home/vsts/work/1/s, and Read
-        # deny rules also apply to Grep/Glob, so that blinds the review to the repo.
+        # Deny reading anything secret-bearing outside the repo: the OAuth token lives
+        # in this process's environment (/proc/self/environ), and the agent's home
+        # holds credential/config files (~/.claude, ~/.ssh, ~/.netrc, ~/.azure, ...),
+        # ADO's per-job temp dir (work/_temp) and the Mend agent dir. The diff is
+        # untrusted (prompt-injectable), so anything readable can be echoed into the
+        # PR review.
+        # DO NOT deny //home wholesale: the agent workspace is /home/vsts/work/1/s,
+        # and Read deny rules also apply to Grep/Glob, so that blinds the review to
+        # the repo. Deny only home-level dotfiles/dot-dirs and work/_* / work/whitesource_agent.
         DENY='Read(//proc/**),Read(//etc/**),Read(//root/**),Read(//run/**),Read(//var/**)'
+        DENY="$DENY"',Read(//home/*/.*),Read(//home/*/.*/**)'
+        DENY="$DENY"',Read(//home/*/work/_*/**),Read(//home/*/work/whitesource_agent/**)'
 
         set +e
         timeout 900 claude -p --output-format json --max-turns 25 \
