@@ -2,13 +2,14 @@
 
 **Prepared for:** Financial Crimes Risk Management (FCRM)
 **Document type:** User Stories & Acceptance Criteria (Agile/BRD input)
-**Actors:** Product Owner (requestor), FCRM Analyst, Risk Committee Member, System (AI)
+**Actors:** Product Owner (requestor), FCRM Analyst, Risk Committee Member, System (AI), Platform Engineer (mock systems), DevOps Engineer (deployment and operations)
 
 ---
 
 ## How to read this document
 
-- Stories are grouped into **10 epics**, mapped to the functional requirements in the problem statement.
+- Stories are grouped into epics. Epics 1–10 map to the functional requirements in the problem statement. Epics 11–13 (Access Control, Deployment and Operations, Non-Functional Requirements) and US-9.3 (examiner-ready audit export) were raised by QA on 17 Sep 2026 after reviewing the built increment, and are cross-cutting rather than feature epics. Epic 14 (mock external systems and data ingestion) was added from the Platform Ecosystem Diagram (`docs/architecture/ecosystem-diagram.md`) and is deterministic integration, not an AI touchpoint.
+- Numbering note: Epic 14 follows Epic 13 because 11–13 were already taken in Azure Boards when the mock-systems epic was written up. The IDs here match the Boards work items one-to-one.
 - Each story follows: *As a [actor], I want [capability], so that [outcome].*
 - Acceptance criteria use **Given / When / Then** so they're directly testable.
 - Stories tagged **[AI]** involve an AI-assisted step — these always pair with a human review/override story, since no output is allowed to go live without a human decision.
@@ -21,14 +22,17 @@
 **Goal:** Replace email/SharePoint intake with a structured, trackable entry point.
 
 ### US-1.1 — Submit a change request
-*As a Product Owner, I want to submit a change request through a structured form, so that FCRM has everything needed to start an assessment without back-and-forth email.*
+*As a Product Owner, I want to submit a change request through a structured form that pulls in what the bank's systems already know, so that FCRM has everything needed to start an assessment without back-and-forth email or me re-typing data that already exists elsewhere.*
 
 **Acceptance Criteria**
 - Given I am a logged-in Product Owner, when I start a new request, then I must select exactly one change type: Product, Feature, Process, Vendor, Geography, or Customer Segment.
-- Given I select a change type, when the form loads, then I see fields specific to that type (e.g. Vendor requests require vendor name, jurisdiction, and data access scope; Geography requests require target country/region).
+- Given I select a change type with a corresponding system of record (Customer Segment → CRM, Product/Feature/Geography → Core Banking, Vendor → Vendor Management), when I identify the relevant customer, product, or vendor, then the system retrieves that record from the bank's system of record and automatically populates the type-specific risk fields (e.g. vendor jurisdiction, data access scope, and risk rating; customer segment and KYC status; product features and geography) — I don't manually re-key data the bank already has (the mock systems, lookup, and snapshot behind this are specified in Epic 14).
+- Given the change type is Process, or a Vendor request names a vendor not yet in the system of record, when the form loads, then I provide the relevant details directly, since no existing record applies.
 - Given I have not filled all mandatory fields, when I try to submit, then the system blocks submission and lists missing fields.
-- Given I submit successfully, when the request is created, then it receives a unique, immutable request ID and timestamp, and enters status "Submitted."
+- Given I submit successfully, when the request is created, then it receives a unique, immutable request ID and timestamp, links to the retrieved system-of-record snapshot (where one was pulled), and enters status "Submitted."
 - Given a request is submitted, when I view it later, then I can see its current status (Submitted / In Assessment / Pending Committee / Decisioned) at all times.
+
+> Assumption: a Vendor request naming a vendor not yet in Vendor Management falls back to manual entry rather than blocking submission until the vendor is pre-registered — new-vendor onboarding is a legitimate use of this change type. Confirm this stays the desired fallback.
 
 ### US-1.2 — Attach supporting documents
 *As a Product Owner, I want to attach supporting documents (product specs, vendor contracts, process diagrams) to my request, so that the analyst has source material without a separate email thread.*
@@ -59,6 +63,7 @@
 
 **Acceptance Criteria**
 - Given a request is submitted, when the system processes it, then it proposes applicable risk categories drawn from a configured, named framework (e.g. FFIEC BSA/AML Examination Manual categories, FATF risk categories).
+- Given the request has a linked system-of-record snapshot (pulled at intake per US-1.1), when categories are proposed, then the mapping is grounded against that retrieved data (e.g. actual vendor jurisdiction, actual product geography) rather than only the free-text description — reducing the chance of a plausible-sounding but factually wrong proposal.
 - Given the system proposes categories, when I view the proposal, then each category shows a citation back to the specific framework section it came from.
 - Given no framework mapping is configured for a change type, when the system cannot propose categories, then it flags this explicitly rather than guessing silently.
 
@@ -234,6 +239,17 @@
 
 > Assumption: "Immutable" means write-once/append-only at the data layer, not merely restricted by application-level permissions. This is a technical/architecture implication worth flagging to the engineering team explicitly, since it affects the data store choice.
 
+### US-9.3 — Export an examiner-ready audit trail
+*As an Auditor or FCRM Analyst preparing for examination, I want to export a request's complete history in a durable format, so that I can hand it to an examiner without reformatting it first.*
+
+**Acceptance Criteria**
+- Given any request ID, when I export its history, then the export contains every event in order: submission, uploads, AI outputs, human overrides with reasons, policy citations relied upon, score calculations, routing, individual votes, and the final decision.
+- Given an export, when I open it, then each entry shows actor, exact timestamp, and the before and after state.
+- Given an export, when it is produced, then it is a durable, human-readable document requiring no further formatting.
+- Given an assessment with AI-generated content, when it is exported, then both the original AI output and any human override appear, never the override alone.
+
+> Origin: raised by QA on 17 Sep 2026 — the third criterion of US-9.1 states the export requirement, but no story owned the export itself. US-9.1 covers reconstructing the history; this story covers producing it as a document.
+
 ---
 
 ## Epic 10 — Platform Configuration (Analyst-Owned)
@@ -258,6 +274,163 @@
 
 ---
 
+## Epic 11 — Access Control
+
+**Goal:** Make the three-role model real at the API, not just in the UI.
+
+> Origin: raised by QA on 17 Sep 2026 from DEF-001 and DEF-002. The user directory is currently readable with no credential at all, and the UI hides screens by role while the API enforces nothing. The role model exists and is honoured only in the frontend, which is worse than having none, because the product looks access-controlled.
+
+### US-11.1 — Enforce role-based permissions on every action
+*As FCRM Leadership, I want every action to be permitted only to the role that owns it, so that the accountability the audit trail records is real rather than assumed.*
+
+**Acceptance Criteria**
+- Given any request to a protected endpoint, when no valid credential is presented, then the request is rejected and no data of any kind is returned.
+- Given an authenticated user, when they attempt an action their role does not permit, then it is refused on authorization grounds before any record is read or written.
+- Given any write action, when the acting user is determined, then it comes from the authenticated session and never from a field in the request payload.
+- Given the permission model, when it is reviewed, then a documented matrix maps each of the three roles (Product Owner, FCRM Analyst, Risk Committee Member) to every action, and each endpoint behaviour matches it.
+
+---
+
+## Epic 12 — Deployment & Operations
+
+**Goal:** Get the product into a running Azure environment and keep it observable. Deployment and Operations are two of the six graded SDLC stages.
+
+> Origin: raised by QA on 17 Sep 2026 after reviewing the 12–17 Sep deployment increment. Covers schema deployment (DEF-007, a first-deploy blocker), container build and scanning (DEF-009, DEF-011), and observability (DEF-010).
+
+### US-12.1 — Apply the database schema to a deployed environment
+*As the DevOps Engineer, I want the schema, stored functions, and reference data applied automatically to a target environment, so that a deployed application can actually serve a request.*
+
+**Acceptance Criteria**
+- Given a newly provisioned database, when the release runs, then schema, all `func_` routines, and reference seed data are applied before the application containers start accepting traffic.
+- Given the schema deployment runs twice, when it completes, then the second run is a safe no-op and destroys no data.
+- Given schema deployment fails, when it does, then the release halts and reports which statement failed, and never proceeds to start an application against an incomplete schema.
+- Given a deployed environment, when I verify it, then a documented post-deploy check confirms the expected function and seed-row counts.
+
+> Origin: DEF-007 — **first-deploy blocker.** The DB folder is not copied into either container image, `Program.cs` performs no bootstrap, and no pipeline applies it. On first deploy the containers would start cleanly and fail on every request.
+
+### US-12.2 — Build and publish container images automatically
+*As the DevOps Engineer, I want images built, scanned, and published by the pipeline, so that what reaches Azure is reproducible and has been checked.*
+
+**Acceptance Criteria**
+- Given a merge to the main branch, when the pipeline runs, then both service images build from the repository root and are pushed to the registry tagged with the commit.
+- Given an image is built, when it is scanned, then no HIGH or CRITICAL operating-system vulnerability is present, and the build fails if one is.
+- Given a running container, when its user is inspected, then it is not root.
+- Given any image, when its layers are inspected, then no local configuration file or secret is present.
+
+> Origin: DEF-009 and DEF-011.
+
+### US-12.3 — Observe a running environment
+*As the DevOps Engineer, I want logs, traces, and metrics from a deployed environment, so that a failure can be diagnosed without redeploying to reproduce it.*
+
+**Acceptance Criteria**
+- Given a deployed environment, when a request is served, then its trace is queryable within minutes, including outbound calls to the database, Mock Systems, and the AI provider.
+- Given an unhandled error, when it occurs, then it is recorded with enough context to identify the request, without recording assessment content or personal data.
+- Given cost constraints, when telemetry is configured, then a sampling rate is set deliberately and documented.
+
+> Origin: DEF-010 — both services register OpenTelemetry and activate on a connection string, but the Log Analytics workspace is commented out in Terraform.
+
+---
+
+## Epic 13 — Non-Functional Requirements
+
+**Goal:** Define the non-functional requirements this document previously named as its own next step and left undefined: data retention, data residency, access control, observability, performance, and availability. Access control is covered by Epic 11 and observability by US-12.3; the stories below cover retention and data residency.
+
+> Origin: raised by QA on 17 Sep 2026. With Azure infrastructure now provisioned, several of these became decidable rather than abstract. Performance and availability targets are still undefined and have no story yet.
+
+### US-13.1 — Retain assessment records for the supervisory period
+*As FCRM Leadership, I want assessment records and their audit trail retained for the full supervisory retention period, so that an examiner can review a decision years after it was taken.*
+
+**Acceptance Criteria**
+- Given a finalized assessment, when the retention period is defined, then it is at least five years and is stated in documentation rather than assumed.
+- Given the database, when backup is configured, then point-in-time restore is enabled and the retention window is documented.
+- Given an attached document, when the request is decisioned, then the document remains retrievable for the same period as its assessment.
+
+> Origin: currently undefined — no backup or retention policy exists on the database.
+
+### US-13.2 — Keep model calls inside the tenant
+*As FCRM Leadership, I want AI calls to stay within our own Azure tenant, so that assessment content never leaves our control boundary.*
+
+**Acceptance Criteria**
+- Given a deployed environment, when an AI call is made, then it goes to the in-tenant Azure AI Foundry deployment and not a third-party endpoint.
+- Given configuration, when the environment starts, then a non-production provider cannot be selected by default in a deployed environment.
+- Given any AI call, when it is logged, then the prompt and response content are not written to general application logs.
+
+> Origin: with Azure AI Foundry now provisioned this became decidable; the provider is currently selected by a configuration value with a non-Azure default.
+
+---
+
+## Epic 14 — Mock External Systems & Data Ingestion
+
+**Goal:** Stand in for the bank's existing CRM, Core Banking, and Vendor Management systems with synthetic, separately-deployed mock systems, and give the Workbench one controlled path to them — so a change request is built from what the bank's systems already hold, and the committee's decision flows back to them, instead of people re-keying data in both directions.
+
+> Origin: added from the Platform Ecosystem Diagram, not the original brief. The brief's constraint — "Synthetic data only. No connection to any real system" — is what makes the mocks necessary. No story in this epic makes a runtime AI call; it is deterministic integration, which is why none is tagged **[AI]**.
+
+### US-14.1 — Stand up the mock CRM, Core Banking, and Vendor Management systems
+*As a Platform Engineer, I want the CRM, Core Banking, and Vendor Management systems stood up as one separately-deployed mock service with its own data store, so that the Workbench integrates with external systems the way it would in production, without any connection to a real one.*
+
+**Acceptance Criteria**
+- Given the mock service is running, when a client requests customers, products, or vendors, then each is served through its own API (list, and get by ID) from a data store separate from the Workbench's own schema.
+- Given any Workbench component other than the Data Ingestion Layer, when it needs mock-system data, then it cannot read the mock schema or call the mock service directly — the Data Ingestion Layer is the only permitted path, and only over the service's API.
+- Given any record in the mock systems, when I inspect it, then it is 100% synthetic — no real customer, product, vendor, or company data.
+- Given the mock service's schema and seed data, when they are (re)applied, then one documented command reproduces the same state.
+
+### US-14.2 — Give each mock record the fields the risk framework scores against
+*As an FCRM Analyst, I want each customer, product, and vendor record to carry the risk-relevant fields the assessment needs, so that a request built from them has real risk context instead of a bare name.*
+
+**Acceptance Criteria**
+- Given a customer record, when I view it, then it carries customer type, geography, segment classification, and KYC/onboarding status.
+- Given a product record, when I view it, then it carries product type, features/limits, geography, and launch/change type.
+- Given a vendor record, when I view it, then it carries vendor risk rating, jurisdiction, data access scope, and certification status.
+- Given a field with a constrained set of allowed values (e.g. KYC status, vendor risk rating, certification status), when a record is written with a value outside that set, then the store rejects it rather than coercing or silently accepting it.
+
+### US-14.3 — Look up an existing customer, product, or vendor when starting a request
+*As a Product Owner, I want to search for and select the relevant existing customer, product, or vendor when I start a change request, so that I identify a real record instead of describing it from memory.*
+
+**Acceptance Criteria**
+- Given I select Customer Segment, Product, Feature, Geography, or Vendor as the change type, when the intake form loads, then I am offered a list of matching records from the relevant mock system (customers for Customer Segment; products for Product, Feature, and Geography; vendors for Vendor).
+- Given I select a record, when I view the form, then I can see the details retrieved for it before I submit, so I can confirm it is the right one.
+- Given I select Process as the change type, when the form loads, then no lookup is offered (there is no system of record for a process) and I provide the details directly.
+- Given I am submitting a Vendor request for a vendor that is not in the list, when I proceed, then I can enter the vendor's details directly rather than being blocked — new-vendor onboarding is a legitimate use of this change type.
+
+> Open question: Geography changes have no natural system of record — the current design approximates them by linking to an affected product. Confirm that is acceptable, or decide whether Geography should be entered directly like Process.
+
+### US-14.4 — Ingest and snapshot the linked record at intake
+*As an FCRM Analyst, I want the linked record's data captured as an immutable snapshot when the request is submitted, so that the assessment reflects what the bank's systems said at that moment even if the source record changes later.*
+
+**Acceptance Criteria**
+- Given a request is submitted with a linked record, when the Data Ingestion Layer runs, then it retrieves the record from the relevant mock system and stores a snapshot against the change request, with the time it was ingested.
+- Given a snapshot has been stored, when the source record in the mock system later changes, then the request's snapshot is unchanged — a request has no snapshot or exactly one, and it is never updated.
+- Given any Workbench component needs the external data (AI category mapping, scoring, analyst UI), when it reads it, then it reads the stored snapshot only, never the mock system directly.
+- Given a request has no linked record (e.g. a Process change), when it is submitted, then no snapshot is created and this is not treated as an error.
+- Given the mock systems are unreachable at intake, when a request is submitted, then the request is still created (intake does not depend on the mock systems being up), the failure is logged, and category mapping falls back to the change type and description alone.
+- Given linked IDs were supplied but none resolve to a record (e.g. stale IDs), when the request is submitted, then no snapshot is stored.
+
+> Open question: with mock-system data now the primary intake path, should an unreachable mock system still let intake proceed with no external context (current behavior), or block submission until it is back? Also: the stored snapshot is currently its own record — retrieval is not written to the Epic 9 audit trail as a separate event. Decide whether it should be.
+
+### US-14.5 — Push the committee decision back to the source system
+*As a Risk Committee Member, I want the committee's final decision reflected back in the system the request originated from, so that nobody has to re-key an outcome that has already been decided.*
+
+**Acceptance Criteria**
+- Given a request was linked to a product, when the committee decision is recorded, then a go-live flag (true for Approved and Approved-with-Conditions, false otherwise) and a risk-rating summary are sent to that product record in Core Banking.
+- Given a request was linked to a vendor, when the decision is recorded, then an updated risk-rating summary is sent to that vendor record in Vendor Management; given it was linked to a customer, then a customer/segment risk flag is sent to that customer record in CRM.
+- Given a request has no linked record, when the decision is recorded, then nothing is pushed and this is not treated as an error.
+- Given no committee decision has been recorded, when the system is running, then nothing is ever pushed — the push-back originates only from a recorded human decision, never from the system's own initiative.
+- Given a push succeeds, when it completes, then it is written to the audit trail as an event by "system", including what was sent.
+- Given the mock systems are unreachable when the decision is recorded, when the push fails, then the decision itself still stands — a decision that is already final is never undone or blocked by a failed push-back — and the failure is logged.
+
+> Open question: today only a successful push is written to the audit trail; a failed one is logged operationally but not audited or retried, so the source system can silently end up out of sync with a final decision. Decide whether failures should be audited and retried, or flagged for manual reconciliation.
+
+### US-14.6 — Generate the mock data synthetically and reproducibly
+*As a Platform Engineer, I want the mock systems' data produced by a documented, repeatable process, so that the demo has one reliable golden path plus realistic variety, and reviewers can see how it was made.*
+
+**Acceptance Criteria**
+- Given the seed dataset, when I review it, then it includes one hand-authored golden-path set (a coherent customer, product, and vendor that walk the full lifecycle end to end) plus additional AI-assisted rows spanning a risk spectrum, not all high-risk or all low-risk.
+- Given the AI-assisted rows, when I look in `/ai/data-generation`, then the brief that produced them is logged alongside the approach.
+- Given the dataset, when I review it, then it includes deliberate edge cases: a customer/product pairing that maps cleanly onto no framework category, and a vendor with no certification.
+- Given a seed row, when it is applied, then it must satisfy the schema's constraints — an invalid row fails the insert instead of being silently corrected.
+
+---
+
 ## Summary: Requirements Traceability
 
 | Functional Requirement (from problem statement) | Epic(s) |
@@ -272,6 +445,11 @@
 | Route to committee, recorded vote | Epic 8 |
 | Full immutable audit trail | Epic 9 |
 | Tunable scoring/workflow configuration | Epic 10 |
+| Actions permitted only to the role that owns them (three roles) — *raised by QA, 17 Sep 2026* | Epic 11 |
+| Production deployment and operations (two of the six SDLC stages the brief requires demonstrated) — *raised by QA, 17 Sep 2026* | Epic 12 |
+| Examiner-ready reconstruction of any past rating — *US-9.3 makes the export a story of its own* | Epic 9 (US-9.1, US-9.3) |
+| Retention, data residency, and other non-functional requirements — *raised by QA, 17 Sep 2026* | Epic 13 (with Epics 11 and 12) |
+| Source intake data from, and return decisions to, the bank's existing systems (mock CRM / Core Banking / Vendor Management) — *from the Platform Ecosystem Diagram, not the original brief; the brief's "synthetic data only, no real system" constraint is what requires them to be mocks* | Epic 14 |
 
 ## Open Questions Requiring Stakeholder Input (consolidated)
 
@@ -280,7 +458,10 @@
 3. Does a scoring override require secondary sign-off before finalization (Epic 7)?
 4. Is committee decisioning majority vote, unanimous, or chair-decided (Epic 8)?
 5. Who has authority to approve scoring/workflow configuration changes (Epic 10)?
+6. Geography changes have no natural system of record — approximate via an affected product (current), or enter directly like Process (Epic 14, US-14.3)?
+7. With mock-system data now the primary intake path, should an unreachable mock system still let intake proceed with no external context, or block submission? And should snapshot retrieval be its own Epic 9 audit event (Epic 14, US-14.4)?
+8. Should a failed decision push-back be audited and retried or flagged for manual reconciliation, rather than only logged (Epic 14, US-14.5)?
 
 ---
 
-*Next suggested steps: non-functional requirements (performance, security, data retention, access control), a data model / entity relationship diagram, and role-based permission matrix.*
+*Next suggested steps: performance and availability targets (the remaining Epic 13 gaps), a data model / entity relationship diagram, and the role-based permission matrix that US-11.1 calls for.*
