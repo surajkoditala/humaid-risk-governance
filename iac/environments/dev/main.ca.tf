@@ -50,6 +50,10 @@ module "container_app_gh_riskgovernance_ui" {
           {
             name  = "BLOB_STORAGE_SERVICE_URI"
             value = local.BLOB_STORAGE_SERVICE_URI
+          },
+          {
+            name  = "AZURE_POSTGRESQL_ENDPOINT"
+            value = local.AZURE_POSTGRESQL_ENDPOINT
           }
         ]
       }
@@ -125,16 +129,16 @@ module "container_app_gh_riskgovernance_backend_app" {
             value = local.PEP_KEY_VAULT
           },
           {
-            name  = "AZURE_POSTGRESQL_ENDPOINT"
-            value = local.AZURE_POSTGRESQL_ENDPOINT
-          },
-          {
             name  = "ENV"
             value = var.tags.environment
           },
           {
             name  = "BLOB_STORAGE_SERVICE_URI"
             value = local.BLOB_STORAGE_SERVICE_URI
+          },
+          {
+            name  = "AZURE_POSTGRESQL_ENDPOINT"
+            value = local.BACKEND_APP_AZURE_POSTGRESQL_ENDPOINT
           }
         ]
       }

@@ -36,8 +36,8 @@ module "pgsql" {
   tags                          = var.tags
 
   databases = {
-    gh_hrg_db = {
-      name = "gh_hrg_db"
+    risk_governance_db = {
+      name = "risk_governance_db"
       # charset   = "UTF8"
       # collation = "en_US.utf8"
     }
