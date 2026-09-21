@@ -113,6 +113,9 @@ steps:
     workingDirectory: $(System.DefaultWorkingDirectory)/webapp
 
   # Mend SCA Scan
+  # NOTE: the Mend log shows checkPolicies/forceUpdate/forceCheckAllDependencies
+  # as false despite the `configuration` below, so treat this step as
+  # inventory-only (it never fails the build). See the PR description.
   - task: WhiteSource@21
     displayName: 'Mend SCA Scan'
     inputs:

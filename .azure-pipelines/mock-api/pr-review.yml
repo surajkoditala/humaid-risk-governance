@@ -97,10 +97,16 @@ steps:
     displayName: '.NET Build (Mock API)'
 
   # Mend SCA Scan
+  # cwd is scoped to the Mock API: the repo root also holds the Workbench and its
+  # webapp (~440 npm packages, ~1.5 min of `npm install`), which the workbench
+  # pipeline scans.
+  # NOTE: the Mend log shows checkPolicies/forceUpdate/forceCheckAllDependencies
+  # as false despite the `configuration` below, so treat this step as
+  # inventory-only (it never fails the build). See the PR description.
   - task: WhiteSource@21
     displayName: 'Mend SCA Scan'
     inputs:
-      cwd: '$(System.DefaultWorkingDirectory)'
+      cwd: '$(System.DefaultWorkingDirectory)/src/6-MockExternalSystems'
       configuration: |
         checkPolicies=true
         forceCheckAllDependencies=true
