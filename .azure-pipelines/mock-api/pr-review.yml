@@ -155,15 +155,25 @@ steps:
         cd "$(System.DefaultWorkingDirectory)"
 
         # ---- 1. Build the PR diff -------------------------------------------
-        # A GitHub PR build checks out the merge commit: parent 1 = base branch,
-        # parent 2 = PR head. Fall back to merge-base against the target branch.
+        # PR build (GitHub): HEAD is the merge commit; parent 1 = base branch,
+        # parent 2 = PR head. Otherwise (manual/CI run) use the PR target branch
+        # if ADO provides it, else review just the last commit so the pipeline can
+        # be exercised without a PR. Read SYSTEM_PULLREQUEST_TARGETBRANCH from the
+        # environment, never as a $(macro): an undefined macro stays as literal
+        # text and bash would run it as a command.
+        PR_TARGET="${SYSTEM_PULLREQUEST_TARGETBRANCH:-}"
         if git rev-parse --verify -q 'HEAD^2' > /dev/null; then
           BASE=$(git rev-parse 'HEAD^1')
-        else
-          TARGET="$(System.PullRequest.TargetBranch)"
-          TARGET="${TARGET#refs/heads/}"
-          git fetch --no-tags origin "$TARGET"
+        elif [ -n "$PR_TARGET" ]; then
+          PR_TARGET="${PR_TARGET#refs/heads/}"
+          git fetch --no-tags origin "$PR_TARGET"
           BASE=$(git merge-base HEAD FETCH_HEAD)
+        elif git rev-parse --verify -q 'HEAD^1' > /dev/null; then
+          echo "Not a PR build -- reviewing the last commit only (HEAD^1..HEAD)."
+          BASE=$(git rev-parse 'HEAD^1')
+        else
+          echo "No base commit to diff against -- skipping AI review."
+          exit 0
         fi
 
         # Lockfiles, generated/bulk SQL and vendored/minified assets are noise.
@@ -414,11 +424,19 @@ steps:
   # passed. If the AI step produced no verdict (e.g. an AI outage), AI_VERDICT
   # is unset and this is a no-op -- an AI outage must not block PRs.
   - script: |
-      if [ "$AI_VERDICT" = "BLOCKING_ISSUES" ]; then
-        echo "##vso[task.logissue type=error]AI review verdict is BLOCKING_ISSUES -- see the PR review / ai-review.json artifact."
-        exit 1
-      fi
-      echo "AI review verdict: ${AI_VERDICT:-not available} -- not blocking."
+      # AI_VERDICT is the literal text "$(AI_VERDICT)" when the AI step never set it.
+      case "$AI_VERDICT" in
+        BLOCKING_ISSUES)
+          echo "##vso[task.logissue type=error]AI review verdict is BLOCKING_ISSUES -- see the PR review / ai-review.json artifact."
+          exit 1
+          ;;
+        LOOKS_GOOD|NEEDS_ATTENTION)
+          echo "AI review verdict: $AI_VERDICT -- not blocking."
+          ;;
+        *)
+          echo "AI review verdict not available -- not blocking."
+          ;;
+      esac
     displayName: 'Enforce AI review verdict'
     env:
       AI_VERDICT: $(AI_VERDICT)
