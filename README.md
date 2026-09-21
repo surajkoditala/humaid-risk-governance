@@ -33,7 +33,7 @@ PostgreSQL  <-----------------------------------------------  (.NET 10 API, port
   procedures/functions, never ad-hoc SQL or EF Core.
 - **Humaid.RiskGovernance.MockSystems** (`6-MockExternalSystems`) stands in for the CRM/Core
   Banking/Vendor Management systems a real bank would already have. Deliberately **not** part of
-  the monolith — its own project, own port, own Postgres schema; the Workbench's Data Ingestion
+  the Workbench — its own project, own port, own Postgres schema; the Workbench's Data Ingestion
   Layer is the only thing that calls it, and only over HTTP. See its own README.
 - **webapp** (`5-Presentation`) is included in `Humaid.RiskGovernance.AdminUI.slnx` as a real,
   build-integrated project (`webapp/webapp.esproj`, the `Microsoft.VisualStudio.JavaScript.Sdk`) —
@@ -49,7 +49,7 @@ PostgreSQL  <-----------------------------------------------  (.NET 10 API, port
 | `src/3-Service/Humaid.RiskGovernance.AdminUI.AI/` | AI orchestration — `IChatCompletionClient` (Anthropic direct or Azure AI Foundry) + the three AI-touchpoint clients. See `ai/README.md`. |
 | `src/4-Persistence/Humaid.RiskGovernance.AdminUI.DA/` | Dapper repos — every query calls a stored routine. |
 | `src/4-Persistence/Humaid.RiskGovernance.AdminUI.DB/` | The schema's single source of truth — `schema/`, `functions/`, `seed/`, plus a generated one-shot `deploy_all.sql`. |
-| `src/6-MockExternalSystems/Humaid.RiskGovernance.MockSystems/` | Mock CRM/Core Banking/Vendor Management — deliberately outside the monolith. |
+| `src/6-MockExternalSystems/Humaid.RiskGovernance.MockSystems/` | Mock CRM/Core Banking/Vendor Management — deliberately outside the Workbench. |
 | `webapp/` (`5-Presentation`) | Frontend. Single-page Vite app. `webapp.esproj` makes it a real project in the solution. |
 | `evals/` | The evaluation framework — see `evals/README.md`. |
 | `ai/` | AI orchestration docs, mirrored prompts, and `data-generation/` (how synthetic seed data was produced). |
@@ -121,7 +121,7 @@ architecture sync) is also wired:
 - **AI provider is swappable** (`AI_PROVIDER` = `Anthropic` or `AzureFoundry`) — no prompt/parsing
   code changes between the two; see `ai/README.md`.
 - **Mock External Systems** (`src/6-MockExternalSystems/`) stand in for a bank's CRM/Core
-  Banking/Vendor Management systems, deliberately outside the monolith.
+  Banking/Vendor Management systems, deliberately outside the Workbench.
 - **Data Ingestion Layer** links a change request to a Mock Systems customer/product/vendor at
   intake and persists an immutable snapshot — the only thing downstream (AI, scoring, analyst UI)
   ever reads.

@@ -1,6 +1,6 @@
 # Architecture mapping: CLAUDE.md's suggestion vs. what we actually built
 
-`CLAUDE.md` (the hackathon brief) proposes a Modular Monolith laid out as
+`CLAUDE.md` (the hackathon brief) proposes a modular, multi-tier application laid out as
 `RAW.Api / RAW.Application / RAW.Domain / RAW.Infrastructure / RAW.AI`, with EF Core against
 PostgreSQL. This repo already existed as a 5-layer Clean Architecture scaffold
 (`1-API / 2-Infrastructure / 3-Service / 4-Persistence / 5-Presentation`, Dapper + stored

@@ -2,7 +2,7 @@
 # One command for a fresh clone: starts local Postgres + Azurite (Docker), creates the database,
 # and applies BOTH services' deploy_all.sql (Workbench + Mock Systems - two separate generated
 # scripts, same database, different schema, because Mock Systems is deliberately not part of the
-# monolith - see docs/architecture/architecture-mapping.md). After this, both
+# Workbench - see docs/architecture/architecture-mapping.md). After this, both
 # `dotnet run --project src/1-API/Humaid.RiskGovernance.AdminUI.Web` and
 # `dotnet run --project src/6-MockExternalSystems/Humaid.RiskGovernance.MockSystems` have
 # everything they need.

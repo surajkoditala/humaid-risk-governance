@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <!-- Deliberately has NO ProjectReference to any Workbench project (1-API..5-Presentation).
-       This is not part of the monolith - see docs/architecture/architecture-mapping.md's
+       This is not part of the Workbench - see docs/architecture/architecture-mapping.md's
        "Mock External Systems" section. It talks to Postgres directly with Dapper, the same way
        every other persistence in this repo does, but owns its own schema (mock_systems) and its
        own connection string - the Workbench's Data Ingestion Layer is the only thing that reads

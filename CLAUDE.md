@@ -57,9 +57,9 @@ Not evaluated: which AI tool used, coding speed, raw output volume, polish witho
 
 ---
 
-## Architecture Decision: Modular Monolith (NOT microservices)
+## Architecture Decision: Modular multi-tier application (NOT microservices)
 
-**Rationale:** 4-person team, 5-week timeline. Production scalability is only 5% of the score; AI harness/orchestration is 30%. Effort belongs in the AI layer, not distributed-systems overhead. Clean module boundaries make the monolith easy to defend and easy to split later if asked.
+**Rationale:** 4-person team, 5-week timeline. Production scalability is only 5% of the score; AI harness/orchestration is 30%. Effort belongs in the AI layer, not distributed-systems overhead. Clean module boundaries make it easy to defend and easy to split later if asked. The one deliberate exception is Mock Systems, which stands in for the bank's external systems and is therefore its own separately deployed service, not part of the Workbench.
 
 ```
 RiskAssessmentWorkbench.sln
@@ -158,7 +158,7 @@ Every AI-touchpoint epic (2, 3, 4, 5) pairs with a human review/override story b
 ## Instructions for Claude Code
 
 - Read `docs/requirements/user-stories.md` in full before implementing any epic — acceptance criteria there are the actual spec, this file is orientation only.
-- Follow the Modular Monolith structure above; keep `RAW.Domain` free of external dependencies.
+- Follow the modular multi-tier structure above; keep `RAW.Domain` free of external dependencies.
 - Every AI-generated output (category mapping, extracted fields, draft narrative, score) must be persisted alongside any human edit/override and the stated reason — never overwrite in place.
 - Audit entries are append-only; do not design any update/delete path for audit records.
 - Residual risk scoring must be mathematically incapable of reaching zero — validate this in both the calculation and the configuration-save path.
