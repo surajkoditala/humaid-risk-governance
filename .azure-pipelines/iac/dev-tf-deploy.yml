@@ -12,6 +12,12 @@
 # iac/environments/dev/** without having passed fmt/lint/Trivy/Checkov/plan
 # review first. This pipeline trusts that gate and applies automatically —
 # no manual approval step.
+#
+# NOTIFICATION: if the deploy fails, the last step @mentions the author of the
+# PR that was merged (falling back to the commit author for direct pushes) so
+# they hear about it. GitHub notifies per the recipient's own settings and
+# never notifies you about your own activity; comments are posted as the
+# GITHUB_PAT owner, so a PR authored by that same account gets no notification.
 # =============================================================================
 
 trigger:
@@ -24,6 +30,13 @@ trigger:
 
 # Not a PR pipeline — deploy only runs after merge.
 pr: none
+
+# GITHUB_PAT (used only by the failure-notification step). NOTE: this group also
+# holds CLAUDE_CODE_OAUTH_TOKEN, which this pipeline doesn't use. The pipeline
+# must be authorized to use the group (Library > variable group > Pipeline
+# permissions), otherwise its first run waits for a "Permit" click in ADO.
+variables:
+  - group: ai-review-secrets
 
 pool:
   vmImage: ubuntu-latest
@@ -72,3 +85,49 @@ steps:
   - publish: $(Build.ArtifactStagingDirectory)
     artifact: 'tf-deploy-$(Build.BuildId)'
     displayName: 'Publish plan & apply output'
+
+  # Notify on failure: comment on the PR that was merged, @mentioning its author.
+  # Runs ONLY if an earlier step failed. Never fails the step itself: the build
+  # is already Failed, and a notification hiccup must not add noise on top.
+  - task: Bash@3
+    displayName: 'Notify PR author on deploy failure'
+    condition: failed()
+    env:
+      GITHUB_PAT: $(GITHUB_PAT)
+    inputs:
+      targetType: 'inline'
+      script: |
+        set -uo pipefail
+        REPO="$(Build.Repository.Name)"
+        SHA="$(Build.SourceVersion)"
+        API="https://api.github.com/repos/${REPO}"
+        RUN_URL="$(System.CollectionUri)$(System.TeamProjectId)/_build/results?buildId=$(Build.BuildId)"
+
+        gh_get() { curl -sf -H "Authorization: token $GITHUB_PAT" -H "Accept: application/vnd.github+json" "$1"; }
+
+        # Which PR produced this commit? (works for squash merges)
+        PR_JSON=$(gh_get "${API}/commits/${SHA}/pulls" | jq -c '.[0] // empty') || PR_JSON=""
+        if [ -n "$PR_JSON" ]; then
+          PR_NUMBER=$(jq -r '.number' <<< "$PR_JSON")
+          AUTHOR=$(jq -r '.user.login // empty' <<< "$PR_JSON")
+          TARGET="${API}/issues/${PR_NUMBER}/comments"
+          WHERE="PR #${PR_NUMBER}"
+        else
+          # No PR (e.g. direct push): comment on the commit, mention its author.
+          AUTHOR=$(gh_get "${API}/commits/${SHA}" | jq -r '.author.login // empty') || AUTHOR=""
+          TARGET="${API}/commits/${SHA}/comments"
+          WHERE="commit ${SHA:0:7}"
+        fi
+
+        MENTION=""
+        [ -n "$AUTHOR" ] && MENTION="@${AUTHOR} "
+        MSG=$(printf '%s**dev-tf-deploy failed** for commit `%s`. The apply may have partially completed -- review the [pipeline run](%s) and the Terraform state before re-running.' "$MENTION" "${SHA:0:7}" "$RUN_URL")
+        BODY=$(jq -n --arg t "$MSG" '{body: $t}')
+
+        if curl -sf -X POST -H "Authorization: token $GITHUB_PAT" -H "Accept: application/vnd.github+json" \
+             "$TARGET" -d "$BODY" > /dev/null; then
+          echo "Posted deploy-failure notification on ${WHERE}${AUTHOR:+ (mentioning @${AUTHOR})}."
+        else
+          echo "##vso[task.logissue type=warning]Could not post the deploy-failure notification on ${WHERE}."
+        fi
+        exit 0
