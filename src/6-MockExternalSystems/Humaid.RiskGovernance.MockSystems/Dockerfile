@@ -27,4 +27,8 @@ COPY --from=build /app/publish .
 ENV ASPNETCORE_URLS=http://+:8080
 EXPOSE 8080
 
+# Run as the non-root `app` user that the .NET 8+ aspnet images ship (APP_UID is set by the
+# base image). Port 8080 is > 1024, so no privileges are needed to bind it.
+USER $APP_UID
+
 ENTRYPOINT ["dotnet", "Humaid.RiskGovernance.MockSystems.dll"]
