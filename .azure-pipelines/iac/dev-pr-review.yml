@@ -326,11 +326,18 @@ steps:
   # Post the AI review as a comment on the GitHub PR.
   # Requires GITHUB_PAT (repo scope) in the ai-review-secrets group.
   # Only runs when this build was actually triggered by a GitHub PR.
+  # NOTIFICATION: when the verdict is NEEDS_ATTENTION or BLOCKING_ISSUES the
+  # comment @mentions the PR author, so GitHub emails/notifies them per their own
+  # notification settings. Caveat: GitHub does not notify you about your own
+  # activity, and this comment is posted as the GITHUB_PAT owner -- so PRs
+  # authored by the PAT owner get no notification. A dedicated bot account (or
+  # GitHub App) for the PAT removes that limitation.
   - task: Bash@3
     displayName: 'Post AI review to GitHub PR'
     condition: and(succeeded(), eq(variables['Build.Reason'], 'PullRequest'))
     env:
       GITHUB_PAT: $(GITHUB_PAT)
+      AI_VERDICT: $(AI_VERDICT)
     inputs:
       targetType: 'inline'
       script: |
@@ -346,7 +353,21 @@ steps:
         REPO="$(Build.Repository.Name)"       # e.g. myorg/myridius-erc-iac
         PR_NUMBER="$(System.PullRequest.PullRequestNumber)"
 
-        BODY=$(jq -Rs '{body: ("### 🤖 AI Review — Trivy, Checkov & Terraform Plan\n\n" + .)}' "$REVIEW_FILE")
+        # @mention the PR author only when the verdict needs their attention.
+        # If the author lookup fails the comment is still posted, just without
+        # the mention (a notification hiccup must not lose the review).
+        MENTION=""
+        if [ "$AI_VERDICT" = "NEEDS_ATTENTION" ] || [ "$AI_VERDICT" = "BLOCKING_ISSUES" ]; then
+          AUTHOR=$(curl -sf -H "Authorization: token $GITHUB_PAT" -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${REPO}/pulls/${PR_NUMBER}" | jq -r '.user.login // empty') || AUTHOR=""
+          if [ -n "$AUTHOR" ]; then
+            MENTION="@${AUTHOR} -- AI review verdict: **${AI_VERDICT}**. Please take a look before merging."
+          else
+            echo "##vso[task.logissue type=warning]Could not look up the PR author -- posting the review without an @mention."
+          fi
+        fi
+
+        BODY=$(jq -Rs --arg m "$MENTION" '{body: ("### 🤖 AI Review — Trivy, Checkov & Terraform Plan\n\n" + (if $m == "" then "" else $m + "\n\n" end) + .)}' "$REVIEW_FILE")
 
         curl -sf -X POST \
           -H "Authorization: token $GITHUB_PAT" \
