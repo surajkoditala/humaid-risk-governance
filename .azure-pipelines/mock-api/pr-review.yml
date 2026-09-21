@@ -176,6 +176,10 @@ steps:
           exit 0
         fi
 
+        # Review only this component's paths (same set as the PR trigger); other
+        # parts of a PR are reviewed by their own pipeline.
+        SCOPE=('src/6-MockExternalSystems' '.azure-pipelines/mock-api')
+
         # Lockfiles, generated/bulk SQL and vendored/minified assets are noise.
         EXCLUDES=(
           ':(exclude)*package-lock.json'
@@ -184,11 +188,11 @@ steps:
           ':(exclude)*/db/seed.sql'
           ':(exclude)*/db/deploy_all.sql'
         )
-        git diff --no-color --unified=5 "$BASE" HEAD -- . "${EXCLUDES[@]}" > "$STAGING/pr.diff"
-        git diff --name-only "$BASE" HEAD -- . "${EXCLUDES[@]}" > "$STAGING/changed-files.txt"
+        git diff --no-color --unified=5 "$BASE" HEAD -- "${SCOPE[@]}" "${EXCLUDES[@]}" > "$STAGING/pr.diff"
+        git diff --name-only "$BASE" HEAD -- "${SCOPE[@]}" "${EXCLUDES[@]}" > "$STAGING/changed-files.txt"
 
         if [ ! -s "$STAGING/pr.diff" ]; then
-          echo "No reviewable changes in this PR (only excluded files) -- skipping AI review."
+          echo "No reviewable changes in this pipeline's paths (or only excluded files) -- skipping AI review."
           exit 0
         fi
 
@@ -227,7 +231,7 @@ steps:
         - Update endpoints (the inbound feedback loop) return the updated row's id or no rows, which Program.cs maps to 404.
         - No secrets, keys or connection strings in code; configuration comes from environment variables. appsettings.Development.json must not be committed.
 
-        Review ONLY the changes in the diff below. You may use Read/Grep/Glob to look at surrounding code for context (callers, interfaces, related tests), but every finding must be about a line this PR adds or changes. Pre-existing problems in untouched code are out of scope.
+        The diff below is limited to this component's paths; other parts of the PR are reviewed by their own pipeline. Review ONLY the changes in the diff below. You may use Read/Grep/Glob to look at surrounding code for context (callers, interfaces, related tests), but every finding must be about a line this PR adds or changes. Pre-existing problems in untouched code are out of scope.
 
         Focus on, in priority order: correctness bugs and unhandled edge cases (including SQL function logic -- wrong joins/filters, missing NULL handling, functions whose signature no longer matches the Dapper call in Program.cs); security (injection, missing input validation on the update endpoints, secret leakage, sensitive data in logs); violations of the project rules above; data-integrity/concurrency/async problems; error handling; then maintainability and missing tests for new logic. Do not comment on formatting or naming style, and do not praise the code.
 
