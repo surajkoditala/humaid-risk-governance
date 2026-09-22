@@ -1,0 +1,54 @@
+parameters:
+  - name: environment
+    type: string
+  - name: imageName
+    type: string
+  - name: appBranch
+    type: string
+    default: ''
+  - name: buildId
+    type: string
+    default: ''
+
+steps:
+  - download: current
+    artifact: version-artifact
+    displayName: Download version.txt
+  - download: current
+    artifact: build-artifact
+    displayName: Download build.txt
+
+  - bash: |
+      VERSION=$(cat "$(Pipeline.Workspace)/version-artifact/version.txt")
+      BUILD_ID=$(cat "$(Pipeline.Workspace)/build-artifact/build.txt")
+      echo "Version: $VERSION"
+      echo "BuildId: $BUILD_ID"
+      echo "##vso[task.setvariable variable=versionSuffix]$VERSION"
+      echo "##vso[task.setvariable variable=buildId]$BUILD_ID"
+    displayName: Read Version and BuildId
+
+  - task: AzureCLI@2
+    displayName: 'Deploy to Azure Container App'
+    inputs:
+      azureSubscription: $(azureSubscription)
+      scriptType: 'bash'
+      scriptLocation: 'inlineScript'
+      inlineScript: |
+        az config set extension.use_dynamic_install=yes_without_prompt
+        echo "Resolving user-assigned identity for ACR pull..."
+        UAI_ID=$(az identity show \
+          --name $(devUaiName) \
+          --resource-group $(devResourceGroup) \
+          --query id -o tsv)
+        echo "Configuring Container App Registry..."
+        az containerapp registry set \
+          --name $(devContainerApp) \
+          --resource-group $(devResourceGroup) \
+          --server $(acrLoginServer) \
+          --identity "$UAI_ID"
+        IMAGE_REF="$(acrLoginServer)/${{ parameters.imageName }}:$(versionSuffix)-$(buildId)"
+        echo "Deploying image: $IMAGE_REF"
+        az containerapp update \
+          --name $(devContainerApp) \
+          --resource-group $(devResourceGroup) \
+          --image $IMAGE_REF
