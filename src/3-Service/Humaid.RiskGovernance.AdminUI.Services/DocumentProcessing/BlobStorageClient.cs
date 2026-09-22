@@ -9,9 +9,10 @@ namespace Humaid.RiskGovernance.AdminUI.Services.DocumentProcessing
     /// <summary>
     /// Local dev talks to Azurite (ops/docker-compose.yml) with its well-known emulator connection
     /// string via BLOB_STORAGE_CONNECTION_STRING; a real Storage Account with Shared Key access
-    /// disabled (the secure-by-default posture - see stghdev01) instead sets BLOB_STORAGE_ACCOUNT_URL
-    /// (just the blob endpoint, e.g. https://stghdev01.blob.core.windows.net) with no key anywhere,
-    /// authenticated via DefaultAzureCredential - same shape as DapperConnectionFactory's
+    /// disabled (the secure-by-default posture - see stghdev01) instead sets BLOB_STORAGE_SERVICE_URI
+    /// (just the blob endpoint, e.g. https://stghdev01.blob.core.windows.net - named to match the
+    /// Container Apps env var DevOps already provisioned) with no key anywhere, authenticated via
+    /// DefaultAzureCredential - same shape as DapperConnectionFactory's
     /// AZURE_POSTGRESQL_CONNECTIONSTRING/AZURE_POSTGRESQL_ENDPOINT split for Postgres. Same
     /// "flag explicitly, don't silently guess" rule as every other external client in this repo
     /// (ClaudeApiClient, MockSystemsClient).
@@ -34,7 +35,7 @@ namespace Humaid.RiskGovernance.AdminUI.Services.DocumentProcessing
         public async Task<string> UploadAsync(string fileName, string contentType, Stream content, CancellationToken cancellationToken = default)
         {
             var connectionString = _configuration["BLOB_STORAGE_CONNECTION_STRING"];
-            var accountUrl = _configuration["BLOB_STORAGE_ACCOUNT_URL"];
+            var accountUrl = _configuration["BLOB_STORAGE_SERVICE_URI"];
 
             BlobServiceClient blobServiceClient;
             if (!string.IsNullOrWhiteSpace(connectionString))
@@ -48,7 +49,7 @@ namespace Humaid.RiskGovernance.AdminUI.Services.DocumentProcessing
             else
             {
                 throw new InvalidOperationException(
-                    "Neither BLOB_STORAGE_CONNECTION_STRING nor BLOB_STORAGE_ACCOUNT_URL is configured - " +
+                    "Neither BLOB_STORAGE_CONNECTION_STRING nor BLOB_STORAGE_SERVICE_URI is configured - " +
                     "set the former to Azurite's emulator connection string for local dev (see " +
                     "ops/docker-compose.yml), or the latter to a real Storage Account's blob endpoint " +
                     "when Shared Key access is disabled there.");
