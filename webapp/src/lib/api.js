@@ -110,6 +110,7 @@ export const Endpoints = {
 
   audit: {
     trail: (changeRequestId) => api(`Audit/${changeRequestId}`),
+    exportPdf: (changeRequestId) => api(`Audit/${changeRequestId}/Export`),
   },
 }
 

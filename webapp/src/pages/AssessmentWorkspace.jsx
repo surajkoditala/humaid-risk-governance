@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -635,9 +635,19 @@ function AuditTab({ changeRequest, bump }) {
   const { data: trail } = useFetch(Endpoints.audit.trail(changeRequest.id), [bump])
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Audit trail</CardTitle>
-        <CardDescription>US-9.1 — every AI output, human edit, and reason, in order.</CardDescription>
+      <CardHeader className="flex-row items-start justify-between space-y-0">
+        <div>
+          <CardTitle>Audit trail</CardTitle>
+          <CardDescription>US-9.1 — every AI output, human edit, and reason, in order.</CardDescription>
+        </div>
+        <a
+          href={Endpoints.audit.exportPdf(changeRequest.id)}
+          target="_blank"
+          rel="noreferrer"
+          className={buttonVariants({ variant: 'outline', size: 'sm' })}
+        >
+          Export PDF
+        </a>
       </CardHeader>
       <CardContent className="space-y-2">
         {(trail || []).map((e) => (
