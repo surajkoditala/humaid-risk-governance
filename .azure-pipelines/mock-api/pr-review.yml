@@ -53,7 +53,7 @@ steps:
 
   - task: UseDotNet@2
     displayName: 'Install .NET SDK'
-    condition: eq(variables.runFull, 'true')
+    condition: and(succeeded(), eq(variables.runFull, 'true'))
     inputs:
       packageType: sdk
       version: '10.0.x'
@@ -67,22 +67,22 @@ steps:
       git diff --exit-code -- "$(MOCK_DB_DIR)/deploy_all.sql" \
         || { echo "##vso[task.logissue type=error]deploy_all.sql is out of date. Run generate_deploy_all.sh and commit the result."; exit 1; }
     displayName: 'Check deploy_all.sql is up to date'
-    condition: eq(variables.runFull, 'true')
+    condition: and(succeeded(), eq(variables.runFull, 'true'))
 
   - script: dotnet build "$(MOCK_PROJECT)" -c Release
     displayName: 'Build Mock API'
-    condition: eq(variables.runFull, 'true')
+    condition: and(succeeded(), eq(variables.runFull, 'true'))
 
   - script: bash .azure-pipelines/scripts/dotnet-vuln-check.sh "$(MOCK_PROJECT)"
     displayName: 'Dependency vulnerability audit'
-    condition: eq(variables.runFull, 'true')
+    condition: and(succeeded(), eq(variables.runFull, 'true'))
 
   - script: |
       set -e
       pip install --quiet semgrep==1.136.0
       semgrep scan --config auto --json-output "$(Build.ArtifactStagingDirectory)/semgrep-results.json" src/6-MockExternalSystems
     displayName: 'Semgrep scan (informational)'
-    condition: eq(variables.runFull, 'true')
+    condition: and(succeeded(), eq(variables.runFull, 'true'))
 
   - template: ../templates/ai-review.yml
     parameters:

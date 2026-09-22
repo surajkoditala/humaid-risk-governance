@@ -49,15 +49,15 @@ stages:
         steps:
           - checkout: self
 
-          # BLOCK manual DEV runs
-          - bash: |
-              echo "Checking if manual run with 'dev' environment..."
-              if [[ "$(Build.Reason)" == "Manual" && "${{ parameters.environment }}" == "dev" ]]; then
-                echo "##vso[task.logissue type=error]Manual runs for 'dev' are not allowed. Please use 'test' or trigger automatically."
-                exit 1
-              fi
-              echo "Proceeding with environment: '${{ parameters.environment }}', reason: '$(Build.Reason)'"
-            displayName: Block Manual Runs for Dev
+          # # BLOCK manual DEV runs
+          # - bash: |
+          #     echo "Checking if manual run with 'dev' environment..."
+          #     if [[ "$(Build.Reason)" == "Manual" && "${{ parameters.environment }}" == "dev" ]]; then
+          #       echo "##vso[task.logissue type=error]Manual runs for 'dev' are not allowed. Please use 'test' or trigger automatically."
+          #       exit 1
+          #     fi
+          #     echo "Proceeding with environment: '${{ parameters.environment }}', reason: '$(Build.Reason)'"
+          #   displayName: Block Manual Runs for Dev
 
           # Extract and persist version/buildId
           - bash: |

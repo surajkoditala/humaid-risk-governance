@@ -34,6 +34,7 @@ steps:
       scriptType: 'bash'
       scriptLocation: 'inlineScript'
       inlineScript: |
+        set -e
         az config set extension.use_dynamic_install=yes_without_prompt
         echo "Resolving user-assigned identity for ACR pull..."
         UAI_ID=$(az identity show \

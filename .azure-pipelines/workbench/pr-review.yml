@@ -51,31 +51,31 @@ steps:
 
   - task: UseDotNet@2
     displayName: 'Install .NET SDK'
-    condition: eq(variables.runFull, 'true')
+    condition: and(succeeded(), eq(variables.runFull, 'true'))
     inputs:
       packageType: sdk
       version: '10.0.x'
 
   - task: NodeTool@0    # Vite 7 needs Node >= 22.12 (also runs the Claude CLI)
     displayName: 'Install Node.js'
-    condition: eq(variables.runFull, 'true')
+    condition: and(succeeded(), eq(variables.runFull, 'true'))
     inputs:
       versionSpec: '22.x'
 
   - script: dotnet build "$(WEB_PROJECT)" -c Release
     displayName: 'Build API'
-    condition: eq(variables.runFull, 'true')
+    condition: and(succeeded(), eq(variables.runFull, 'true'))
 
   - script: |
       dotnet test "$(TEST_PROJECT)" -c Release \
         --logger "trx;LogFileName=unit-tests.trx" \
         --results-directory "$(Build.ArtifactStagingDirectory)/test-results"
     displayName: 'Unit tests'
-    condition: eq(variables.runFull, 'true')
+    condition: and(succeeded(), eq(variables.runFull, 'true'))
 
   - task: PublishTestResults@2
     displayName: 'Publish test results'
-    condition: eq(variables.runFull, 'true')
+    condition: and(succeededOrFailed(), eq(variables.runFull, 'true'))
     inputs:
       testResultsFormat: VSTest
       testResultsFiles: '**/*.trx'
@@ -88,21 +88,21 @@ steps:
       npm run build
     displayName: 'Build webapp'
     workingDirectory: webapp
-    condition: eq(variables.runFull, 'true')
+    condition: and(succeeded(), eq(variables.runFull, 'true'))
 
   - script: |
       set -e
       bash .azure-pipelines/scripts/dotnet-vuln-check.sh "$(WEB_PROJECT)" "$(TEST_PROJECT)"
       npm audit --prefix webapp --audit-level=high
     displayName: 'Dependency vulnerability audit'
-    condition: eq(variables.runFull, 'true')
+    condition: and(succeeded(), eq(variables.runFull, 'true'))
 
   - script: |
       set -e
       pip install --quiet semgrep==1.136.0
       semgrep scan --config auto --json-output "$(Build.ArtifactStagingDirectory)/semgrep-results.json" .
     displayName: 'Semgrep scan (informational)'
-    condition: eq(variables.runFull, 'true')
+    condition: and(succeeded(), eq(variables.runFull, 'true'))
 
   - template: ../templates/ai-review.yml
     parameters:
