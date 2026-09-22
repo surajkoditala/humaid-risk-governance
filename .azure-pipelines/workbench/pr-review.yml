@@ -1,7 +1,14 @@
 # PR validation for the Workbench (API + webapp).
-# Runs on PRs to release/1.00 that touch the paths below; the Mock API has its
-# own pipeline (.azure-pipelines/mock-api). Repo is on GitHub, pipeline in Azure
-# DevOps (needs the GitHub service connection).
+# Runs on every PR to release/1.00 (no path filter on the trigger - see below);
+# the Mock API has its own pipeline (.azure-pipelines/mock-api). Repo is on
+# GitHub, pipeline in Azure DevOps (needs the GitHub service connection).
+#
+# Both this pipeline's check (gh-workbench-dev-pr-review) and the Mock API's
+# (gh-mock-api-dev-pr-review) are required GitHub status checks on release/1.00.
+# A path-filtered `pr.paths` trigger would mean the check never gets posted (and
+# merges blocked forever waiting on it) for a PR that doesn't touch this scope -
+# so the pipeline always triggers, and the "Detect relevant path changes" step
+# below skips the actual gate steps (fast success) when nothing in scope changed.
 #
 # Hard gates (a failure turns the required GitHub check red and blocks the merge):
 #   build, unit tests, webapp build, vulnerable dependencies, AI review blockers.
@@ -11,17 +18,6 @@ trigger: none
 pr:
   branches:
     include: [release/1.00]
-  paths:
-    include:
-      - src/1-API/*
-      - src/2-Infrastructure/*
-      - src/3-Service/*
-      - src/4-Persistence/*
-      - tests/*
-      - webapp/*
-      - .azure-pipelines/workbench/*
-      - .azure-pipelines/templates/*   # shared review logic: re-run when it changes
-      - .azure-pipelines/scripts/*
 
 variables:
   - group: ai-review-secrets
@@ -37,29 +33,49 @@ steps:
   - checkout: self
     fetchDepth: 0    # the AI review diffs the PR merge commit against its base
 
+  - bash: |
+      set -e
+      TARGET_BRANCH="${SYSTEM_PULLREQUEST_TARGETBRANCH#refs/heads/}"
+      git fetch --quiet origin "$TARGET_BRANCH"
+      CHANGED=$(git diff --name-only "origin/$TARGET_BRANCH...HEAD")
+      echo "Changed files:"
+      echo "$CHANGED"
+      if echo "$CHANGED" | grep -qE '^(src/1-API/|src/2-Infrastructure/|src/3-Service/|src/4-Persistence/|tests/|webapp/|\.azure-pipelines/workbench/|\.azure-pipelines/templates/|\.azure-pipelines/scripts/)'; then
+        echo "Workbench scope touched - running full gate."
+        echo "##vso[task.setvariable variable=runFull]true"
+      else
+        echo "Nothing in Workbench scope touched - skipping gate steps."
+        echo "##vso[task.setvariable variable=runFull]false"
+      fi
+    displayName: 'Detect relevant path changes'
+
   - task: UseDotNet@2
     displayName: 'Install .NET SDK'
+    condition: eq(variables.runFull, 'true')
     inputs:
       packageType: sdk
       version: '10.0.x'
 
   - task: NodeTool@0    # Vite 7 needs Node >= 22.12 (also runs the Claude CLI)
     displayName: 'Install Node.js'
+    condition: eq(variables.runFull, 'true')
     inputs:
       versionSpec: '22.x'
 
   - script: dotnet build "$(WEB_PROJECT)" -c Release
     displayName: 'Build API'
+    condition: eq(variables.runFull, 'true')
 
   - script: |
       dotnet test "$(TEST_PROJECT)" -c Release \
         --logger "trx;LogFileName=unit-tests.trx" \
         --results-directory "$(Build.ArtifactStagingDirectory)/test-results"
     displayName: 'Unit tests'
+    condition: eq(variables.runFull, 'true')
 
   - task: PublishTestResults@2
     displayName: 'Publish test results'
-    condition: succeededOrFailed()
+    condition: eq(variables.runFull, 'true')
     inputs:
       testResultsFormat: VSTest
       testResultsFiles: '**/*.trx'
@@ -72,18 +88,21 @@ steps:
       npm run build
     displayName: 'Build webapp'
     workingDirectory: webapp
+    condition: eq(variables.runFull, 'true')
 
   - script: |
       set -e
       bash .azure-pipelines/scripts/dotnet-vuln-check.sh "$(WEB_PROJECT)" "$(TEST_PROJECT)"
       npm audit --prefix webapp --audit-level=high
     displayName: 'Dependency vulnerability audit'
+    condition: eq(variables.runFull, 'true')
 
   - script: |
       set -e
       pip install --quiet semgrep==1.136.0
       semgrep scan --config auto --json-output "$(Build.ArtifactStagingDirectory)/semgrep-results.json" .
     displayName: 'Semgrep scan (informational)'
+    condition: eq(variables.runFull, 'true')
 
   - template: ../templates/ai-review.yml
     parameters:
