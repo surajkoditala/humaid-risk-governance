@@ -1,5 +1,6 @@
 namespace Humaid.RiskGovernance.AdminUI.Services.DocumentProcessing
 {
+    using Azure.Identity;
     using Azure.Storage.Blobs;
     using Azure.Storage.Blobs.Models;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.DocumentProcessing;
@@ -7,9 +8,13 @@ namespace Humaid.RiskGovernance.AdminUI.Services.DocumentProcessing
 
     /// <summary>
     /// Local dev talks to Azurite (ops/docker-compose.yml) with its well-known emulator connection
-    /// string; production points BLOB_STORAGE_CONNECTION_STRING at a real Storage Account
-    /// (Suraj's IaC - see ops/README.md). Same "flag explicitly, don't silently guess" rule as
-    /// every other external client in this repo (ClaudeApiClient, MockSystemsClient).
+    /// string via BLOB_STORAGE_CONNECTION_STRING; a real Storage Account with Shared Key access
+    /// disabled (the secure-by-default posture - see stghdev01) instead sets BLOB_STORAGE_ACCOUNT_URL
+    /// (just the blob endpoint, e.g. https://stghdev01.blob.core.windows.net) with no key anywhere,
+    /// authenticated via DefaultAzureCredential - same shape as DapperConnectionFactory's
+    /// AZURE_POSTGRESQL_CONNECTIONSTRING/AZURE_POSTGRESQL_ENDPOINT split for Postgres. Same
+    /// "flag explicitly, don't silently guess" rule as every other external client in this repo
+    /// (ClaudeApiClient, MockSystemsClient).
     /// </summary>
     public class BlobStorageClient : IBlobStorageClient
     {
@@ -29,14 +34,27 @@ namespace Humaid.RiskGovernance.AdminUI.Services.DocumentProcessing
         public async Task<string> UploadAsync(string fileName, string contentType, Stream content, CancellationToken cancellationToken = default)
         {
             var connectionString = _configuration["BLOB_STORAGE_CONNECTION_STRING"];
-            if (string.IsNullOrWhiteSpace(connectionString))
+            var accountUrl = _configuration["BLOB_STORAGE_ACCOUNT_URL"];
+
+            BlobServiceClient blobServiceClient;
+            if (!string.IsNullOrWhiteSpace(connectionString))
+            {
+                blobServiceClient = new BlobServiceClient(connectionString);
+            }
+            else if (!string.IsNullOrWhiteSpace(accountUrl))
+            {
+                blobServiceClient = new BlobServiceClient(new Uri(accountUrl), new DefaultAzureCredential());
+            }
+            else
             {
                 throw new InvalidOperationException(
-                    "BLOB_STORAGE_CONNECTION_STRING is not configured - set it to Azurite's emulator " +
-                    "connection string for local dev (see ops/docker-compose.yml), or a real Storage Account's in production.");
+                    "Neither BLOB_STORAGE_CONNECTION_STRING nor BLOB_STORAGE_ACCOUNT_URL is configured - " +
+                    "set the former to Azurite's emulator connection string for local dev (see " +
+                    "ops/docker-compose.yml), or the latter to a real Storage Account's blob endpoint " +
+                    "when Shared Key access is disabled there.");
             }
 
-            var containerClient = new BlobServiceClient(connectionString).GetBlobContainerClient(ContainerName);
+            var containerClient = blobServiceClient.GetBlobContainerClient(ContainerName);
             await containerClient.CreateIfNotExistsAsync(cancellationToken: cancellationToken);
 
             // A GUID prefix, not the raw file name, so two analysts uploading "policy.pdf" the same
