@@ -39,6 +39,9 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.Audit
             try
             {
                 var pdfBytes = await _auditExportService.ExportPdfAsync(changeRequestId);
+                if (pdfBytes is null)
+                    return NotFound(OperationResult<object>.Failure($"Change request {changeRequestId} not found."));
+
                 return File(pdfBytes, "application/pdf", $"audit-trail-{changeRequestId}.pdf");
             }
             catch (Exception ex)

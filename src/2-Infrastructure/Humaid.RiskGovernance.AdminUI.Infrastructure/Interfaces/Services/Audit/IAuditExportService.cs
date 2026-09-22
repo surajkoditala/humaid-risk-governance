@@ -4,6 +4,8 @@ namespace Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.Audit
     /// human-readable format (e.g. PDF)" but no story owned building it until QA raised this gap.</summary>
     public interface IAuditExportService
     {
-        Task<byte[]> ExportPdfAsync(Guid changeRequestId);
+        /// <summary>Returns null when <paramref name="changeRequestId"/> doesn't exist, so the
+        /// controller can map that to a 404 rather than a generic 500.</summary>
+        Task<byte[]?> ExportPdfAsync(Guid changeRequestId);
     }
 }

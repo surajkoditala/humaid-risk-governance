@@ -128,3 +128,27 @@ export async function authorizedFetch(url, token, options = {}) {
   }
   return response.json()
 }
+
+/**
+ * Downloads a binary response (e.g. the audit trail PDF) with an optional Bearer token attached,
+ * then triggers the browser's normal save-file flow via a temporary object URL. A plain anchor
+ * href to a protected endpoint can't attach a token, so it would silently 401 once a real Auth0
+ * tenant replaces the dev bypass - this goes through the same auth path apiFetch/authorizedFetch
+ * already use for every other request.
+ */
+export async function downloadFile(url, token, filename) {
+  const headers = token ? { Authorization: `Bearer ${token}` } : undefined
+  const response = await fetch(url, { headers })
+  if (!response.ok) {
+    throw new Error(`Request to ${url} failed with status ${response.status}`)
+  }
+  const blob = await response.blob()
+  const objectUrl = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = objectUrl
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(objectUrl)
+}

@@ -22,10 +22,10 @@ namespace Humaid.RiskGovernance.AdminUI.Services.Audit
             _changeRequestRepo = changeRequestRepo;
         }
 
-        public async Task<byte[]> ExportPdfAsync(Guid changeRequestId)
+        public async Task<byte[]?> ExportPdfAsync(Guid changeRequestId)
         {
-            var changeRequest = await _changeRequestRepo.GetByIdAsync(changeRequestId)
-                ?? throw new InvalidOperationException($"Change request {changeRequestId} not found.");
+            var changeRequest = await _changeRequestRepo.GetByIdAsync(changeRequestId);
+            if (changeRequest is null) return null;
             var trail = await _auditService.GetTrailAsync(changeRequestId);
 
             var document = Document.Create(container =>
