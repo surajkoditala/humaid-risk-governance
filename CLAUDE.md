@@ -18,7 +18,7 @@ This file gives Claude Code full context on this hackathon project. Read this be
 
 | Role | Owns |
 |---|---|
-| Dev 1 (Suleman — backend/.NET tech lead) | Core domain, Assessment/Scoring module, AI orchestration layer (`RAW.AI`) |
+| Dev 1 (backend/.NET tech lead) | Core domain, Assessment/Scoring module, AI orchestration layer (`RAW.AI`) |
 | Dev 2 | Intake, Workflow, Committee module, API layer, EF Core setup |
 | QA | `/tests` (unit/integration), `/evals` (AI output quality evaluation — 10% judging weight) |
 | DevOps | `/ops` (Docker, Bicep/Terraform), Azure DevOps CI/CD, monitoring/observability (Operations stage) |
@@ -91,9 +91,9 @@ RiskAssessmentWorkbench.sln
 
 ## Tech Stack
 - Backend: C# / .NET Web API
-- Frontend: React or Angular (team's choice — no hackathon restriction; Suleman's background is Angular, React also viable)
+- Frontend: React or Angular (team's choice — no hackathon restriction)
 - Database: PostgreSQL (Azure Database for PostgreSQL Flexible Server, Burstable tier, or containerized for local dev)
-- Deployment: Azure Container Apps (Suleman has Visual Studio Enterprise subscription with Azure credits)
+- Deployment: Azure Container Apps
 - Containerization: Dockerfile + docker-compose.yml (local), Bicep/Terraform (Azure deploy)
 - AI coding tool: Claude Code — used to direct/orchestrate development, not a prompt-to-app generator
 
@@ -127,7 +127,7 @@ New product → Products/Services + Customers · Feature → Products/Services �
 
 ## User Stories — see `docs/requirements/user-stories.md`
 
-Prepared by the team's BA (epics 1–10), plus Epics 11–13 raised by QA on 17 Sep 2026 (Access Control, Deployment & Operations, Non-Functional Requirements; also US-9.3, audit export) and Epic 14 added from the Platform Ecosystem Diagram. Epic and story IDs match the Azure Boards work items. Given/When/Then acceptance criteria throughout. Structure:
+Prepared by the team's BA (epics 1–10), plus Epics 11–13 raised by QA on 17 Sep 2026 (Access Control, Deployment & Operations, Non-Functional Requirements; also US-9.3, audit export), Epic 14 added from the Platform Ecosystem Diagram, and Epics 15–18 (infrastructure, pipelines, observability) added from the IaC and pipeline work — see the section below. Epic and story IDs match the Azure Boards work items. Given/When/Then acceptance criteria throughout. Structure:
 
 1. Change Request Intake
 2. Risk Categorization & Framework Mapping **[AI]**
@@ -143,6 +143,10 @@ Prepared by the team's BA (epics 1–10), plus Epics 11–13 raised by QA on 17 
 12. Deployment & Operations (schema deploy, container build/scan, observability)
 13. Non-Functional Requirements (retention, in-tenant model calls)
 14. Mock External Systems & Data Ingestion (mock CRM/Core Banking/Vendor Management as a separate service; Data Ingestion Layer is the only path to it; committee decisions push back to the source system — deterministic, no AI call)
+15. Terraform Modules for Azure Infrastructure (10 reusable modules under `iac/modules`)
+16. Dev Environment Infrastructure Set Up (the dev environment provisioned from those modules)
+17. Set Up DevOps CI/CD Pipelines (infrastructure and application pipelines in Azure DevOps) — US-17.4 and US-17.8 are tagged **[AI]**: AI reviews pull requests in the pipeline, not in the product
+18. Observability (placeholder: telemetry to Application Insights / Log Analytics, and an SRE watchdog agent)
 
 **Open questions logged by the BA — resolve with team before locking design:**
 1. Do Product Owners see analyst scoring rationale, or only status?
@@ -152,6 +156,51 @@ Prepared by the team's BA (epics 1–10), plus Epics 11–13 raised by QA on 17 
 5. Who can approve scoring/workflow configuration changes — self-service or manager approval?
 
 Every AI-touchpoint epic (2, 3, 4, 5) pairs with a human review/override story by design — this directly evidences the 15% "human-in-the-loop and governance" judging criterion, so preserve that pairing in implementation; don't let an AI output reach the committee stage without a corresponding review gate in code.
+
+---
+
+## Infrastructure, DevOps & Observability — see Epics 15–18 in `docs/requirements/user-stories.md`
+
+Orientation only, as of 21 Sep 2026; the acceptance criteria in the user stories are the spec. This section is separate from the application architecture above.
+
+### Where the code lives
+- **`main`** holds the infrastructure: `iac/` (Terraform) and the infrastructure pipelines in `.azure-pipelines/iac/`. It has no application code.
+- **`release/1.00`** holds the application (`src/`, `webapp/`, `tests/`, `ops/`), `docs/`, and the application pipelines in `.azure-pipelines/`. `iac/` is not on this branch yet.
+- The repo is on GitHub; the pipelines run in Azure DevOps.
+
+### Infrastructure as Code (`iac/`, Epics 15–16)
+- Terraform `~> 1.8` (pipelines install 1.12.2), azurerm `>= 4.0, < 5.0`. Remote state: azurerm backend, resource group `rg-gh-tf-dev`, storage account `stghtfstatedev01`, container `tfstate`, key `dev/terraform.tfstate`.
+- **`iac/modules/`** — ten reusable modules, each with README, Intro, CHANGELOG, and examples: resource group, virtual network, private DNS zone, key vault, storage account, PostgreSQL, Log Analytics workspace, container registry, container apps environment, container apps. The modules validate the required tags (`business_unit`, `customer`, `environment`, `product`, `owner`, `region`), follow the `<type>-<product>-<environment>` naming, and offer optional locks, RBAC, private endpoints, and diagnostic settings.
+- **`iac/environments/dev/`** — one configuration, one `main.<resource>.tf` file per resource, variables in `variables.*.tf`, values in `parameters.*.auto.tfvars`. It provisions: resource group; VNet `10.12.0.0/16` with subnets `snet-pep-dev-01` and `snet-cae-dev-01` and one NSG each; six private DNS zones; Key Vault; Storage Account (four private endpoints); PostgreSQL Flexible Server with database `risk_governance_db`; Log Analytics workspace and Application Insights; container registry; user-assigned identity `id-ca-<product>-<environment>` with AcrPull; a VNet-integrated container apps environment (Consumption profile); and two container apps.
+- **Container apps:** `gh-hrg-workbench` (Workbench UI, external ingress, port 8080) and `gh-hrg-mockapi` (Mock API, internal-only ingress, so only the Workbench inside the environment can reach it). Both start from a placeholder image (`hello-dotnet-http:v1`); the real images are meant to be deployed by the pipeline.
+- **Decisions and constraints to keep:** default region `eastus2`; PostgreSQL is in `centralus` because the subscription cannot provision it in `eastus2`, and its private endpoint stays in `eastus2` with the VNet. Data services sit behind private endpoints with network rules set to deny by default. Dev is cost-conscious on purpose: Consumption plan only, no high availability, no geo-redundant backup, no resource group lock, and diagnostic settings and Log Analytics attachments left disabled (commented out in Terraform).
+- **Secrets never go in code or tfvars.** The PostgreSQL admin password is generated by Terraform at apply time, and the apps reach PostgreSQL, Key Vault, and Storage through managed identities (Entra), not passwords.
+
+### CI/CD pipelines (`.azure-pipelines/`, Epic 17)
+| Pipeline | File | Runs when | Hard gates |
+|---|---|---|---|
+| Infra PR review | `iac/dev-pr-review.yml` | PR to `main` touching `iac/environments/dev` | `terraform fmt`, init, validate, TFLint (errors), Trivy HIGH/CRITICAL, Terraform plan, AI review `BLOCKING_ISSUES` |
+| Infra deploy | `iac/dev-tf-deploy.yml` | push to `main` touching `iac/environments/dev` | plan + apply to dev, no manual approval (the PR review is the required check) |
+| Workbench PR review | `workbench/pr-review.yml` | PR to `release/1.00` touching Workbench paths | build, unit tests, webapp build, dependency audit, AI review blockers |
+| Mock API PR review | `mock-api/pr-review.yml` | PR to `release/1.00` touching `src/6-MockExternalSystems` | `deploy_all.sql` drift, build, dependency audit, AI review blockers |
+| Image build and deploy | `workbench/workbench.yml`, `mock-api/mock-api.yml` | not built yet — empty placeholders (US-17.9, US-17.10) | — |
+
+- Informational only (never fail a build): Trivy MEDIUM, Checkov (soft-fail, skipped checks are justified in `.azure-pipelines/iac/.checkov.yml`), TFLint warnings, Semgrep.
+- **AI review:** the infrastructure pipeline reviews the scan results and the plan; the application pipelines share `templates/ai-review.yml` and `scripts/ai-review/` (`rules.md`, `schema.json`, `review.sh`, `post.sh`) plus a per-component `prompt.md`. The reviewer is read-only inside the checkout, and only a blocker fails the build. An AI outage never blocks a PR.
+- **Access to Azure** goes through the `azure-cloud` service connection (Workload Identity Federation, no stored client secret). Secrets live in the variable groups `ai-review-secrets` (`CLAUDE_CODE_OAUTH_TOKEN`, `GITHUB_PAT`) and `checkov-secrets`; never commit them.
+- Failure and attention notifications @mention the PR author on GitHub.
+
+### Observability (Epic 18 — placeholder)
+- The Log Analytics workspace and Application Insights are provisioned in dev, but nothing sends telemetry to them yet (kept off for cost). Planned: US-18.1 sends logs, metrics, and application telemetry to them; US-18.2 adds an SRE watchdog agent that watches Application Insights and notifies the team of critical issues. Open: which conditions are critical, and which notification channel.
+- US-12.2 (build and publish images) and US-12.3 (observe an environment) in Epic 12 are expected to be largely covered by Epics 17 and 18.
+
+### Azure DevOps Boards (how to add or change work items)
+- Organization `https://dev.azure.com/Myridius-Insurity`, project `humaid-risk-governance`, Scrum process: **Epic → Product Backlog Item** (no Feature level). Area and iteration stay at the project root.
+- Title format `Epic N - Name` and `US-N.M - Title`. Description: `<p>As a DevOps Engineer, I want …, so that ….</p>`. Acceptance criteria go in the Acceptance Criteria field as `<ul><li>Given … when … then …</li></ul>`. Priority 2, Value Area Business, State New. Tags: one category tag plus one epic tag, separated by `; `.
+- **Write items as work for someone to pick up:** forward-looking ("set up", "create"), never describing something as already existing.
+- Boards IDs (they differ from the epic numbers): Epic 15 = 52 (stories 53–62), Epic 16 = 63 (64–76), Epic 17 = 77 (78, 80–89; 79 was deleted), Epic 18 = 90 (91–92).
+- **CLI:** `az devops login` and paste the PAT (Work Items: Read & write) at the hidden prompt — never in chat, and revoke it when done. Set the defaults with `az devops configure --defaults organization=… project=…`. In WIQL, `@project` returned no results; use the literal project name. Link a story to its epic with `az boards work-item relation add --relation-type parent`.
+- **Keep the docs in sync:** any change to these Boards items must also be made in `docs/requirements/user-stories.md`, whose IDs match one-to-one.
 
 ---
 
