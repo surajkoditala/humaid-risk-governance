@@ -14,11 +14,13 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.Audit
     public class AuditController : BaseApiController
     {
         private readonly IAuditService _auditService;
+        private readonly IAuditExportService _auditExportService;
 
-        public AuditController(IAuditService auditService, ILogger<AuditController> logger)
+        public AuditController(IAuditService auditService, IAuditExportService auditExportService, ILogger<AuditController> logger)
             : base(logger)
         {
             _auditService = auditService;
+            _auditExportService = auditExportService;
         }
 
         /// <summary>US-9.1: full chronological history for one change request.</summary>
@@ -29,5 +31,24 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.Audit
                 var trail = await _auditService.GetTrailAsync(changeRequestId);
                 return OperationResult<IReadOnlyList<AuditEvent>>.Success(trail);
             }, "Failed to fetch audit trail.");
+
+        /// <summary>US-9.3: the same trail as a durable, examiner-ready PDF.</summary>
+        [HttpGet("{changeRequestId:guid}/Export")]
+        public async Task<IActionResult> ExportPdf(Guid changeRequestId)
+        {
+            try
+            {
+                var pdfBytes = await _auditExportService.ExportPdfAsync(changeRequestId);
+                if (pdfBytes is null)
+                    return NotFound(OperationResult<object>.Failure($"Change request {changeRequestId} not found."));
+
+                return File(pdfBytes, "application/pdf", $"audit-trail-{changeRequestId}.pdf");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Failed to export audit trail PDF for change request {ChangeRequestId}.", changeRequestId);
+                return StatusCode(500, OperationResult<object>.Failure("Failed to export audit trail."));
+            }
+        }
     }
 }

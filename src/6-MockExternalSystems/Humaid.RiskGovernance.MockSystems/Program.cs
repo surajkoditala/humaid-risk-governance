@@ -1,3 +1,5 @@
+using Azure.Core;
+using Azure.Identity;
 using Azure.Monitor.OpenTelemetry.AspNetCore;
 using Dapper;
 using Humaid.RiskGovernance.MockSystems;
@@ -17,9 +19,42 @@ if (!string.IsNullOrWhiteSpace(appInsightsConnectionString))
     builder.Services.AddOpenTelemetry().UseAzureMonitor(options => options.ConnectionString = appInsightsConnectionString);
 }
 
-var connectionString = builder.Configuration["MOCK_SYSTEMS_POSTGRESQL_CONNECTIONSTRING"]
-    ?? throw new InvalidOperationException("MOCK_SYSTEMS_POSTGRESQL_CONNECTIONSTRING is not configured.");
-var dataSource = NpgsqlDataSource.Create(connectionString);
+// MOCK_SYSTEMS_POSTGRESQL_CONNECTIONSTRING is the primary key (password auth, matches local dev's
+// Azurite-equivalent flow); AZURE_POSTGRESQL_ENDPOINT is a fallback - the same connection-string
+// shape but without a password (Server/Database/Port/Ssl Mode/User Id), for Managed Identity
+// (Entra ID) auth against the shared Flexible Server - same dual-mode pattern as the Workbench's
+// own DapperConnectionFactory.cs, reused here rather than adding a second env var Suraj would need
+// to provision separately.
+var connectionString = builder.Configuration["MOCK_SYSTEMS_POSTGRESQL_CONNECTIONSTRING"];
+if (string.IsNullOrWhiteSpace(connectionString))
+{
+    connectionString = builder.Configuration["AZURE_POSTGRESQL_ENDPOINT"];
+}
+if (string.IsNullOrWhiteSpace(connectionString))
+{
+    throw new InvalidOperationException(
+        "Neither MOCK_SYSTEMS_POSTGRESQL_CONNECTIONSTRING nor AZURE_POSTGRESQL_ENDPOINT is configured.");
+}
+
+var pgConnStringBuilder = new NpgsqlConnectionStringBuilder(connectionString);
+var useEntraIdAuth = !string.IsNullOrEmpty(pgConnStringBuilder.Username) && string.IsNullOrEmpty(pgConnStringBuilder.Password);
+
+var dataSourceBuilder = new NpgsqlDataSourceBuilder(pgConnStringBuilder.ConnectionString);
+if (useEntraIdAuth)
+{
+    var credential = new DefaultAzureCredential();
+    dataSourceBuilder.UsePeriodicPasswordProvider(
+        async (_, ct) =>
+        {
+            var token = await credential
+                .GetTokenAsync(new TokenRequestContext(["https://ossrdbms-aad.database.windows.net/.default"]), ct)
+                .ConfigureAwait(false);
+            return token.Token;
+        },
+        TimeSpan.FromMinutes(55),
+        TimeSpan.FromSeconds(30));
+}
+var dataSource = dataSourceBuilder.Build();
 builder.Services.AddSingleton(dataSource);
 
 var corsOrigins = builder.Configuration.GetSection("CORS_ALLOWED_ORIGINS").Get<string[]>() ?? [];
