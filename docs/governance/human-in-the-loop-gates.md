@@ -20,3 +20,70 @@ Epic 8 (Committee) and Epic 10's workflow-rule half are now wired (see
 `architecture-mapping.md`'s "Committee decision resolution rule" for how the quorum-based
 resolution itself works) — nothing in this table changes as a result, since neither module
 generates AI output; they're the final human-decision stage everything above feeds into.
+
+---
+
+## The same table, as a diagram
+
+> Added 2026-09-23, per Shanthi's standup feedback that the AI-vs-human split should be
+> explicit at a glance, not just tabular. Same color key as `ecosystem-diagram.md` — this is
+> the picture version of the table above, not new information.
+
+```mermaid
+flowchart TB
+    classDef ai fill:#ede4fc,stroke:#7c3aed,color:#3b0764,stroke-width:2px
+    classDef deterministic fill:#dbeafe,stroke:#1d4ed8,color:#1e3a8a,stroke-width:2px
+    classDef human fill:#dcfce7,stroke:#15803d,color:#14532d,stroke-width:2px
+    classDef gate fill:#fff7ed,stroke:#c2410c,color:#7c2d12,stroke-width:2px
+
+    subgraph LEGEND["Legend"]
+        direction LR
+        LG1["AI output"]:::ai
+        LG2["Deterministic"]:::deterministic
+        LG3["Human decision"]:::human
+        LG4["Gate enforced in code"]:::gate
+    end
+
+    subgraph EPIC2["Epic 2 — Category Mapping"]
+        direction LR
+        E2A["AI proposes categories<br/>+ citation"]:::ai --> E2G["Analyst adds/removes<br/>reason mandatory"]:::gate
+    end
+    subgraph EPIC3["Epic 3 — Policy Research"]
+        direction LR
+        E3A["Full-text search<br/>(not AI)"]:::deterministic --> E3G["Analyst marks relied-upon<br/>per category"]:::gate
+    end
+    subgraph EPIC4["Epic 4 — Document Extraction"]
+        direction LR
+        E4A["AI extracts fields<br/>+ confidence"]:::ai --> E4G["Analyst corrects any field"]:::gate
+    end
+    subgraph EPIC5["Epic 5 — AI-Drafted Narrative"]
+        direction LR
+        E5A["AI drafts narrative<br/>per category"]:::ai --> E5G["Blocked from committee until<br/>analyst-reviewed"]:::gate
+    end
+    subgraph EPIC6["Epic 6 — cross-cutting"]
+        direction LR
+        E6H["Any AI-generated field"]:::human --> E6G["Edit always needs a stated reason<br/>original + edited both retained"]:::gate
+    end
+    subgraph EPIC7["Epic 7 — Risk Scoring"]
+        direction LR
+        E7A["Deterministic formula<br/>inherent x controls"]:::deterministic --> E7G["Analyst can override<br/>residual never forced to 0"]:::gate
+    end
+    subgraph EPIC8["Epic 8 — Committee"]
+        direction LR
+        E8H["No AI output"]:::human --> E8G["Every vote individually<br/>recorded, never anonymized"]:::gate
+    end
+    subgraph EPIC14["Epic 14 — Mock Systems"]
+        direction LR
+        E14D["Deterministic integration<br/>no AI output"]:::deterministic --> E14G["Push-back fires only from an<br/>already-recorded decision"]:::gate
+    end
+
+    EPIC2 --> AUD
+    EPIC3 --> AUD
+    EPIC4 --> AUD
+    EPIC5 --> AUD
+    EPIC6 --> AUD
+    EPIC7 --> AUD
+    EPIC8 --> AUD
+    EPIC14 --> AUD
+    AUD[("Immutable Audit Trail<br/>append-only, DB trigger blocks UPDATE/DELETE")]
+```
