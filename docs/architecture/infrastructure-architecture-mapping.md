@@ -44,43 +44,60 @@ How each infra resource maps to what the code actually does with it:
 ## 3. Technology architecture
 
 ```mermaid
+%%{init: {'flowchart': {'nodeSpacing': 45, 'rankSpacing': 90, 'curve': 'basis'}}}%%
 flowchart LR
-    USERS(["Users"])
-    AISVC(["AI Provider<br/>Anthropic / Azure AI Foundry"])
+    classDef external fill:#ede4fc,stroke:#7c3aed,color:#3b0764,stroke-width:2px
+    classDef security fill:#fee2e2,stroke:#b91c1c,color:#7f1d1d,stroke-width:2px
+    classDef compute fill:#dbeafe,stroke:#1d4ed8,color:#1e3a8a,stroke-width:2px
+    classDef data fill:#fef3c7,stroke:#b45309,color:#78350f,stroke-width:2px
+    classDef monitor fill:#dcfce7,stroke:#15803d,color:#14532d,stroke-width:2px
+
+    USERS(["Users"]):::external
 
     subgraph SUB["Subscription"]
         subgraph RG["Resource Group"]
-            KV["Key Vault"]
-            ACR["Container Registry"]
+
+            subgraph SEC["Identity & Images"]
+                direction TB
+                KV["Key Vault"]:::security
+                ACR["Container Registry"]:::security
+            end
 
             subgraph COMPUTE["Container Apps Environment"]
-                CAUI["Workbench App"]
-                CABACK["Backend / Mock API"]
+                direction TB
+                CAUI["Workbench App<br/>(external ingress)"]:::compute
+                CABACK["Backend / Mock API<br/>(internal only)"]:::compute
+                CAUI --> CABACK
             end
 
             subgraph MON["Monitor, Insights, Logs"]
-                LAW["Log Analytics"]
-                APPI["Application Insights"]
+                direction TB
+                LAW["Log Analytics"]:::monitor
+                APPI["Application Insights"]:::monitor
             end
 
             subgraph STORAGE["Storage"]
-                BLOB["Storage Blob"]
-                QUEUE["Storage Queue"]
-                PG["PostgreSQL"]
-                TABLE["Tables"]
+                direction TB
+                BLOB["Storage Blob"]:::data
+                QUEUE["Storage Queue"]:::data
+                PG["PostgreSQL"]:::data
+                TABLE["Tables"]:::data
             end
         end
     end
 
+    AISVC(["AI Provider<br/>Anthropic / Azure AI Foundry"]):::external
+
     USERS --> CAUI
-    KV --> COMPUTE
-    ACR --> COMPUTE
-    CAUI --> CABACK
-    CAUI -->|category mapping, document<br/>extraction, narrative drafting| AISVC
+    SEC --> COMPUTE
     COMPUTE --> STORAGE
     COMPUTE --> MON
     STORAGE --> MON
+    MON ~~~ AISVC
+    CAUI ==>|category mapping, document<br/>extraction, narrative drafting| AISVC
 ```
+
+*Legend: <span style="color:#b91c1c">■</span> identity/image security · <span style="color:#1d4ed8">■</span> compute · <span style="color:#b45309">■</span> data/storage · <span style="color:#15803d">■</span> monitoring · <span style="color:#7c3aed">■</span> external*
 
 ---
 
