@@ -1,0 +1,492 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root { color-scheme: light dark; }
+  body { margin: 0; }
+  img { max-width: 100%; }
+  [hidden] { display: none !important; }
+</style>
+<title>Business Requirement Coverage</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@500;600;700&display=swap">
+<style>
+  :root {
+    --ground:#F6F7F9; --surface:#FFFFFF; --surface-2:#EFF2F5;
+    --ink:#131C26; --ink-2:#3B4956; --muted:#66757F;
+    --line:#DBE1E7; --line-2:#C7D0D8;
+    --accent:#0F4C5C; --accent-ink:#0F4C5C; --accent-soft:#E2EDF0;
+    --critical:#A02B21; --critical-soft:#F7E7E5;
+    --warn:#8A5A06; --warn-soft:#FBF0DC;
+    --pass:#1B6B4C; --pass-soft:#E2F0E9;
+    --neutral:#5D6B78; --neutral-soft:#E9EDF1;
+    --f-display:"IBM Plex Serif",Georgia,serif;
+    --f-body:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+    --measure:70ch; --radius:3px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:#0D141B; --surface:#131C25; --surface-2:#18232E;
+      --ink:#E5EBF1; --ink-2:#BDC9D4; --muted:#8B9BA8;
+      --line:#24313D; --line-2:#314250;
+      --accent:#5FB4C8; --accent-ink:#7CC5D6; --accent-soft:#10303A;
+      --critical:#E4837A; --critical-soft:#351917;
+      --warn:#D9A44E; --warn-soft:#33260F;
+      --pass:#6BC49C; --pass-soft:#122C22;
+      --neutral:#92A2AF; --neutral-soft:#1C2731;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:#0D141B; --surface:#131C25; --surface-2:#18232E;
+    --ink:#E5EBF1; --ink-2:#BDC9D4; --muted:#8B9BA8;
+    --line:#24313D; --line-2:#314250;
+    --accent:#5FB4C8; --accent-ink:#7CC5D6; --accent-soft:#10303A;
+    --critical:#E4837A; --critical-soft:#351917;
+    --warn:#D9A44E; --warn-soft:#33260F;
+    --pass:#6BC49C; --pass-soft:#122C22;
+    --neutral:#92A2AF; --neutral-soft:#1C2731;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--ground); color:var(--ink); font-family:var(--f-body); font-size:15px; line-height:1.63; -webkit-font-smoothing:antialiased; }
+  .shell { display:grid; grid-template-columns:216px minmax(0,1fr); gap:50px; max-width:1200px; margin:0 auto; padding:0 30px 90px; }
+  .rail { position:sticky; top:0; align-self:start; padding-top:46px; height:100vh; overflow-y:auto; }
+  .rail-mark { font-family:var(--f-mono); font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent-ink); margin-bottom:20px; }
+  .rail nav { display:flex; flex-direction:column; gap:1px; border-left:1px solid var(--line); }
+  .rail a { padding:6px 0 6px 13px; text-decoration:none; color:var(--muted); font-size:12.3px; line-height:1.32; border-left:2px solid transparent; margin-left:-1px; transition:color .12s,border-color .12s; }
+  .rail a:hover { color:var(--ink); border-left-color:var(--line-2); }
+  .rail a:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+
+  .masthead { padding:52px 0 0; }
+  .eyebrow { font-family:var(--f-mono); font-size:11px; letter-spacing:.15em; text-transform:uppercase; color:var(--muted); }
+  h1 { font-family:var(--f-display); font-weight:700; font-size:clamp(31px,4.5vw,45px); line-height:1.1; letter-spacing:-.015em; margin:14px 0 16px; text-wrap:balance; }
+  .standfirst { font-size:17px; line-height:1.6; color:var(--ink-2); max-width:var(--measure); margin:0 0 28px; }
+  .meta { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); border-top:1px solid var(--line-2); border-bottom:1px solid var(--line-2); }
+  .meta div { padding:13px 16px 13px 0; border-right:1px solid var(--line); }
+  .meta div:last-child { border-right:0; }
+  .meta dt { font-family:var(--f-mono); font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); margin-bottom:5px; }
+  .meta dd { margin:0; font-size:13.5px; font-weight:500; }
+
+  section { padding-top:56px; scroll-margin-top:20px; }
+  .sec-head { border-top:2px solid var(--ink); padding-top:12px; margin-bottom:20px; }
+  h2 { font-family:var(--f-display); font-weight:600; font-size:clamp(21px,2.6vw,27px); line-height:1.22; margin:0; letter-spacing:-.01em; }
+  .sec-sub { color:var(--muted); font-size:14px; margin-top:5px; max-width:var(--measure); }
+  h3 { font-family:var(--f-display); font-weight:600; font-size:16.5px; margin:30px 0 9px; }
+  h4 { font-weight:600; font-size:14px; margin:20px 0 7px; }
+  p { max-width:var(--measure); margin:0 0 12px; }
+  ul,ol { max-width:var(--measure); padding-left:20px; margin:0 0 12px; }
+  li { margin-bottom:5px; }
+  code { font-family:var(--f-mono); font-size:.87em; background:var(--surface-2); padding:1px 5px; border-radius:var(--radius); border:1px solid var(--line); }
+  a { color:var(--accent-ink); }
+  blockquote { margin:14px 0; padding:2px 0 2px 16px; border-left:2px solid var(--line-2); color:var(--ink-2); font-style:italic; max-width:var(--measure); }
+
+  .pill { display:inline-block; font-family:var(--f-mono); font-size:9.5px; font-weight:500; letter-spacing:.04em; text-transform:uppercase; padding:2px 6px; border-radius:2px; white-space:nowrap; }
+  .p-pass { background:var(--pass-soft); color:var(--pass); }
+  .p-crit { background:var(--critical-soft); color:var(--critical); }
+  .p-warn { background:var(--warn-soft); color:var(--warn); }
+  .p-neut { background:var(--neutral-soft); color:var(--neutral); }
+  .p-acc  { background:var(--accent-soft); color:var(--accent-ink); }
+
+  .tw { overflow-x:auto; margin:14px 0 20px; border:1px solid var(--line); border-radius:var(--radius); background:var(--surface); }
+  table { width:100%; border-collapse:collapse; font-size:12.7px; }
+  th,td { text-align:left; padding:8px 11px; border-bottom:1px solid var(--line); vertical-align:top; }
+  thead th { font-family:var(--f-mono); font-size:9.5px; letter-spacing:.09em; text-transform:uppercase; color:var(--muted); font-weight:500; background:var(--surface-2); white-space:nowrap; }
+  tbody tr:last-child td { border-bottom:0; }
+  td.mono,th.mono { font-family:var(--f-mono); font-size:11px; }
+  td.c { text-align:center; white-space:nowrap; }
+  tr.gap td { background:var(--critical-soft); }
+
+  pre { font-family:var(--f-mono); font-size:11.4px; line-height:1.55; background:var(--surface-2); border:1px solid var(--line); border-radius:var(--radius); padding:11px 13px; overflow-x:auto; margin:10px 0; }
+  pre code { background:none; border:0; padding:0; font-size:inherit; }
+
+  .note { border-left:2px solid var(--accent); background:var(--accent-soft); padding:14px 18px; margin:17px 0; max-width:var(--measure); }
+  .note p:last-child { margin-bottom:0; }
+  .note .lbl { font-family:var(--f-mono); font-size:9.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--accent-ink); display:block; margin-bottom:6px; }
+  .note.warn { border-left-color:var(--warn); background:var(--warn-soft); }
+  .note.warn .lbl { color:var(--warn); }
+  .note.crit { border-left-color:var(--critical); background:var(--critical-soft); }
+  .note.crit .lbl { color:var(--critical); }
+  .note.pass { border-left-color:var(--pass); background:var(--pass-soft); }
+  .note.pass .lbl { color:var(--pass); }
+
+  .gapcard { background:var(--surface); border:1px solid var(--line); border-left-width:3px; border-radius:var(--radius); padding:17px 20px; margin:18px 0; }
+  .g-hi { border-left-color:var(--critical); }
+  .g-md { border-left-color:var(--warn); }
+  .g-lo { border-left-color:var(--neutral); }
+  .g-head { display:flex; flex-wrap:wrap; gap:9px; align-items:baseline; margin-bottom:3px; }
+  .g-id { font-family:var(--f-mono); font-size:11.5px; font-weight:600; color:var(--muted); }
+  .g-title { font-family:var(--f-display); font-weight:600; font-size:16.5px; margin:0 0 9px; }
+  .gapcard dl { display:grid; grid-template-columns:92px 1fr; gap:4px 14px; margin:12px 0 0; font-size:12.8px; }
+  .gapcard dt { font-family:var(--f-mono); font-size:9.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); padding-top:3px; }
+  .gapcard dd { margin:0; }
+
+  .lede-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(112px,1fr)); border:1px solid var(--line); border-radius:var(--radius); background:var(--surface); margin:20px 0 24px; }
+  .lede-stats div { padding:14px 17px; border-right:1px solid var(--line); }
+  .lede-stats div:last-child { border-right:0; }
+  .lede-stats .v { font-family:var(--f-display); font-size:26px; font-weight:700; line-height:1; font-variant-numeric:tabular-nums; }
+  .lede-stats .k { font-family:var(--f-mono); font-size:9px; letter-spacing:.09em; text-transform:uppercase; color:var(--muted); margin-top:6px; }
+
+  .foot { margin-top:62px; padding-top:18px; border-top:1px solid var(--line-2); font-size:12.5px; color:var(--muted); max-width:var(--measure); }
+
+  @media (max-width:960px) {
+    .shell { grid-template-columns:1fr; gap:0; padding:0 17px 56px; }
+    .rail { position:static; height:auto; padding-top:22px; }
+    .rail nav { flex-direction:row; flex-wrap:wrap; gap:4px; border-left:0; }
+    .rail a { border:1px solid var(--line); border-radius:2px; padding:4px 8px; margin-left:0; }
+    .masthead { padding-top:26px; }
+    .gapcard dl { grid-template-columns:1fr; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition:none !important; } }
+
+  @page { size:A4; margin:15mm 14mm 17mm; }
+  @media print {
+    :root, :root[data-theme="dark"], :root:not([data-theme="light"]) {
+      --ground:#FFF; --surface:#FFF; --surface-2:#F2F5F7; --ink:#101820; --ink-2:#33414E;
+      --muted:#5A6874; --line:#D3DAE1; --line-2:#B8C2CC; --accent:#0F4C5C; --accent-ink:#0F4C5C;
+      --accent-soft:#E6EFF2; --critical:#8E2219; --critical-soft:#F8E9E7; --warn:#7A4F05;
+      --warn-soft:#FBF1DE; --pass:#17593F; --pass-soft:#E5F1EB; --neutral:#4F5D69; --neutral-soft:#EDF0F3;
+    }
+    * { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
+    body { font-size:9.5pt; line-height:1.45; background:#fff; }
+    .shell { display:block; max-width:none; padding:0; }
+    .rail { display:none; }
+    .masthead { padding-top:0; }
+    h1 { font-size:24pt; } h2 { font-size:14.5pt; } h3 { font-size:11pt; }
+    p,ul,ol,.standfirst,.sec-sub,.note,blockquote { max-width:none; }
+    section { break-before:page; padding-top:0; }
+    #s1 { break-before:auto; }
+    .sec-head,h3,h4 { break-after:avoid; }
+    .tw,.note,pre,.lede-stats,.gapcard { break-inside:avoid; }
+    tr,li { break-inside:avoid; }
+    thead { display:table-header-group; }
+    a { color:var(--ink); text-decoration:none; }
+  }
+</style>
+
+<div class="shell">
+  <aside class="rail">
+    <div class="rail-mark">HumAId&nbsp;·&nbsp;BA</div>
+    <nav>
+      <a href="#s1">01 · What this reviews</a>
+      <a href="#s2">02 · The business case</a>
+      <a href="#s3">03 · Functional requirements</a>
+      <a href="#s4">04 · Non-negotiable constraints</a>
+      <a href="#s5">05 · Business gaps</a>
+      <a href="#s6">06 · Scope balance</a>
+      <a href="#s7">07 · Verdict &amp; actions</a>
+    </nav>
+  </aside>
+
+  <main>
+    <header class="masthead">
+      <div class="eyebrow">Genius Hacks Q3 2026 · Risk Assessment Workbench</div>
+      <h1>Business Requirement Coverage</h1>
+      <p class="standfirst">The 73 user stories judged against the business problem they exist to solve — not against the code. Does this backlog, if fully delivered, actually give the bank what it asked for?</p>
+      <dl class="meta">
+        <div><dt>Reviewer</dt><dd>Shanthi Subramanian · BA&nbsp;/&nbsp;QA</dd></div>
+        <div><dt>Date</dt><dd>23 September 2026</dd></div>
+        <div><dt>Source of truth</dt><dd>The client brief</dd></div>
+        <div><dt>Days to submit</dt><dd>7</dd></div>
+      </dl>
+      <div class="lede-stats">
+        <div><div class="v">10/10</div><div class="k">Functional reqs covered</div></div>
+        <div><div class="v">5/5</div><div class="k">Constraints covered</div></div>
+        <div><div class="v">2/4</div><div class="k">Business outcomes served</div></div>
+        <div><div class="v">7</div><div class="k">Business gaps</div></div>
+      </div>
+    </header>
+
+    <!-- ══ 01 ══ -->
+    <section id="s1">
+      <div class="sec-head">
+        <h2>What this reviews, and against what</h2>
+        <p class="sec-sub">A different question from the last review — and a harder one.</p>
+      </div>
+
+      <p>The previous review asked <em>"is each story built and tested?"</em> This one asks <em>"if every story on this board were delivered perfectly, would the bank's problem be solved?"</em> A backlog can be fully implemented, fully tested, and still miss the point.</p>
+
+      <h3>The source of truth</h3>
+      <p>The business requirements are the client brief in <code>CLAUDE.md</code> — the problem statement as given. It states four things a BA can hold the backlog against: <strong>the business case</strong> (why this exists), <strong>the functional requirements</strong> (what the platform must do), <strong>the non-negotiable constraints</strong>, and <strong>the actors</strong>.</p>
+
+      <div class="note">
+        <span class="lbl">One thing to keep in mind throughout</span>
+        <p>The brief says the problem statement is <strong>"deliberately incomplete — expansion is graded."</strong> So a gap between the brief and the backlog is not automatically a failure. The question for each gap is: <em>was it filled deliberately, filled accidentally, or left open without anyone deciding?</em> The third is the only one that is actually a problem — and this review separates them.</p>
+      </div>
+
+      <h3>How each requirement was rated</h3>
+      <div class="tw"><table>
+        <thead><tr><th>Rating</th><th>Means</th></tr></thead>
+        <tbody>
+          <tr><td><span class="pill p-pass">Served</span></td><td>One or more stories exist, and together their criteria would satisfy the requirement</td></tr>
+          <tr><td><span class="pill p-warn">Partial</span></td><td>Stories exist but leave a material part of the requirement unaddressed</td></tr>
+          <tr><td><span class="pill p-crit">Not served</span></td><td>No story on the board addresses it</td></tr>
+        </tbody>
+      </table></div>
+      <p>Whether a story is <em>built</em> is irrelevant here. This is about whether the backlog, as written, is aimed at the right target.</p>
+    </section>
+
+    <!-- ══ 02 ══ -->
+    <section id="s2">
+      <div class="sec-head">
+        <h2>The business case</h2>
+        <p class="sec-sub">Four stated problems. The backlog solves two of them well, one implicitly, and does not address one at all.</p>
+      </div>
+
+      <blockquote>Runs on email/Word/Excel/SharePoint. Assessment takes 15–20 business days. Two analysts can reach different conclusions on the same change. Reconstructing the reasoning behind a past rating (for examiners) is slow and incomplete.</blockquote>
+
+      <div class="tw"><table>
+        <thead><tr><th class="mono">BC</th><th>The stated pain</th><th>Covered by</th><th class="c">Rating</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="mono">BC-1</td>
+            <td><strong>Fragmented tooling</strong> — email, Word, Excel, SharePoint</td>
+            <td>Epics 1–10 deliver one governed platform end to end. Epic 14 replaces the "go ask another system" step</td>
+            <td class="c"><span class="pill p-pass">Served</span></td>
+          </tr>
+          <tr class="gap">
+            <td class="mono">BC-2</td>
+            <td><strong>15–20 business day cycle</strong></td>
+            <td>Nothing. No story sets a target, measures elapsed time against one, escalates a breach, or reports on throughput</td>
+            <td class="c"><span class="pill p-crit">Not served</span></td>
+          </tr>
+          <tr class="gap">
+            <td class="mono">BC-3</td>
+            <td><strong>Two analysts reach different conclusions</strong></td>
+            <td>Helped implicitly by AI category proposal and a deterministic scoring formula — but no story names consistency as a goal or measures it</td>
+            <td class="c"><span class="pill p-warn">Partial</span></td>
+          </tr>
+          <tr>
+            <td class="mono">BC-4</td>
+            <td><strong>Examiner reconstruction is slow and incomplete</strong></td>
+            <td>US-9.1 (full history), US-9.2 (immutability), US-9.3 (examiner-ready export)</td>
+            <td class="c"><span class="pill p-pass">Served</span></td>
+          </tr>
+        </tbody>
+      </table></div>
+
+      <div class="note crit">
+        <span class="lbl">BC-2 is the headline business benefit, and nothing measures it</span>
+        <p>"15–20 business days" is the number a sponsor would quote to justify funding this platform. The backlog contains <strong>no target, no service level, no escalation, and no reporting</strong> against it. I confirmed this in the data model: there is no <code>due_date</code>, <code>sla</code>, <code>target_date</code> or <code>cycle_time</code> anywhere in the schema.</p>
+        <p>The system does show <em>days elapsed</em> on a Product Owner's request list — but that is a number on a screen with nothing to compare it to. At the end of this project nobody will be able to say whether the platform made assessments faster, because nothing records what "faster" would mean.</p>
+      </div>
+
+      <div class="note warn">
+        <span class="lbl">BC-3 is served by accident rather than by design</span>
+        <p>Two mechanisms genuinely reduce inconsistency: every assessment starts from the <em>same</em> AI-proposed categories against the <em>same</em> citable framework, and the score is a fixed formula rather than a judgement. Both are real, and both are good design.</p>
+        <p>But no story says "analysts should reach consistent conclusions", so nothing verifies it and nothing protects it. If someone later made scoring configurable per analyst, no acceptance criterion anywhere would object. <strong>Consistency is currently an emergent property, not a requirement</strong> — and emergent properties are the ones that quietly disappear.</p>
+      </div>
+    </section>
+
+    <!-- ══ 03 ══ -->
+    <section id="s3">
+      <div class="sec-head">
+        <h2>Functional requirements</h2>
+        <p class="sec-sub">The brief lists ten things the platform must do. All ten have an epic. This is the backlog's strongest area.</p>
+      </div>
+
+      <div class="tw"><table>
+        <thead><tr><th class="mono">FR</th><th>Required by the brief</th><th>Epic</th><th class="c">Rating</th><th>Note</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">FR-1</td><td>Intake a change request with defined types</td><td>Epic 1</td><td class="c"><span class="pill p-pass">Served</span></td><td>All six types enumerated and enforced in the data model</td></tr>
+          <tr><td class="mono">FR-2</td><td>Decompose into categories from a supervisory framework</td><td>Epic 2</td><td class="c"><span class="pill p-pass">Served</span></td><td>FFIEC, with citations per category</td></tr>
+          <tr><td class="mono">FR-3</td><td>Retrieve / surface relevant policy</td><td>Epic 3</td><td class="c"><span class="pill p-pass">Served</span></td><td>Deliberately deterministic search rather than AI — a defensible judgement call</td></tr>
+          <tr><td class="mono">FR-4</td><td>Extract structure from submitted documents</td><td>Epic 4</td><td class="c"><span class="pill p-pass">Served</span></td><td>Source excerpt + confidence per field</td></tr>
+          <tr><td class="mono">FR-5</td><td>Draft the assessment for analyst review</td><td>Epic 5</td><td class="c"><span class="pill p-pass">Served</span></td><td>Per category, not one monolithic narrative</td></tr>
+          <tr><td class="mono">FR-6</td><td>Analyst edit / override with reason, first-class</td><td>Epic 6</td><td class="c"><span class="pill p-pass">Served</span></td><td>Three stories; the rule also recurs across Epics 2, 4, 7, 10</td></tr>
+          <tr><td class="mono">FR-7</td><td>Score: controls mitigate, never eliminate</td><td>Epic 7</td><td class="c"><span class="pill p-pass">Served</span></td><td>Enforced at calculation <em>and</em> configuration, as the brief demands</td></tr>
+          <tr><td class="mono">FR-8</td><td>Route to committee with a recorded vote</td><td>Epic 8</td><td class="c"><span class="pill p-pass">Served</span></td><td>All four outcomes the brief names are implemented as allowed values</td></tr>
+          <tr><td class="mono">FR-9</td><td>Full immutable audit trail</td><td>Epic 9</td><td class="c"><span class="pill p-pass">Served</span></td><td>Append-only at the data layer, as the brief specifies</td></tr>
+          <tr><td class="mono">FR-10</td><td>Tunable scoring / workflow configuration</td><td>Epic 10</td><td class="c"><span class="pill p-warn">Partial</span></td><td>Scoring is tunable; <strong>escalation thresholds are named in US-10.2 but nothing implements them</strong></td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="note pass">
+        <span class="lbl">Worth saying plainly</span>
+        <p>Ten out of ten functional requirements have a home, and the mapping is one-to-one with the brief's own list. The four decision outcomes the brief names — approved, rejected, deferred, approved-with-conditions — appear verbatim as database constraints. That is textbook traceability from a client brief to a working system, and it is the single strongest thing about this backlog.</p>
+      </div>
+
+      <h3>The AI requirement, specifically</h3>
+      <p>The brief is precise about where AI belongs: <em>"mapping the request to risk categories, finding relevant policy, extracting structure from submitted documents, and drafting the assessment narrative."</em> Four named touchpoints.</p>
+      <div class="tw"><table>
+        <thead><tr><th>Touchpoint</th><th>Epic</th><th>Implemented as</th></tr></thead>
+        <tbody>
+          <tr><td>Map to risk categories</td><td>2</td><td><span class="pill p-acc">AI</span> grounded against a fixed category list</td></tr>
+          <tr><td>Find relevant policy</td><td>3</td><td><span class="pill p-neut">Deterministic search</span> — a deliberate deviation</td></tr>
+          <tr><td>Extract from documents</td><td>4</td><td><span class="pill p-acc">AI</span> with confidence and source excerpt</td></tr>
+          <tr><td>Draft the narrative</td><td>5</td><td><span class="pill p-acc">AI</span> with a fabrication guard</td></tr>
+        </tbody>
+      </table></div>
+      <p>Epic 3 is the interesting one: the brief asked for AI, the team chose full-text search instead, and <em>documented why</em> — ranking indexed text is a solved problem, and an LLM would add latency, cost and nondeterminism for no accuracy gain. <strong>That is a deviation from the brief, and a good one</strong> — but it is a decision the client should be told about rather than discover.</p>
+    </section>
+
+    <!-- ══ 04 ══ -->
+    <section id="s4">
+      <div class="sec-head">
+        <h2>Non-negotiable constraints</h2>
+        <p class="sec-sub">Five rules the brief states as absolute. All five are reflected in the backlog.</p>
+      </div>
+
+      <div class="tw"><table>
+        <thead><tr><th class="mono">NC</th><th>The rule</th><th>Where it lives in the backlog</th><th class="c">Rating</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">NC-1</td><td><strong>The system prepares, humans decide.</strong> Nothing auto-approved or auto-rejected</td><td>Every AI epic (2, 4, 5) pairs with a human gate; US-6.3 is the single chokepoint; US-8.2 requires a human vote</td><td class="c"><span class="pill p-pass">Served</span></td></tr>
+          <tr><td class="mono">NC-2</td><td>Risk decomposition grounded in a <strong>real, published, citable</strong> framework</td><td>US-2.1 requires a citation per category; FFIEC seeded with section references</td><td class="c"><span class="pill p-pass">Served</span></td></tr>
+          <tr><td class="mono">NC-3</td><td><strong>Residual risk never zero</strong>, at calculation and configuration time</td><td>US-7.1 (calculation), US-10.1 (configuration) — the brief demands both and both exist</td><td class="c"><span class="pill p-pass">Served</span></td></tr>
+          <tr><td class="mono">NC-4</td><td><strong>Override any AI output</strong>, state a reason, retain both</td><td>US-2.2, US-4.2, US-6.1, US-7.2, US-10.1</td><td class="c"><span class="pill p-pass">Served</span></td></tr>
+          <tr><td class="mono">NC-5</td><td><strong>Synthetic data only.</strong> No connection to any real system</td><td>Epic 14 — mock CRM, Core Banking and Vendor Management as a separate service</td><td class="c"><span class="pill p-pass">Served</span></td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="note">
+        <span class="lbl">A BA observation on NC-4</span>
+        <p>The override rule is the most <em>widely spread</em> requirement in the brief — it appears in five separate stories across four epics, and the brief calls it first-class. But it exists only as a repeated acceptance criterion; <strong>no single story owns it as a cross-cutting rule.</strong></p>
+        <p>That is why it ended up the least-verified rule in the product (from the previous review, only one of the five has a test that a blank reason is refused). A requirement spread across five stories and owned by none is the classic way a non-negotiable quietly becomes optional.</p>
+      </div>
+    </section>
+
+    <!-- ══ 05 ══ -->
+    <section id="s5">
+      <div class="sec-head">
+        <h2>Business gaps</h2>
+        <p class="sec-sub">Seven things the business needs that no story currently delivers. Ordered by business consequence, not effort.</p>
+      </div>
+
+      <div class="gapcard g-hi">
+        <div class="g-head"><span class="g-id">BG-1</span><span class="pill p-crit">High</span><span class="pill p-neut">Business case</span></div>
+        <h3 class="g-title" style="margin-top:0">Nothing measures the cycle time the project exists to reduce</h3>
+        <p>No target, no service level, no escalation on a breach, no throughput reporting. Confirmed absent from the data model — no <code>due_date</code>, <code>sla</code>, <code>target_date</code> or <code>cycle_time</code> column exists.</p>
+        <p>The consequence is not technical. At the end of this project, <strong>no one can demonstrate the platform made anything faster</strong> — which is the benefit the business asked for.</p>
+        <dl>
+          <dt>Needs</dt><dd>One story: a target cycle time per change type, elapsed time measured against it, and a simple view of requests approaching or breaching it</dd>
+          <dt>Effort</dt><dd>Low — <code>submitted_at</code> already exists; this is arithmetic and a screen</dd>
+        </dl>
+      </div>
+
+      <div class="gapcard g-hi">
+        <div class="g-head"><span class="g-id">BG-2</span><span class="pill p-crit">High</span><span class="pill p-neut">Delivery</span></div>
+        <h3 class="g-title" style="margin-top:0">The evaluation framework has no user story at all</h3>
+        <p>The brief makes AI output quality a first-class deliverable, and the project's own success criteria weight it at <strong>10%</strong> — equal to requirement expansion and double production readiness. An evaluation harness exists in the codebase with 12 test cases across the three AI touchpoints.</p>
+        <p>But <strong>no epic and no story on the board covers it.</strong> It is real work, it is graded, and it is invisible to anyone reading the backlog — which means nobody is accountable for finishing it, and it does not appear in any plan.</p>
+        <dl>
+          <dt>Needs</dt><dd>An epic with stories for: evaluating each AI touchpoint against fixed datasets, running the evaluation in the pipeline, and acting on a regression</dd>
+          <dt>Effort</dt><dd>Low to write — the work largely exists and simply is not represented</dd>
+        </dl>
+      </div>
+
+      <div class="gapcard g-md">
+        <div class="g-head"><span class="g-id">BG-3</span><span class="pill p-warn">Medium</span><span class="pill p-neut">Business case</span></div>
+        <h3 class="g-title" style="margin-top:0">Analyst consistency is an outcome, not a requirement</h3>
+        <p>"Two analysts can reach different conclusions on the same change" is one of three stated pains. The design genuinely helps — a shared framework, a shared AI starting point, a deterministic formula — but no story names consistency, so nothing protects it from a future change.</p>
+        <dl>
+          <dt>Needs</dt><dd>Either a story that states it as a requirement, or an explicit note that it is served by design decisions in Epics 2 and 7 — so it is a recorded decision rather than luck</dd>
+        </dl>
+      </div>
+
+      <div class="gapcard g-md">
+        <div class="g-head"><span class="g-id">BG-4</span><span class="pill p-warn">Medium</span><span class="pill p-neut">Functional</span></div>
+        <h3 class="g-title" style="margin-top:0">Notifications are required by three stories and built by none</h3>
+        <p>US-1.3 requires the requester be notified on status change; US-8.1 requires notification when an assessment is routed; US-8.3 requires the Product Owner be told the decision and any conditions. There is no notification mechanism anywhere in the system.</p>
+        <p>This matters more than it looks: the brief's first pain is that the process runs on <em>email</em>. If the platform cannot tell anyone anything, users will go back to email to find out what happened — and the original problem returns through the back door.</p>
+        <dl>
+          <dt>Needs</dt><dd>A decision first: in scope or not? If not, remove the criteria from three stories with a stated reason. If yes, one story owns it</dd>
+        </dl>
+      </div>
+
+      <div class="gapcard g-md">
+        <div class="g-head"><span class="g-id">BG-5</span><span class="pill p-warn">Medium</span><span class="pill p-neut">Functional</span></div>
+        <h3 class="g-title" style="margin-top:0">Escalation thresholds are specified but not implemented</h3>
+        <p>US-10.2 names "escalation thresholds" among the workflow rules an analyst should be able to tune. The schema mentions <code>EscalationThreshold.ResidualRating</code> — <em>as a comment</em>. No such rule is seeded and nothing consumes one. The only workflow rule that exists is the committee quorum.</p>
+        <p>Business meaning: a very high residual risk currently follows exactly the same path as a trivial one. There is no "this one needs senior attention" mechanism, which is a normal expectation in a risk function.</p>
+      </div>
+
+      <div class="gapcard g-md">
+        <div class="g-head"><span class="g-id">BG-6</span><span class="pill p-warn">Medium</span><span class="pill p-neut">Organisational</span></div>
+        <h3 class="g-title" style="margin-top:0">The bank has four business units; the system has none</h3>
+        <p>The brief describes the client as running <em>consumer banking, commercial banking, payments and wealth management</em>, and says a business unit raises the change. The application data model has <strong>no concept of a business unit</strong> — a change request records who submitted it, but not which part of the bank it came from.</p>
+        <p>Consequences: no routing by business unit, no BU-specific workflow rules, and no way to answer "how much risk is the payments business generating?" — a question any FCRM function would ask. It also touches open question 2, which asked whether the framework varies by business line.</p>
+        <dl>
+          <dt>Note</dt><dd>Defensible to descope for a hackathon — but it should be a stated decision, since the brief introduces the business units explicitly</dd>
+        </dl>
+      </div>
+
+      <div class="gapcard g-lo">
+        <div class="g-head"><span class="g-id">BG-7</span><span class="pill p-neut">Low</span><span class="pill p-neut">Actors</span></div>
+        <h3 class="g-title" style="margin-top:0">"FCRM Leadership" appears as an actor with no role in the system</h3>
+        <p>The brief names three user roles: Product Owner, FCRM Analyst, Risk Committee. The system implements four (adding Admin). Several stories — including US-9.2 and three raised by QA — are written from the perspective of <em>FCRM Leadership</em>, who has no role, no screen and no permission set.</p>
+        <p>Minor, but it means those stories have no one who can actually perform them. Either leadership is the Admin role, or the persona should be changed to one that exists.</p>
+      </div>
+    </section>
+
+    <!-- ══ 06 ══ -->
+    <section id="s6">
+      <div class="sec-head">
+        <h2>Scope balance</h2>
+        <p class="sec-sub">Where the backlog's weight actually sits — and whether that is right.</p>
+      </div>
+
+      <div class="tw"><table>
+        <thead><tr><th>Group</th><th class="c">Stories</th><th class="c">Share</th><th>Serves</th></tr></thead>
+        <tbody>
+          <tr><td><strong>The business problem</strong> — Epics 1–10, 14</td><td class="c">30</td><td class="c">41%</td><td>What the bank asked for</td></tr>
+          <tr><td><strong>How it gets delivered</strong> — Epics 15–18</td><td class="c">36</td><td class="c">49%</td><td>Infrastructure, pipelines, observability</td></tr>
+          <tr><td><strong>Quality &amp; governance</strong> — Epics 11–13</td><td class="c">6</td><td class="c">8%</td><td>Access control, deployment, non-functional</td></tr>
+          <tr><td>Documentation</td><td class="c">1</td><td class="c">2%</td><td>—</td></tr>
+        </tbody>
+      </table></div>
+
+      <p><strong>Nearly half the backlog is about delivery rather than the business problem.</strong> On a normal bank engagement that ratio would be a serious warning sign — the client is paying for risk assessment, not for Terraform modules.</p>
+
+      <div class="note">
+        <span class="lbl">Here it is correct, and worth being able to explain</span>
+        <p>This project's success criteria weight <strong>SDLC automation across all six stages at 20%</strong> and production readiness at 5% — a quarter of the assessment is about <em>how</em> it was built. The infrastructure epics are not scope creep; they are a graded deliverable, and documenting them as stories is what makes that work visible.</p>
+        <p>The point worth carrying into any review conversation: this ratio is <strong>deliberate and defensible here</strong>, and would not be on a real engagement. Saying so demonstrates the judgement, rather than leaving a reviewer to wonder whether the team lost sight of the customer.</p>
+      </div>
+
+      <h3>Are any stories not traceable to a requirement?</h3>
+      <p>No. Every one of the 73 traces either to a functional requirement in the brief, a non-negotiable constraint, or the project's own delivery criteria. <strong>There is no scope creep</strong> — the backlog has gaps, not excess.</p>
+    </section>
+
+    <!-- ══ 07 ══ -->
+    <section id="s7">
+      <div class="sec-head">
+        <h2>Verdict &amp; actions</h2>
+        <p class="sec-sub">Would this backlog, fully delivered, solve the bank's problem?</p>
+      </div>
+
+      <div class="note pass">
+        <span class="lbl">Verdict</span>
+        <p><strong>Substantially yes — with one significant caveat.</strong> All ten functional requirements and all five non-negotiable constraints are covered, traceably, with the brief's own vocabulary carried into the data model. A reviewer comparing the brief to the board would find the mapping clean.</p>
+        <p>The caveat is that the backlog delivers <em>the platform</em> the brief describes but not <em>the improvement</em> the brief justifies. The bank's stated pain is a 15–20 day cycle and inconsistent outcomes. The backlog would replace the tooling, and almost certainly help with both — but it contains nothing that would let anyone <strong>demonstrate</strong> either.</p>
+      </div>
+
+      <h3>Recommended actions</h3>
+      <div class="tw"><table>
+        <thead><tr><th class="c">#</th><th>Action</th><th>Closes</th><th>Effort</th></tr></thead>
+        <tbody>
+          <tr><td class="c">1</td><td>Add a story for <strong>cycle time against a target</strong> per change type</td><td>BG-1 · the headline business benefit</td><td>Low</td></tr>
+          <tr><td class="c">2</td><td>Add an <strong>epic for the AI evaluation framework</strong></td><td>BG-2 · 10% of the assessment, currently invisible</td><td>Low — the work exists</td></tr>
+          <tr><td class="c">3</td><td><strong>Decide on notifications</strong> — build one story or remove three sets of criteria</td><td>BG-4 · three stories currently cannot be completed</td><td>Decision first</td></tr>
+          <tr><td class="c">4</td><td>Record <strong>analyst consistency</strong> as a served requirement, naming the design decisions that serve it</td><td>BG-3</td><td>Very low</td></tr>
+          <tr><td class="c">5</td><td>Record the <strong>Epic 3 deviation</strong> — the brief asked for AI, the team chose deterministic search</td><td>Turns a deviation into a defensible decision</td><td>Very low</td></tr>
+          <tr><td class="c">6</td><td>State explicitly that <strong>business unit and escalation thresholds are descoped</strong>, or schedule them</td><td>BG-5, BG-6</td><td>Decision only</td></tr>
+          <tr><td class="c">7</td><td>Resolve the <strong>FCRM Leadership persona</strong> to a role that exists</td><td>BG-7</td><td>Very low</td></tr>
+        </tbody>
+      </table></div>
+
+      <p>Six of the seven are writing or deciding rather than building. With seven days left, that matters: <strong>BG-1 and BG-2 are the two worth actually building</strong>, and both are small.</p>
+
+      <div class="note warn">
+        <span class="lbl">Still open from earlier reviews</span>
+        <p>Three questions remain unanswered and each blocks acceptance criteria: <strong>Q3</strong> (does a scoring override need secondary sign-off), <strong>Q5</strong> (who approves configuration changes), and <strong>Q6</strong> (who owns database schema deployment). Q6 is the urgent one — it is an unassigned responsibility, not an open design question, and it currently blocks any deployment at all.</p>
+      </div>
+    </section>
+
+    <p class="foot">Reviewed 23 September 2026 against the client brief in <code>CLAUDE.md</code>, the 91-item Azure DevOps board, and the application data model. Requirements were derived from the brief's own structure — business case, functional requirements, non-negotiable constraints, actors — and each was rated on whether the backlog <em>as written</em> would satisfy it, independently of whether any story is built. Absence of concepts such as SLA and business unit was confirmed against the database schema rather than inferred. Companion document: <em>Story-by-Story Board Review</em>, which covers build and test status.</p>
+  </main>
+</div>
+
+</body>
+</html>
