@@ -1,0 +1,19 @@
+variables:
+
+  buildId: '' # Can be overridden by pipeline UI or YAML parameters
+  
+  # Azure Service Connection
+  azureSubscription: 'azure-cloud'
+
+  # Shared ACR
+  acrName: crghdev01
+  acrLoginServer: crghdev01.azurecr.io
+  acrLoginServername: crghdev01
+
+  # DEV
+  devResourceGroup: rg-gh-dev
+  devContainerApp: ca-gh-hrg-workbench-dev
+  devUaiName: id-ca-gh-dev   # user-assigned identity granted AcrPull in iac
+
+  # Docker image tar artifact
+  artifactName: gh-hrg-workbench-image-tar

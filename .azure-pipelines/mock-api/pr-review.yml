@@ -1,8 +1,15 @@
 # PR validation for the Mock API (Humaid.RiskGovernance.MockSystems).
-# Runs on PRs to release/1.00 that touch the paths below; the Workbench has its
-# own pipeline (.azure-pipelines/workbench). The Mock API is deliberately not part
-# of the Workbench. Repo is on GitHub, pipeline in Azure DevOps (needs
-# the GitHub service connection).
+# Runs on every PR to release/1.00 (no path filter on the trigger - see below);
+# the Workbench has its own pipeline (.azure-pipelines/workbench). The Mock API
+# is deliberately not part of the Workbench. Repo is on GitHub, pipeline
+# in Azure DevOps (needs the GitHub service connection).
+#
+# Both this pipeline's check (gh-mock-api-dev-pr-review) and the Workbench's
+# (gh-workbench-dev-pr-review) are required GitHub status checks on release/1.00.
+# A path-filtered `pr.paths` trigger would mean the check never gets posted (and
+# merges blocked forever waiting on it) for a PR that doesn't touch this scope -
+# so the pipeline always triggers, and the "Detect relevant path changes" step
+# below skips the actual gate steps (fast success) when nothing in scope changed.
 #
 # Hard gates (a failure turns the required GitHub check red and blocks the merge):
 #   generated-SQL drift, build, vulnerable dependencies, AI review blockers.
@@ -13,12 +20,6 @@ trigger: none
 pr:
   branches:
     include: [release/1.00]
-  paths:
-    include:
-      - src/6-MockExternalSystems/*
-      - .azure-pipelines/mock-api/*
-      - .azure-pipelines/templates/*   # shared review logic: re-run when it changes
-      - .azure-pipelines/scripts/*
 
 variables:
   - group: ai-review-secrets
@@ -34,8 +35,25 @@ steps:
   - checkout: self
     fetchDepth: 0    # the AI review diffs the PR merge commit against its base
 
+  - bash: |
+      set -e
+      TARGET_BRANCH="${SYSTEM_PULLREQUEST_TARGETBRANCH#refs/heads/}"
+      git fetch --quiet origin "$TARGET_BRANCH"
+      CHANGED=$(git diff --name-only "origin/$TARGET_BRANCH...HEAD")
+      echo "Changed files:"
+      echo "$CHANGED"
+      if echo "$CHANGED" | grep -qE '^(src/6-MockExternalSystems/|\.azure-pipelines/mock-api/|\.azure-pipelines/templates/|\.azure-pipelines/scripts/)'; then
+        echo "Mock API scope touched - running full gate."
+        echo "##vso[task.setvariable variable=runFull]true"
+      else
+        echo "Nothing in Mock API scope touched - skipping gate steps."
+        echo "##vso[task.setvariable variable=runFull]false"
+      fi
+    displayName: 'Detect relevant path changes'
+
   - task: UseDotNet@2
     displayName: 'Install .NET SDK'
+    condition: and(succeeded(), eq(variables.runFull, 'true'))
     inputs:
       packageType: sdk
       version: '10.0.x'
@@ -49,18 +67,22 @@ steps:
       git diff --exit-code -- "$(MOCK_DB_DIR)/deploy_all.sql" \
         || { echo "##vso[task.logissue type=error]deploy_all.sql is out of date. Run generate_deploy_all.sh and commit the result."; exit 1; }
     displayName: 'Check deploy_all.sql is up to date'
+    condition: and(succeeded(), eq(variables.runFull, 'true'))
 
   - script: dotnet build "$(MOCK_PROJECT)" -c Release
     displayName: 'Build Mock API'
+    condition: and(succeeded(), eq(variables.runFull, 'true'))
 
   - script: bash .azure-pipelines/scripts/dotnet-vuln-check.sh "$(MOCK_PROJECT)"
     displayName: 'Dependency vulnerability audit'
+    condition: and(succeeded(), eq(variables.runFull, 'true'))
 
   - script: |
       set -e
       pip install --quiet semgrep==1.136.0
       semgrep scan --config auto --json-output "$(Build.ArtifactStagingDirectory)/semgrep-results.json" src/6-MockExternalSystems
     displayName: 'Semgrep scan (informational)'
+    condition: and(succeeded(), eq(variables.runFull, 'true'))
 
   - template: ../templates/ai-review.yml
     parameters:

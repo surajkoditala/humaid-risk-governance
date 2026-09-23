@@ -22,7 +22,9 @@ BEGIN;
 -- Apply in numeric order: schema/*.sql, then functions/**/*.sql, then seed/*.sql.
 -- See ../README.md for the exact psql invocation.
 
-CREATE EXTENSION IF NOT EXISTS pgcrypto; -- gen_random_uuid() on older server builds
+-- gen_random_uuid() is a Postgres core builtin since PG13 - no extension needed (and Azure
+-- Database for PostgreSQL Flexible Server doesn't allow-list pgcrypto by default, so trying to
+-- CREATE EXTENSION it there fails outright). Deliberately no CREATE EXTENSION line here.
 
 -- Conventions used throughout this schema:
 --  * Every table has a UUID primary key (gen_random_uuid()).

@@ -64,6 +64,10 @@ using OpenTelemetry;
 // needing a column alias in every single SQL function.
 Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;
 
+// Required one-time call - QuestPDF throws at first use otherwise. Community license is free for
+// this project's size (per questpdf.com/license) - US-9.3's audit export.
+QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Eagerly validates the whole DI graph (every registration below, not just whatever a given
@@ -231,6 +235,7 @@ builder.Services.AddScoped<INarrativeService, NarrativeService>();
 builder.Services.AddScoped<IAssessmentService, AssessmentService>();
 builder.Services.AddScoped<IScoringService, ScoringService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
+builder.Services.AddScoped<IAuditExportService, AuditExportService>();
 builder.Services.AddScoped<ICommitteeService, CommitteeService>();
 builder.Services.AddScoped<IWorkflowRuleService, WorkflowRuleService>();
 builder.Services.AddScoped<IUserService, UserService>();

@@ -1,15 +1,17 @@
 import { useEffect, useState } from 'react'
+import { useAuth0 } from '@auth0/auth0-react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
+import { isAuth0Configured } from '../auth/authConfig.js'
 import { useDevUser } from '../auth/DevUserContext.jsx'
-import { Endpoints, apiFetch } from '../lib/api.js'
+import { Endpoints, apiFetch, downloadFile } from '../lib/api.js'
 import { useFetch } from '../lib/useFetch.js'
 
 const NARRATIVE_STATUS_LABEL = {
@@ -633,11 +635,37 @@ function FinalizeTab({ assessmentId, assessment, bump }) {
 // ---- Audit tab (Epic 9) -------------------------------------------------------------------------
 function AuditTab({ changeRequest, bump }) {
   const { data: trail } = useFetch(Endpoints.audit.trail(changeRequest.id), [bump])
+  const { getAccessTokenSilently } = useAuth0()
+
+  const handleExportPdf = async () => {
+    try {
+      // A plain <a href> can't attach a Bearer token, so this goes through the same auth path
+      // as every other request instead - see downloadFile's comment in lib/api.js.
+      const token = isAuth0Configured ? await getAccessTokenSilently() : null
+      await downloadFile(
+        Endpoints.audit.exportPdf(changeRequest.id),
+        token,
+        `audit-trail-${changeRequest.requestNumber}.pdf`,
+      )
+    } catch (err) {
+      toast.error(err.message || 'Failed to export audit trail PDF.')
+    }
+  }
+
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Audit trail</CardTitle>
-        <CardDescription>US-9.1 — every AI output, human edit, and reason, in order.</CardDescription>
+      <CardHeader className="flex-row items-start justify-between space-y-0">
+        <div>
+          <CardTitle>Audit trail</CardTitle>
+          <CardDescription>US-9.1 — every AI output, human edit, and reason, in order.</CardDescription>
+        </div>
+        <button
+          type="button"
+          onClick={handleExportPdf}
+          className={buttonVariants({ variant: 'outline', size: 'sm' })}
+        >
+          Export PDF
+        </button>
       </CardHeader>
       <CardContent className="space-y-2">
         {(trail || []).map((e) => (

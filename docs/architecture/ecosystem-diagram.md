@@ -2,7 +2,7 @@
 
 **Provenance:** this is "the architect's Platform Ecosystem Diagram," referenced by name in [`README.md`](../../README.md)'s "Ecosystem expansion" section and [`ai/data-generation/README.md`](../../ai/data-generation/README.md) — both credit it for the hand-authored-golden-path + AI-assisted-bulk-variation data approach, the Data Ingestion Layer boundary, and the feedback loop, all of which shipped in `release/1.00`. The file itself was never committed anywhere until now (it lived in a separate working copy while the build happened). This revision brings it in line with what was actually built, replacing the earlier draft's assumptions with the real, shipped decisions — see [`architecture-mapping.md`](architecture-mapping.md) and [`human-in-the-loop-gates.md`](../governance/human-in-the-loop-gates.md) for the code-level detail this diagram summarizes at a conceptual level.
 
-**Status:** current as of 2026-09-18, reconciled against the shipped `release/1.00` implementation. See the revision log at the bottom for what changed and why.
+**Status:** current as of 2026-09-23, reconciled against the shipped `release/1.00` implementation. See the revision log at the bottom for what changed and why.
 
 ---
 
@@ -68,6 +68,18 @@ This is the core of the Workbench. The flowchart below shows every processing st
 
 ```mermaid
 flowchart TB
+    classDef ai fill:#ede4fc,stroke:#7c3aed,color:#3b0764,stroke-width:2px
+    classDef deterministic fill:#dbeafe,stroke:#1d4ed8,color:#1e3a8a,stroke-width:2px
+    classDef human fill:#dcfce7,stroke:#15803d,color:#14532d,stroke-width:2px
+    classDef infra fill:#f1f5f9,stroke:#64748b,color:#334155,stroke-width:1px
+
+    subgraph LEGEND["Legend"]
+        direction LR
+        LG1["AI output"]:::ai
+        LG2["Deterministic"]:::deterministic
+        LG3["Human decision"]:::human
+    end
+
     PO["Product Owner"] -->|submits form + documents<br/>Epic 1| CR
 
     subgraph EXT["Mock External Systems service"]
@@ -123,6 +135,11 @@ flowchart TB
     DECISION -->|updated vendor risk rating| VMS
     DECISION -->|customer/segment risk flag| CRM
     AUDIT -->|examiner-ready export| EXAM[Examiner / Regulator]
+
+    class PO,REVIEW,COMMITTEE,DECISION human
+    class MAP,EXTRACT,DRAFT ai
+    class POLICY,SCORE deterministic
+    class CR,INGEST,AUDIT,CONFIG,FRAMEWORK,CRM,CBS,VMS,POLICYLIB infra
 ```
 
 The same workflow, shown as a sequence over time between actors — useful for seeing *when* a human is required to act versus when the system can proceed on its own, and where the AI Engine is actually involved versus not:
@@ -158,7 +175,7 @@ sequenceDiagram
     Note over AUD: Nothing here is ever edited in place —<br/>corrections are new, additive entries only,<br/>enforced by a DB trigger.
 ```
 
-**Key invariants visible in both diagrams:** the flow originates with the Product Owner, not a data feed (Epic 1); the AI Engine never talks directly to the Risk Committee; no arrow skips the FCRM Analyst review step; Policy Research and Scoring are deterministic, not AI, so only three epics (2, 4, 5) actually call a language model (Epic 14's mock systems and ingestion are deterministic integration); and Platform Configuration governs the scoring engine through a human-initiated, audited action, not an automatic connection. That's the "system prepares, humans decide" rule made structural rather than just stated.
+**Key invariants visible in both diagrams:** the flow originates with the Product Owner, not a data feed (Epic 1); the AI Engine never talks directly to the Risk Committee; no arrow skips the FCRM Analyst review step; Policy Research and Scoring are deterministic, not AI, so only three epics (2, 4, 5) actually call a language model (Epic 14's mock systems and ingestion are deterministic integration); and Platform Configuration governs the scoring engine through a human-initiated, audited action, not an automatic connection. That's the "system prepares, humans decide" rule made structural rather than just stated. The first flowchart is color-coded to make this scannable at a glance — purple for AI output, blue for deterministic, green for a human decision, gray for infrastructure/data (see its Legend) — rather than requiring a read of every label; the sequence diagram carries the same distinction natively, since mermaid already renders actors (Product Owner, FCRM Analyst, Risk Committee) as stick figures, distinct from the system participants. For the full epic-by-epic AI/human gate breakdown, see [`human-in-the-loop-gates.md`](../governance/human-in-the-loop-gates.md), which has its own diagram of the same split.
 
 ---
 
@@ -237,6 +254,7 @@ flowchart LR
 
 ## Revision log
 
+- **2026-09-23** — color-coded the §4 workflow flowchart (purple = AI, blue = deterministic, green = human, gray = infrastructure) with a Legend subgraph, per Shanthi's standup feedback that the diagram should make the AI-vs-human split explicit at a glance rather than requiring every label to be read. No structural change to the diagram itself. `docs/governance/human-in-the-loop-gates.md` gained a matching diagram of the same split, one subgraph per epic, using the same color key.
 - **2026-09-20** — aligned with the new Epic 14 (Mock External Systems & Data Ingestion) in `docs/requirements/user-stories.md`: the mock-systems, ingestion, and feedback-loop components now cite the stories that specify them (US-14.1–14.6). Numbered 14 rather than 11 because Epics 11–13 (Access Control, Deployment and Operations, NFRs) were already claimed in Azure Boards. No diagram changes — the components themselves were already accurate; they just had no stories behind them.
 - **2026-09-18 (reverted)** — a follow-up pass (now reverted) had corrected the Data Ingestion Layer to describe Mock Systems linking as *optional*, matching the `Intake.jsx` code as it stood at the time. Team direction has since moved back toward Mock Systems data being the primary, expected intake path (Suleman is implementing this), so that correction no longer reflects where the system is headed. Reverted rather than left half-consistent with two different intents. **The epics/stories are being updated to match this direction — see `docs/requirements/user-stories.md` and Azure Boards; if `Intake.jsx` still shows optional linking, that's the code catching up, not this diagram being wrong.**
 - **2026-09-18** — reconciled against the shipped `release/1.00` implementation (this diagram had been evolving in a separate working copy while the real build happened in parallel). Corrected: Policy Research is deterministic full-text search, not an AI call — three of the ten epics call a model, not four; the framework is FFIEC-only (four hardcoded categories), not FFIEC-plus-Wolfsberg-plus-FATF; the committee resolution rule is a specific, already-implemented quorum algorithm, not an open question; the three mock systems are one real service (`Humaid.RiskGovernance.MockSystems`) with three logical domains, not three separate systems; the mock-data-generation pipeline and the policy corpus were both actually built (`schema/007_policy_corpus.sql`, `seed/seed_policy_corpus.sql`) — no longer a backlog gap. Removed references to a parallel doc set (`data-strategy.md`, a separate `docs/governance/001-risk-framework-selection.md`, an Azure Boards project under a different org) that never existed in this repo.
