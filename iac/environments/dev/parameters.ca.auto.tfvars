@@ -1,5 +1,6 @@
-min_replicas = 1
-max_replicas = 1
+ASPNETCORE_ENVIRONMENT = "Development"
+min_replicas           = 1
+max_replicas           = 1
 
 ingress = {
   allow_insecure_connections = false
