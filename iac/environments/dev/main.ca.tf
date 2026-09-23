@@ -54,6 +54,38 @@ module "container_app_gh_riskgovernance_ui" {
           {
             name  = "AZURE_POSTGRESQL_ENDPOINT"
             value = local.AZURE_POSTGRESQL_ENDPOINT
+          },
+          {
+            name  = "ASPNETCORE_ENVIRONMENT"
+            value = local.ASPNETCORE_ENVIRONMENT
+          },
+          {
+            name  = "AI_PROVIDER"
+            value = local.AI_PROVIDER
+          },
+          {
+            name  = "FOUNDRY_PROJECT_ENDPOINT"
+            value = local.FOUNDRY_PROJECT_ENDPOINT
+          },
+          {
+            name  = "FOUNDRY_MODEL_DEPLOYMENT"
+            value = local.FOUNDRY_MODEL_DEPLOYMENT
+          },
+          {
+            name  = "ANTHROPIC_MODEL"
+            value = local.ANTHROPIC_MODEL
+          },
+          {
+            name  = "CORS_ALLOWED_ORIGINS__0"
+            value = local.CORS_ALLOWED_ORIGINS__0
+          },
+          {
+            name  = "MOCK_SYSTEMS_BASE_URL"
+            value = local.MOCK_SYSTEMS_BASE_URL
+          },
+          {
+            name  = "APPLICATIONINSIGHTS_CONNECTION_STRING"
+            value = local.APPLICATIONINSIGHTS_CONNECTION_STRING
           }
         ]
       }
@@ -96,7 +128,7 @@ module "container_app_gh_riskgovernance_ui" {
   }
 }
 
-# container app for backend app
+# mock-api
 #Containerapp - gh_riskgovernance_backend_app
 module "container_app_gh_riskgovernance_backend_app" {
   source = "../../modules/terraform-azure-containerapps"
@@ -139,6 +171,14 @@ module "container_app_gh_riskgovernance_backend_app" {
           {
             name  = "AZURE_POSTGRESQL_ENDPOINT"
             value = local.BACKEND_APP_AZURE_POSTGRESQL_ENDPOINT
+          },
+          {
+            name  = "ASPNETCORE_ENVIRONMENT"
+            value = local.ASPNETCORE_ENVIRONMENT
+          },
+          {
+            name  = "CORS_ALLOWED_ORIGINS__0"
+            value = local.CORS_ALLOWED_ORIGINS__0
           }
         ]
       }
