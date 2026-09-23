@@ -46,6 +46,7 @@ How each infra resource maps to what the code actually does with it:
 ```mermaid
 flowchart LR
     USERS(["Users"])
+    AISVC(["AI Provider<br/>Anthropic / Azure AI Foundry"])
 
     subgraph SUB["Subscription"]
         subgraph RG["Resource Group"]
@@ -59,7 +60,7 @@ flowchart LR
 
             subgraph MON["Monitor, Insights, Logs"]
                 LAW["Log Analytics"]
-                AI["Application Insights"]
+                APPI["Application Insights"]
             end
 
             subgraph STORAGE["Storage"]
@@ -75,6 +76,7 @@ flowchart LR
     KV --> COMPUTE
     ACR --> COMPUTE
     CAUI --> CABACK
+    CAUI -->|category mapping, document<br/>extraction, narrative drafting| AISVC
     COMPUTE --> STORAGE
     COMPUTE --> MON
     STORAGE --> MON
