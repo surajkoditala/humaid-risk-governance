@@ -1,6 +1,6 @@
 # Build context is the repo ROOT, same convention as the Workbench's Dockerfile, even though this
 # project has no sibling ProjectReferences - deliberately: Mock Systems is NOT part of the
-# monolith (see docs/architecture/architecture-mapping.md), so it never references any
+# Workbench (see docs/architecture/architecture-mapping.md), so it never references any
 # 1-API/2-Infrastructure/3-Service/4-Persistence project. From the repo root:
 #   docker build -f src/6-MockExternalSystems/Humaid.RiskGovernance.MockSystems/Dockerfile -t humaid-mocksystems .
 

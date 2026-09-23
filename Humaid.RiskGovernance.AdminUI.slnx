@@ -18,7 +18,7 @@
     </Project>
   </Folder>
   <Folder Name="/6-MockExternalSystems/">
-    <!-- Deliberately NOT part of the monolith - see docs/architecture/architecture-mapping.md.
+    <!-- Deliberately NOT part of the Workbench - see docs/architecture/architecture-mapping.md.
          Included here only so `dotnet build` on this .slnx builds it too; nothing in
          1-API..5-Presentation has a ProjectReference to it. -->
     <Project Path="src/6-MockExternalSystems/Humaid.RiskGovernance.MockSystems/Humaid.RiskGovernance.MockSystems.csproj" />

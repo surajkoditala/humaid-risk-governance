@@ -1,7 +1,7 @@
 # PR validation for the Mock API (Humaid.RiskGovernance.MockSystems).
 # Runs on every PR to release/1.00 (no path filter on the trigger - see below);
 # the Workbench has its own pipeline (.azure-pipelines/workbench). The Mock API
-# is deliberately not part of the Workbench monolith. Repo is on GitHub, pipeline
+# is deliberately not part of the Workbench. Repo is on GitHub, pipeline
 # in Azure DevOps (needs the GitHub service connection).
 #
 # Both this pipeline's check (gh-mock-api-dev-pr-review) and the Workbench's

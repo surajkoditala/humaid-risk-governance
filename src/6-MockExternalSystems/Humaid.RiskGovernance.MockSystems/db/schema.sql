@@ -1,6 +1,6 @@
 -- Mock External Systems - deliberately its own Postgres SCHEMA namespace (not just tables in
 -- 'public'), even though this runs against the same Docker Postgres instance as the Workbench for
--- local simplicity. This is the DB-level expression of "not part of the monolith": the Workbench's
+-- local simplicity. This is the DB-level expression of "not part of the Workbench": the Workbench's
 -- own connection string/user only ever needs SELECT/UPDATE on these tables through this service's
 -- HTTP API, never a direct connection into this schema - see docs/architecture/architecture-mapping.md.
 

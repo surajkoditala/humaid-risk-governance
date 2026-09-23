@@ -2,9 +2,8 @@
 
 Stand-in for the three systems a real bank would already have (per the architect's Platform
 Ecosystem Diagram and the 2026-09-09 architecture sync): a CRM, a Core Banking product catalog, and
-a Vendor Management registry. **Deliberately not part of the Workbench monolith** — Suleman agreed
-on the call this must live outside it ("It shouldn't be part of the monolith." / "Exactly,
-exactly."). The Workbench's Data Ingestion Layer (`src/3-Service/.../DataIngestion`) is the only
+a Vendor Management registry. **Deliberately not part of the Workbench** — Suleman agreed
+on the architecture call that this must live outside it. The Workbench's Data Ingestion Layer (`src/3-Service/.../DataIngestion`) is the only
 thing allowed to read this service, and only over HTTP — nothing shares a database connection into
 `mock_systems` directly.
 

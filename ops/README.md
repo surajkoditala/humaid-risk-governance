@@ -9,7 +9,7 @@ bash ops/setup-local-db.sh
 Starts Docker Postgres + Azurite (`docker-compose.yml`), creates `risk_governance_db`, and applies
 **both** services' `deploy_all.sql` (Workbench: `src/4-Persistence/Humaid.RiskGovernance.AdminUI.DB/`;
 Mock Systems: `src/6-MockExternalSystems/Humaid.RiskGovernance.MockSystems/db/`) — same database,
-different schema, because Mock Systems is deliberately not part of the monolith. Safe to re-run:
+different schema, because Mock Systems is deliberately not part of the Workbench. Safe to re-run:
 skips straight to "already set up" if the database exists, rather than failing partway through
 non-idempotent `CREATE TABLE` statements. `--reset` drops and recreates from scratch (destroys
 local data — only runs with the flag, never implicitly).
@@ -26,7 +26,7 @@ pipeline is DevOps' explicit ownership (CLAUDE.md's team table), not written as 
 
 | Resource | Purpose | Notes from the sync |
 |---|---|---|
-| Container Apps environment + 2 Container Apps | Workbench (`1-API`, the monolith) and Mock Systems (`6-MockExternalSystems`) - two separate apps, not one, per Suleman's "It shouldn't be part of the monolith" agreement | "Let's do container apps, it's the cheapest" |
+| Container Apps environment + 2 Container Apps | Workbench (`1-API`) and Mock Systems (`6-MockExternalSystems`) - two separate apps, not one, per Suleman's agreement on the call that Mock Systems shouldn't be part of the Workbench | "Let's do container apps, it's the cheapest" |
 | Azure Database for PostgreSQL Flexible Server (Burstable) | Same schema `deploy_all.sql` already applies locally | One instance; Mock Systems uses its own `mock_systems` schema within it, not a separate server, for cost |
 | Storage Account (Blob) | Real document uploads (Phase 3 Step 4) - Azurite is the local stand-in | `BLOB_STORAGE_CONNECTION_STRING` |
 | Key Vault | Secrets (`ANTHROPIC_API_KEY` / `FOUNDRY_API_KEY`, Postgres credentials) - never baked into a container image | Referenced by the Container Apps, not provisioned by application code |
