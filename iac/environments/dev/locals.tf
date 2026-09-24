@@ -10,15 +10,15 @@ locals {
   AI_PROVIDER                           = "AzureFoundry"
   FOUNDRY_PROJECT_ENDPOINT              = "https://proj-gh.services.ai.azure.com/api/projects/proj-gh"
   FOUNDRY_MODEL_DEPLOYMENT              = "gpt-4.1-mini"
-  ANTHROPIC_MODEL                       = "claude-5-sonnet-20260630"
+  ANTHROPIC_MODEL                       = "claude-sonnet-5"
   CORS_ALLOWED_ORIGINS__0               = "https://ca-${var.container_app_ui_name}-${var.tags.environment}.${module.container_app_env.container_app_environment_default_domain}"
-  MOCK_SYSTEMS_BASE_URL                 = "https://ca-${var.container_app_backend_app_name}-${var.tags.environment}.${module.container_app_env.container_app_environment_default_domain}"
+  MOCK_SYSTEMS_BASE_URL                 = "https://ca-${var.container_app_backend_app_name}-${var.tags.environment}.internal.${module.container_app_env.container_app_environment_default_domain}"
   APPLICATIONINSIGHTS_CONNECTION_STRING = module.log_analytics_workspace.application_insights_connection_string
 
   # workbench variables
-  AZURE_POSTGRESQL_ENDPOINT = "Server=${module.pgsql.postgresql_server_fqdn};Database=postgres;Port=5432;Ssl Mode=Require;User Id=ca-${var.container_app_ui_name}-${var.tags.environment};"
+  AZURE_POSTGRESQL_ENDPOINT = "Server=${module.pgsql.postgresql_server_fqdn};Database=risk_governance_db;Port=5432;Ssl Mode=Require;User Id=ca-${var.container_app_ui_name}-${var.tags.environment};"
 
   # mockapi variables - backend_app
-  BACKEND_APP_AZURE_POSTGRESQL_ENDPOINT = "Server=${module.pgsql.postgresql_server_fqdn};Database=postgres;Port=5432;Ssl Mode=Require;User Id=ca-${var.container_app_backend_app_name}-${var.tags.environment};"
+  BACKEND_APP_AZURE_POSTGRESQL_ENDPOINT = "Server=${module.pgsql.postgresql_server_fqdn};Database=risk_governance_db;Port=5432;Ssl Mode=Require;User Id=ca-${var.container_app_backend_app_name}-${var.tags.environment};"
 
 }
