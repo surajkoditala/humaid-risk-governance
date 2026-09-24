@@ -1,5 +1,6 @@
 namespace Humaid.RiskGovernance.AdminUI.AI
 {
+    using System.Net.Http.Headers;
     using System.Net.Http.Json;
     using System.Text.Json;
     using System.Text.Json.Serialization;
@@ -26,6 +27,7 @@ namespace Humaid.RiskGovernance.AdminUI.AI
     {
         private readonly HttpClient _httpClient;
         private readonly string? _model;
+        private readonly bool _isConfigured;
         private readonly ILogger<ClaudeApiClient> _logger;
 
         public ClaudeApiClient(IHttpClientFactory httpClientFactory, IConfiguration configuration, ILogger<ClaudeApiClient> logger)
@@ -35,16 +37,30 @@ namespace Humaid.RiskGovernance.AdminUI.AI
             _model = configuration["ANTHROPIC_MODEL"];
 
             var apiKey = configuration["ANTHROPIC_API_KEY"];
-            if (!string.IsNullOrWhiteSpace(apiKey))
+            _isConfigured = !string.IsNullOrWhiteSpace(apiKey);
+            if (_isConfigured)
             {
-                _httpClient.DefaultRequestHeaders.Add("x-api-key", apiKey);
+                // Two different credential shapes share this one config key: a standard API key
+                // (sk-ant-api03-...) authenticates via the x-api-key header; a Claude Code/Claude
+                // Agent SDK long-lived OAuth token (sk-ant-oat01-..., from `claude setup-token`,
+                // tied to a Pro/Max subscription rather than API billing) only authenticates via
+                // Authorization: Bearer - x-api-key returns 401 "API key is invalid" for it, even
+                // though the token itself is valid (confirmed against the real endpoint).
+                if (apiKey!.StartsWith("sk-ant-oat", StringComparison.Ordinal))
+                {
+                    _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+                }
+                else
+                {
+                    _httpClient.DefaultRequestHeaders.Add("x-api-key", apiKey);
+                }
             }
             _httpClient.DefaultRequestHeaders.Add("anthropic-version", "2023-06-01");
         }
 
         public async Task<string> CompleteAsync(string systemPrompt, string userPrompt, CancellationToken cancellationToken = default)
         {
-            if (string.IsNullOrWhiteSpace(_model) || !_httpClient.DefaultRequestHeaders.Contains("x-api-key"))
+            if (string.IsNullOrWhiteSpace(_model) || !_isConfigured)
             {
                 // Every other AI touchpoint in this app flags missing configuration explicitly
                 // rather than silently guessing (US-2.1 AC3) - the same rule applies here.
