@@ -1,4 +1,5 @@
 using Azure.Core;
+using Azure.Extensions.AspNetCore.Configuration.Secrets;
 using Azure.Identity;
 using Azure.Monitor.OpenTelemetry.AspNetCore;
 using Dapper;
@@ -9,6 +10,28 @@ using OpenTelemetry;
 Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Key Vault as a config source - same pattern and reasoning as the Workbench's Program.cs
+// (highest-priority provider, no-op when PEP_KEY_VAULT is unset).
+var keyVaultUri = builder.Configuration["PEP_KEY_VAULT"];
+if (!string.IsNullOrWhiteSpace(keyVaultUri))
+{
+    var keyVaultCredential = new DefaultAzureCredential(new DefaultAzureCredentialOptions
+    {
+        ExcludeManagedIdentityCredential = !builder.Environment.IsProduction(),
+    });
+    try
+    {
+        // See the Workbench's Program.cs - AddAzureKeyVault loads synchronously, so a failure
+        // here is caught rather than left to crash the whole app over one optional config source.
+        builder.Configuration.AddAzureKeyVault(new Uri(keyVaultUri), keyVaultCredential, new UnderscoreKeyVaultSecretManager());
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine($"Key Vault ({keyVaultUri}) could not be reached or read - continuing without it, falling back to env vars/appsettings for any key it would have provided. {ex.Message}");
+    }
+}
+
 builder.Services.AddOpenApi();
 
 // Phase 4 - same conditional-on-config Application Insights registration as the Workbench's own
@@ -147,3 +170,11 @@ app.MapPost("/api/vendors/{id:guid}/risk-flag", async (Guid id, VendorRiskUpdate
 app.MapGet("/api/ping", () => Results.Ok("pong"));
 
 app.Run();
+
+// Key Vault secret names use hyphens; every config key this app reads uses screaming-snake-case
+// with underscores so it maps directly onto Container App env vars too - see the Workbench's
+// Program.cs for the fuller comment.
+public class UnderscoreKeyVaultSecretManager : KeyVaultSecretManager
+{
+    public override string GetKey(Azure.Security.KeyVault.Secrets.KeyVaultSecret secret) => secret.Name.Replace('-', '_');
+}

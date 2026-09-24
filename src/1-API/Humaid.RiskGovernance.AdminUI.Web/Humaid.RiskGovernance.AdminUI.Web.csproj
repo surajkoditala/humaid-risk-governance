@@ -18,6 +18,13 @@
          APPLICATIONINSIGHTS_CONNECTION_STRING is set - see ops/README.md. -->
     <PackageReference Include="Azure.Monitor.OpenTelemetry.AspNetCore" Version="1.6.0" />
     <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="10.2.3" />
+    <!-- Key Vault as a config source - registered conditionally in Program.cs only when
+         PEP_KEY_VAULT is set, so it stays highest-priority (overrides env vars/appsettings for
+         any key it holds) without requiring it locally. Azure.Identity is already a transitive
+         dependency via .Services/.DA, referenced explicitly here since Program.cs uses
+         DefaultAzureCredential directly now. -->
+    <PackageReference Include="Azure.Extensions.AspNetCore.Configuration.Secrets" Version="1.5.2" />
+    <PackageReference Include="Azure.Identity" Version="1.21.0" />
   </ItemGroup>
 
   <ItemGroup>
