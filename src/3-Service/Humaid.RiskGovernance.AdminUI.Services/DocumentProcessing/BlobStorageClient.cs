@@ -5,6 +5,7 @@ namespace Humaid.RiskGovernance.AdminUI.Services.DocumentProcessing
     using Azure.Storage.Blobs.Models;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.DocumentProcessing;
     using Microsoft.Extensions.Configuration;
+    using Microsoft.Extensions.Hosting;
 
     /// <summary>
     /// Local dev talks to Azurite (ops/docker-compose.yml) with its well-known emulator connection
@@ -22,14 +23,16 @@ namespace Humaid.RiskGovernance.AdminUI.Services.DocumentProcessing
         private const string ContainerName = "change-request-attachments";
 
         private readonly IConfiguration _configuration;
+        private readonly IHostEnvironment _environment;
 
-        public BlobStorageClient(IConfiguration configuration)
+        public BlobStorageClient(IConfiguration configuration, IHostEnvironment environment)
         {
             // Config is validated at call time (UploadAsync), not here - ChangeRequestService
             // takes this by constructor injection, so every ChangeRequest request (not just file
             // uploads) would fail at DI-resolution time otherwise. Same "fail loudly, but only
             // when actually asked to do the thing" rule as ClaudeApiClient/MockSystemsClient.
             _configuration = configuration;
+            _environment = environment;
         }
 
         public async Task<string> UploadAsync(string fileName, string contentType, Stream content, CancellationToken cancellationToken = default)
@@ -44,7 +47,17 @@ namespace Humaid.RiskGovernance.AdminUI.Services.DocumentProcessing
             }
             else if (!string.IsNullOrWhiteSpace(accountUrl))
             {
-                blobServiceClient = new BlobServiceClient(new Uri(accountUrl), new DefaultAzureCredential());
+                // ManagedIdentityCredential probes IMDS and, when it's genuinely unreachable (any
+                // dev machine, not just this one), throws a hard AuthenticationFailedException
+                // rather than the CredentialUnavailableException DefaultAzureCredential's chain
+                // expects to fall through on - so it never reaches AzureCliCredential locally.
+                // Skip it outside Production, where Managed Identity is the actual, correct path
+                // (Container Apps) and this exclusion never applies.
+                var credentialOptions = new DefaultAzureCredentialOptions
+                {
+                    ExcludeManagedIdentityCredential = !_environment.IsProduction(),
+                };
+                blobServiceClient = new BlobServiceClient(new Uri(accountUrl), new DefaultAzureCredential(credentialOptions));
             }
             else
             {

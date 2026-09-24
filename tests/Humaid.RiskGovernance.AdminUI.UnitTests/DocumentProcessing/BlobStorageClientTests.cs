@@ -2,6 +2,8 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.DocumentProcessing
 {
     using Humaid.RiskGovernance.AdminUI.Services.DocumentProcessing;
     using Microsoft.Extensions.Configuration;
+    using Microsoft.Extensions.Hosting;
+    using Moq;
     using Xunit;
 
     /// <summary>
@@ -15,11 +17,12 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.DocumentProcessing
     public class BlobStorageClientTests
     {
         private static IConfiguration EmptyConfiguration() => new ConfigurationBuilder().Build();
+        private static IHostEnvironment FakeEnvironment() => Mock.Of<IHostEnvironment>(e => e.EnvironmentName == "Development");
 
         [Fact]
         public void Constructor_DoesNotThrowWhenUnconfigured()
         {
-            var exception = Record.Exception(() => new BlobStorageClient(EmptyConfiguration()));
+            var exception = Record.Exception(() => new BlobStorageClient(EmptyConfiguration(), FakeEnvironment()));
 
             Assert.Null(exception);
         }
@@ -27,7 +30,7 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.DocumentProcessing
         [Fact]
         public async Task UploadAsync_ThrowsOnlyAtCallTimeWhenUnconfigured()
         {
-            var sut = new BlobStorageClient(EmptyConfiguration());
+            var sut = new BlobStorageClient(EmptyConfiguration(), FakeEnvironment());
             using var stream = new MemoryStream([1, 2, 3]);
 
             await Assert.ThrowsAsync<InvalidOperationException>(() => sut.UploadAsync("f.pdf", "application/pdf", stream));
