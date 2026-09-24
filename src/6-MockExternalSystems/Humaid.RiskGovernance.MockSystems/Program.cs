@@ -2,6 +2,7 @@ using Azure.Core;
 using Azure.Extensions.AspNetCore.Configuration.Secrets;
 using Azure.Identity;
 using Azure.Monitor.OpenTelemetry.AspNetCore;
+using Azure.Security.KeyVault.Secrets;
 using Dapper;
 using Humaid.RiskGovernance.MockSystems;
 using Npgsql;
@@ -173,8 +174,15 @@ app.Run();
 
 // Key Vault secret names use hyphens; every config key this app reads uses screaming-snake-case
 // with underscores so it maps directly onto Container App env vars too - see the Workbench's
-// Program.cs for the fuller comment.
+// Program.cs for the fuller comment. Load's allow-list matters because the dev environment
+// provisions one Key Vault shared by both container apps - without it, this service would load
+// every secret in the vault, including ones that belong to the Workbench, not just its own
+// (currently none - Mock Systems doesn't call any external API needing a secret yet).
 public class UnderscoreKeyVaultSecretManager : KeyVaultSecretManager
 {
-    public override string GetKey(Azure.Security.KeyVault.Secrets.KeyVaultSecret secret) => secret.Name.Replace('-', '_');
+    private static readonly HashSet<string> AllowedSecretNames = new(StringComparer.OrdinalIgnoreCase);
+
+    public override bool Load(SecretProperties secret) => AllowedSecretNames.Contains(secret.Name);
+
+    public override string GetKey(KeyVaultSecret secret) => secret.Name.Replace('-', '_');
 }

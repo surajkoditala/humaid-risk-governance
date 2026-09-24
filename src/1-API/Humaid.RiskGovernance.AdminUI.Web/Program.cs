@@ -51,6 +51,7 @@ using Humaid.RiskGovernance.AdminUI.Services.DocumentProcessing;
 using Humaid.RiskGovernance.AdminUI.Services.Narrative;
 using Humaid.RiskGovernance.AdminUI.Services.PolicyResearch;
 using Humaid.RiskGovernance.AdminUI.Services.Scoring;
+using Humaid.RiskGovernance.AdminUI.Services.Startup;
 using Humaid.RiskGovernance.AdminUI.Services.Users;
 using Humaid.RiskGovernance.AdminUI.Web.Auth;
 using Azure.Extensions.AspNetCore.Configuration.Secrets;
@@ -97,7 +98,15 @@ if (!string.IsNullOrWhiteSpace(keyVaultUri))
         // source. Whatever secret would have come from here just isn't in IConfiguration, so
         // downstream callers hit their normal "not configured" error at call time instead - same
         // "flag explicitly, but only when actually asked to do the thing" rule as everywhere else.
-        builder.Configuration.AddAzureKeyVault(new Uri(keyVaultUri), keyVaultCredential, new UnderscoreKeyVaultSecretManager());
+        //
+        // The allow-list matters because the dev environment provisions one Key Vault shared by
+        // both container apps - without it, this app would load every secret in the vault,
+        // including ones that belong to Mock Systems or other infra, not just its own two.
+        var workbenchKeyVaultSecretNames = new[] { "ANTHROPIC-API-KEY", "FOUNDRY-API-KEY" };
+        builder.Configuration.AddAzureKeyVault(
+            new Uri(keyVaultUri),
+            keyVaultCredential,
+            new UnderscoreKeyVaultSecretManager(workbenchKeyVaultSecretNames));
     }
     catch (Exception ex)
     {
@@ -310,13 +319,3 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
-
-// Key Vault secret names use hyphens (ANTHROPIC-API-KEY); every config key this app reads uses
-// screaming-snake-case with underscores (ANTHROPIC_API_KEY) so it maps directly onto Container
-// App env vars too - this makes a Key Vault secret land on the same config key its env var
-// fallback already uses, instead of silently becoming a second, differently-named key nothing
-// reads.
-public class UnderscoreKeyVaultSecretManager : KeyVaultSecretManager
-{
-    public override string GetKey(Azure.Security.KeyVault.Secrets.KeyVaultSecret secret) => secret.Name.Replace('-', '_');
-}
