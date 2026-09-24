@@ -7,6 +7,23 @@
 # (screaming-snake-case), so it maps directly onto `docker run -e KEY=value` / Container App env
 # vars. See ops/README.md for the full variable table. This image does not bake in any secret.
 
+# Bake the frontend into this image's own wwwroot, same pattern as the ERC admin UI project: Vite
+# turns webapp/ into plain static files, the throwaway node stage below never ships in the final
+# image, and at runtime the single .NET process both serves /api/... and hands back the built
+# index.html/assets for everything else (Program.cs's UseDefaultFiles/UseStaticFiles). Without
+# this stage wwwroot is empty and every non-API route 404s - that's what shipped before this fix.
+FROM node:22-alpine AS webapp-build
+WORKDIR /webapp
+COPY webapp/package.json webapp/package-lock.json ./
+RUN npm ci
+COPY webapp/ ./
+# Empty string, not unset - api.js's apiFetch defaults to http://localhost:5210 when this is
+# unset (its ?? fallback), which would bake the wrong base URL into the production bundle since
+# Vite inlines import.meta.env.VITE_* at build time. Empty string means same-origin, which is
+# correct once the built assets are served from this same container.
+ENV VITE_API_BASE_URL=""
+RUN npm run build
+
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
@@ -27,9 +44,8 @@ COPY src/3-Service/Humaid.RiskGovernance.AdminUI.AI/*.csproj src/3-Service/Humai
 COPY src/4-Persistence/Humaid.RiskGovernance.AdminUI.DA/*.csproj src/4-Persistence/Humaid.RiskGovernance.AdminUI.DA/
 RUN dotnet restore src/1-API/Humaid.RiskGovernance.AdminUI.Web/Humaid.RiskGovernance.AdminUI.Web.csproj
 
-# Now the rest of the source and publish. webapp/ (5-Presentation) is NOT copied - this project has
-# no ProjectReference to webapp.esproj, so building it here would just cost a Node install for
-# nothing; the frontend gets its own static build/deploy, unrelated to this image.
+# Now the rest of the source and publish. webapp/ (5-Presentation) has no ProjectReference here -
+# it's built separately by the webapp-build stage above and copied straight into wwwroot below.
 COPY src/1-API/Humaid.RiskGovernance.AdminUI.Web/ src/1-API/Humaid.RiskGovernance.AdminUI.Web/
 COPY src/2-Infrastructure/Humaid.RiskGovernance.AdminUI.Infrastructure/ src/2-Infrastructure/Humaid.RiskGovernance.AdminUI.Infrastructure/
 COPY src/3-Service/Humaid.RiskGovernance.AdminUI.Services/ src/3-Service/Humaid.RiskGovernance.AdminUI.Services/
@@ -42,6 +58,7 @@ RUN dotnet publish src/1-API/Humaid.RiskGovernance.AdminUI.Web/Humaid.RiskGovern
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 COPY --from=build /app/publish .
+COPY --from=webapp-build /webapp/dist ./wwwroot
 
 ENV ASPNETCORE_URLS=http://+:8080
 EXPOSE 8080
