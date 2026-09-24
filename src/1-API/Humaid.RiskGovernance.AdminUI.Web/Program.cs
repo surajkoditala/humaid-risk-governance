@@ -84,11 +84,15 @@ if (!string.IsNullOrWhiteSpace(keyVaultUri))
 {
     // Same reasoning as BlobStorageClient.cs: ManagedIdentityCredential hard-fails (rather than
     // falling through) when IMDS is genuinely unreachable, which blocks the whole
-    // DefaultAzureCredential chain on a dev machine - excluded outside Production, where Managed
-    // Identity is the real, correct path (Container Apps).
+    // DefaultAzureCredential chain on a dev machine. Can't key this off
+    // IHostEnvironment/ASPNETCORE_ENVIRONMENT: the only environment deployed today (Azure
+    // Container Apps dev) also sets ASPNETCORE_ENVIRONMENT=Development, identical to a
+    // developer's laptop - CONTAINER_APP_NAME is what actually distinguishes them, since Azure
+    // Container Apps injects it automatically into every revision and no local machine has it.
+    var runningInContainerApp = !string.IsNullOrWhiteSpace(builder.Configuration["CONTAINER_APP_NAME"]);
     var keyVaultCredential = new DefaultAzureCredential(new DefaultAzureCredentialOptions
     {
-        ExcludeManagedIdentityCredential = !builder.Environment.IsProduction(),
+        ExcludeManagedIdentityCredential = !runningInContainerApp,
     });
     try
     {

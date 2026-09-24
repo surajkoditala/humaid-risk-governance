@@ -17,14 +17,17 @@ var builder = WebApplication.CreateBuilder(args);
 var keyVaultUri = builder.Configuration["PEP_KEY_VAULT"];
 if (!string.IsNullOrWhiteSpace(keyVaultUri))
 {
+    // See the Workbench's Program.cs - CONTAINER_APP_NAME distinguishes a real deployed
+    // Container App from local dev, since both report ASPNETCORE_ENVIRONMENT=Development.
+    var runningInContainerApp = !string.IsNullOrWhiteSpace(builder.Configuration["CONTAINER_APP_NAME"]);
     var keyVaultCredential = new DefaultAzureCredential(new DefaultAzureCredentialOptions
     {
-        ExcludeManagedIdentityCredential = !builder.Environment.IsProduction(),
+        ExcludeManagedIdentityCredential = !runningInContainerApp,
     });
     try
     {
-        // See the Workbench's Program.cs - AddAzureKeyVault loads synchronously, so a failure
-        // here is caught rather than left to crash the whole app over one optional config source.
+        // AddAzureKeyVault loads synchronously, so a failure here is caught rather than left to
+        // crash the whole app over one optional config source.
         builder.Configuration.AddAzureKeyVault(new Uri(keyVaultUri), keyVaultCredential, new UnderscoreKeyVaultSecretManager());
     }
     catch (Exception ex)
