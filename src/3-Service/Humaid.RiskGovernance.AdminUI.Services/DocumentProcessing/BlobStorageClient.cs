@@ -47,16 +47,7 @@ namespace Humaid.RiskGovernance.AdminUI.Services.DocumentProcessing
             }
             else if (!string.IsNullOrWhiteSpace(accountUrl))
             {
-                // ManagedIdentityCredential probes IMDS and, when it's genuinely unreachable (any
-                // dev machine, not just this one), throws a hard AuthenticationFailedException
-                // rather than the CredentialUnavailableException DefaultAzureCredential's chain
-                // expects to fall through on - so it never reaches AzureCliCredential locally.
-                // Skip it outside Production, where Managed Identity is the actual, correct path
-                // (Container Apps) and this exclusion never applies.
-                var credentialOptions = new DefaultAzureCredentialOptions
-                {
-                    ExcludeManagedIdentityCredential = !_environment.IsProduction(),
-                };
+                var credentialOptions = BuildCredentialOptions(_environment);
                 blobServiceClient = new BlobServiceClient(new Uri(accountUrl), new DefaultAzureCredential(credentialOptions));
             }
             else
@@ -82,6 +73,23 @@ namespace Humaid.RiskGovernance.AdminUI.Services.DocumentProcessing
                 cancellationToken);
 
             return blobClient.Uri.ToString();
+        }
+
+        // Extracted so the exclusion rule itself is directly testable (asserting on the returned
+        // options) without needing to mock Azure.Identity/Azure.Storage internals or reach for
+        // InternalsVisibleTo - see BlobStorageClientTests.cs.
+        public static DefaultAzureCredentialOptions BuildCredentialOptions(IHostEnvironment environment)
+        {
+            // ManagedIdentityCredential probes IMDS and, when it's genuinely unreachable (any dev
+            // machine, not just this one), throws a hard AuthenticationFailedException rather than
+            // the CredentialUnavailableException DefaultAzureCredential's chain expects to fall
+            // through on - so it never reaches AzureCliCredential locally. Skip it outside
+            // Production, where Managed Identity is the actual, correct path (Container Apps) and
+            // this exclusion never applies.
+            return new DefaultAzureCredentialOptions
+            {
+                ExcludeManagedIdentityCredential = !environment.IsProduction(),
+            };
         }
     }
 }

@@ -35,5 +35,24 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.DocumentProcessing
 
             await Assert.ThrowsAsync<InvalidOperationException>(() => sut.UploadAsync("f.pdf", "application/pdf", stream));
         }
+
+        /// <summary>
+        /// Regression guard for a second real bug caught locally (PR #50 review): outside
+        /// Production, ManagedIdentityCredential must be excluded from the DefaultAzureCredential
+        /// chain, or it hard-fails on any dev machine with no IMDS and never falls through to
+        /// AzureCliCredential - see BuildCredentialOptions's own comment.
+        /// </summary>
+        [Theory]
+        [InlineData("Development", true)]
+        [InlineData("Staging", true)]
+        [InlineData("Production", false)]
+        public void BuildCredentialOptions_ExcludesManagedIdentityOnlyOutsideProduction(string environmentName, bool expectedExcluded)
+        {
+            var environment = Mock.Of<IHostEnvironment>(e => e.EnvironmentName == environmentName);
+
+            var options = BlobStorageClient.BuildCredentialOptions(environment);
+
+            Assert.Equal(expectedExcluded, options.ExcludeManagedIdentityCredential);
+        }
     }
 }
