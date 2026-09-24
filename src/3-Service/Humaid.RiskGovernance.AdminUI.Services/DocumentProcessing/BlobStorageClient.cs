@@ -44,7 +44,8 @@ namespace Humaid.RiskGovernance.AdminUI.Services.DocumentProcessing
             }
             else if (!string.IsNullOrWhiteSpace(accountUrl))
             {
-                blobServiceClient = new BlobServiceClient(new Uri(accountUrl), new DefaultAzureCredential());
+                var credentialOptions = BuildCredentialOptions(_configuration);
+                blobServiceClient = new BlobServiceClient(new Uri(accountUrl), new DefaultAzureCredential(credentialOptions));
             }
             else
             {
@@ -69,6 +70,30 @@ namespace Humaid.RiskGovernance.AdminUI.Services.DocumentProcessing
                 cancellationToken);
 
             return blobClient.Uri.ToString();
+        }
+
+        // Extracted so the exclusion rule itself is directly testable (asserting on the returned
+        // options) without needing to mock Azure.Identity/Azure.Storage internals or reach for
+        // InternalsVisibleTo - see BlobStorageClientTests.cs.
+        public static DefaultAzureCredentialOptions BuildCredentialOptions(IConfiguration configuration)
+        {
+            // ManagedIdentityCredential probes IMDS and, when it's genuinely unreachable (any dev
+            // machine, not just this one), throws a hard AuthenticationFailedException rather than
+            // the CredentialUnavailableException DefaultAzureCredential's chain expects to fall
+            // through on - so it never reaches AzureCliCredential locally.
+            //
+            // This can't key off IHostEnvironment/ASPNETCORE_ENVIRONMENT: the only environment
+            // deployed today (Azure Container Apps dev) also sets ASPNETCORE_ENVIRONMENT to
+            // Development, identical to a developer's laptop, and that deployed container is
+            // exactly where Managed Identity is the real, only working credential (no interactive
+            // az login inside a container, Shared Key access disabled on the storage account).
+            // CONTAINER_APP_NAME is what actually distinguishes them - Azure Container Apps
+            // injects it automatically into every revision, and no local machine ever has it set.
+            var runningInContainerApp = !string.IsNullOrWhiteSpace(configuration["CONTAINER_APP_NAME"]);
+            return new DefaultAzureCredentialOptions
+            {
+                ExcludeManagedIdentityCredential = !runningInContainerApp,
+            };
         }
     }
 }
