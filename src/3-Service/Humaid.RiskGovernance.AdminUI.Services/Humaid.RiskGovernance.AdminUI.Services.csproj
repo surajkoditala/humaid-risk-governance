@@ -8,7 +8,9 @@
 
   <ItemGroup>
     <PackageReference Include="Azure.Identity" Version="1.21.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.3" />
+    <!-- Bumped from 10.0.3 - Azure.Extensions.AspNetCore.Configuration.Secrets pulls in
+         Microsoft.Extensions.Hosting.Abstractions 10.0.9, which needs at least this version. -->
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.9" />
     <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.0" />
     <!-- Phase 3 Step 4 - real document extraction. Deterministic parsing only, no AI/network
          dependency for either package - see IDocumentTextExtractor's own reasoning. -->
@@ -16,6 +18,9 @@
     <PackageReference Include="PdfPig" Version="0.1.16" />
     <PackageReference Include="DocumentFormat.OpenXml" Version="3.1.1" />
     <PackageReference Include="QuestPDF" Version="2026.9.0" />
+    <!-- UnderscoreKeyVaultSecretManager (Startup/) - lives here rather than in .Web's Program.cs
+         so it's reachable from the unit test project, which references this project but not .Web. -->
+    <PackageReference Include="Azure.Extensions.AspNetCore.Configuration.Secrets" Version="1.5.2" />
   </ItemGroup>
 
   <ItemGroup>

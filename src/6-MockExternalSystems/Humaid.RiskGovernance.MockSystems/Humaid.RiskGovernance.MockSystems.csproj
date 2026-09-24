@@ -23,6 +23,9 @@
          APPLICATIONINSIGHTS_CONNECTION_STRING is set - see ops/README.md. -->
     <PackageReference Include="Azure.Monitor.OpenTelemetry.AspNetCore" Version="1.6.0" />
     <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="10.2.3" />
+    <!-- Key Vault as a config source - same pattern and reasoning as the Workbench's Program.cs;
+         registered conditionally only when PEP_KEY_VAULT is set. -->
+    <PackageReference Include="Azure.Extensions.AspNetCore.Configuration.Secrets" Version="1.5.2" />
   </ItemGroup>
 
 </Project>

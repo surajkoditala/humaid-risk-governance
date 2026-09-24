@@ -1,6 +1,8 @@
 using Azure.Core;
+using Azure.Extensions.AspNetCore.Configuration.Secrets;
 using Azure.Identity;
 using Azure.Monitor.OpenTelemetry.AspNetCore;
+using Azure.Security.KeyVault.Secrets;
 using Dapper;
 using Humaid.RiskGovernance.MockSystems;
 using Npgsql;
@@ -9,6 +11,31 @@ using OpenTelemetry;
 Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Key Vault as a config source - same pattern and reasoning as the Workbench's Program.cs
+// (highest-priority provider, no-op when PEP_KEY_VAULT is unset).
+var keyVaultUri = builder.Configuration["PEP_KEY_VAULT"];
+if (!string.IsNullOrWhiteSpace(keyVaultUri))
+{
+    // See the Workbench's Program.cs - CONTAINER_APP_NAME distinguishes a real deployed
+    // Container App from local dev, since both report ASPNETCORE_ENVIRONMENT=Development.
+    var runningInContainerApp = !string.IsNullOrWhiteSpace(builder.Configuration["CONTAINER_APP_NAME"]);
+    var keyVaultCredential = new DefaultAzureCredential(new DefaultAzureCredentialOptions
+    {
+        ExcludeManagedIdentityCredential = !runningInContainerApp,
+    });
+    try
+    {
+        // AddAzureKeyVault loads synchronously, so a failure here is caught rather than left to
+        // crash the whole app over one optional config source.
+        builder.Configuration.AddAzureKeyVault(new Uri(keyVaultUri), keyVaultCredential, new UnderscoreKeyVaultSecretManager());
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine($"Key Vault ({keyVaultUri}) could not be reached or read - continuing without it, falling back to env vars/appsettings for any key it would have provided. {ex.Message}");
+    }
+}
+
 builder.Services.AddOpenApi();
 
 // Phase 4 - same conditional-on-config Application Insights registration as the Workbench's own
@@ -147,3 +174,18 @@ app.MapPost("/api/vendors/{id:guid}/risk-flag", async (Guid id, VendorRiskUpdate
 app.MapGet("/api/ping", () => Results.Ok("pong"));
 
 app.Run();
+
+// Key Vault secret names use hyphens; every config key this app reads uses screaming-snake-case
+// with underscores so it maps directly onto Container App env vars too - see the Workbench's
+// Program.cs for the fuller comment. Load's allow-list matters because the dev environment
+// provisions one Key Vault shared by both container apps - without it, this service would load
+// every secret in the vault, including ones that belong to the Workbench, not just its own
+// (currently none - Mock Systems doesn't call any external API needing a secret yet).
+public class UnderscoreKeyVaultSecretManager : KeyVaultSecretManager
+{
+    private static readonly HashSet<string> AllowedSecretNames = new(StringComparer.OrdinalIgnoreCase);
+
+    public override bool Load(SecretProperties secret) => AllowedSecretNames.Contains(secret.Name);
+
+    public override string GetKey(KeyVaultSecret secret) => secret.Name.Replace('-', '_');
+}

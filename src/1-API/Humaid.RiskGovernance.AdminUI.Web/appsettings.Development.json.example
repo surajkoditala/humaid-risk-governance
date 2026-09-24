@@ -14,6 +14,8 @@
   "APPLICATIONINSIGHTS_CONNECTION_STRING": "",
   "_comment2": "Azurite's well-known, publicly-documented local dev account/key (not a secret) - see ops/docker-compose.yml. Against a real Storage Account with Shared Key access disabled instead, leave this blank and set BLOB_STORAGE_SERVICE_URI (just the blob endpoint, e.g. https://stghdev01.blob.core.windows.net) - see BlobStorageClient.cs.",
   "BLOB_STORAGE_CONNECTION_STRING": "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://127.0.0.1:10000/devstoreaccount1;",
-  "BLOB_STORAGE_SERVICE_URI": ""
+  "BLOB_STORAGE_SERVICE_URI": "",
+  "_comment3": "Optional locally - only set this if you want to test the Key Vault config path itself (see Program.cs's UnderscoreKeyVaultSecretManager); most local dev doesn't need it since the keys above already carry real values. When set, any Key Vault secret whose name (hyphens -> underscores) matches one of this file's keys overrides it.",
+  "PEP_KEY_VAULT": ""
 }
 
