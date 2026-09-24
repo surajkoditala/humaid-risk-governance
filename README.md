@@ -68,8 +68,9 @@ PostgreSQL  <-----------------------------------------------  (.NET 10 API, port
    ```bash
    bash ops/setup-local-db.sh
    ```
-   Safe to re-run — skips setup if the database already exists rather than failing halfway
-   through (`--reset` to drop and start clean). See `ops/README.md`.
+   Safe to re-run — applies each service's schema only if it isn't already there rather than
+   failing halfway through (`--reset` to drop and start clean; `--no-docker` to target a Postgres
+   you already run). See `ops/README.md`.
 2. **Backend settings** — copy `appsettings.Development.json.example` → `appsettings.Development.json`
    in both `src/1-API/Humaid.RiskGovernance.AdminUI.Web/` and
    `src/6-MockExternalSystems/Humaid.RiskGovernance.MockSystems/` (git-ignored, local-only).

@@ -10,9 +10,19 @@ Starts Docker Postgres + Azurite (`docker-compose.yml`), creates `risk_governanc
 **both** services' `deploy_all.sql` (Workbench: `src/4-Persistence/Humaid.RiskGovernance.AdminUI.DB/`;
 Mock Systems: `src/6-MockExternalSystems/Humaid.RiskGovernance.MockSystems/db/`) — same database,
 different schema, because Mock Systems is deliberately not part of the Workbench. Safe to re-run:
-skips straight to "already set up" if the database exists, rather than failing partway through
-non-idempotent `CREATE TABLE` statements. `--reset` drops and recreates from scratch (destroys
-local data — only runs with the flag, never implicitly).
+each service's script is applied only if that service's schema is missing (it looks for
+`public.change_request` / `mock_systems.crm_customer`), rather than failing partway through
+non-idempotent `CREATE TABLE` statements. It checks for the tables, not for the database itself,
+because the Postgres image auto-creates `risk_governance_db` on first start — so the database
+"exists" even when it is empty. `--reset` drops and recreates from scratch (destroys local data —
+only runs with the flag, never implicitly).
+
+Already running your own Postgres (e.g. a native install) and don't want Docker? Point the script
+at it with the standard libpq variables and `--no-docker`; the password is yours to supply:
+
+```bash
+PGPORT=5432 PGPASSWORD='<your password>' bash ops/setup-local-db.sh --no-docker
+```
 
 After that, `dotnet run` both services plus `npm run dev` for the webapp — see the root `README.md`
 for exact commands.
