@@ -1,0 +1,40 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/api/ChangeRequest/Submit",
+    "body": {
+      "changeType": "Geography",
+      "title": "[QA-E2E FINAL09251251] clarification",
+      "description": "x",
+      "submittedByUserId": "a6a709a7-65e7-4a90-9b58-cbbaec1d651a"
+    }
+  },
+  "response": {
+    "status": 200,
+    "durationMs": 283,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:22:16 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": true,
+      "isBadRequest": false,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": {
+        "id": "ba127540-de51-4e40-989e-29b7bb56ec57",
+        "requestNumber": "CR-2026-00057",
+        "changeType": "Geography",
+        "title": "[QA-E2E FINAL09251251] clarification",
+        "description": "x",
+        "typeSpecificFieldsJson": "{}",
+        "status": "Submitted",
+        "submittedByUserId": "a6a709a7-65e7-4a90-9b58-cbbaec1d651a",
+        "submittedAt": "2026-09-25T07:22:17.418978+00:00"
+      },
+      "message": null
+    }
+  }
+}

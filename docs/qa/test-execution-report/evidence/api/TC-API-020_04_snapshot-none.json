@@ -1,0 +1,25 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/api/DataIngestion/Snapshot/6a78af14-7388-4b01-8352-68ebf57be9a6",
+    "body": null
+  },
+  "response": {
+    "status": 404,
+    "durationMs": 302,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:22:19 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": false,
+      "isBadRequest": false,
+      "isNotFound": true,
+      "isConflict": false,
+      "data": null,
+      "message": "No external snapshot linked to this change request."
+    }
+  }
+}

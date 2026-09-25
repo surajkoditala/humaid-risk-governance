@@ -1,0 +1,50 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/api/Committee/Queue",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "durationMs": 284,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:23:22 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": true,
+      "isBadRequest": false,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": [
+        {
+          "assessmentId": "35b32ea9-b582-47a4-ad59-ad953bc0f5af",
+          "changeRequestId": "d80b9214-6103-4950-bbbf-e2ed93d18531",
+          "requestNumber": "CR-2026-00039",
+          "changeType": "Feature",
+          "title": "[QA-E2E 202609250658] API probe - re-vote",
+          "routedAt": "2026-09-25T06:59:46.528673+00:00"
+        },
+        {
+          "assessmentId": "50f965f9-70e5-4c4d-bec5-36017302898e",
+          "changeRequestId": "18404cb0-2e0b-4ef4-9a7d-b06fffe699f5",
+          "requestNumber": "CR-2026-00061",
+          "changeType": "Feature",
+          "title": "[QA-E2E FINAL09251251] API probe - empty assessment",
+          "routedAt": "2026-09-25T07:22:24.397786+00:00"
+        },
+        {
+          "assessmentId": "eba39f9c-a4ba-40cf-946d-fa0a3da1bb98",
+          "changeRequestId": "ef797803-aaf9-4a7a-b7af-a86f6f010f9a",
+          "requestNumber": "CR-2026-00060",
+          "changeType": "Vendor",
+          "title": "[QA-E2E FINAL09251251] API lifecycle - onboard settlement vendor",
+          "routedAt": "2026-09-25T07:23:22.966726+00:00"
+        }
+      ],
+      "message": null
+    }
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/api/Committee/50f965f9-70e5-4c4d-bec5-36017302898e/Votes",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "durationMs": 283,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:23:29 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": true,
+      "isBadRequest": false,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": [
+        {
+          "id": "e0e39fce-7476-4503-a59c-97bc587cde38",
+          "committeeMemberUserId": "083ecfe5-aa01-4703-9168-762f0065078f",
+          "committeeMemberName": "Jordan Blake",
+          "vote": "Defer",
+          "conditionsText": null,
+          "rationale": "   ",
+          "votedAt": "2026-09-25T07:23:29.104309+00:00"
+        },
+        {
+          "id": "49503cc7-0fe9-4d97-a8a9-cf7177d20505",
+          "committeeMemberUserId": "a6a709a7-65e7-4a90-9b58-cbbaec1d651a",
+          "committeeMemberName": "Priya Owens",
+          "vote": "Approve",
+          "conditionsText": null,
+          "rationale": null,
+          "votedAt": "2026-09-25T07:23:29.899815+00:00"
+        }
+      ],
+      "message": null
+    }
+  }
+}

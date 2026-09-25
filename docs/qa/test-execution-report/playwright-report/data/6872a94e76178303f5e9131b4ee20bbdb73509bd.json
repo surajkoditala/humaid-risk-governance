@@ -1,0 +1,40 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/api/ChangeRequest/Submit",
+    "body": {
+      "changeType": "CustomerSegment",
+      "title": "[QA-E2E FINAL09251251] API probe - config versioning",
+      "description": "x",
+      "submittedByUserId": "a6a709a7-65e7-4a90-9b58-cbbaec1d651a"
+    }
+  },
+  "response": {
+    "status": 200,
+    "durationMs": 291,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:23:46 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": true,
+      "isBadRequest": false,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": {
+        "id": "de00fb95-f4e9-4c55-9d17-781709873552",
+        "requestNumber": "CR-2026-00063",
+        "changeType": "CustomerSegment",
+        "title": "[QA-E2E FINAL09251251] API probe - config versioning",
+        "description": "x",
+        "typeSpecificFieldsJson": "{}",
+        "status": "Submitted",
+        "submittedByUserId": "a6a709a7-65e7-4a90-9b58-cbbaec1d651a",
+        "submittedAt": "2026-09-25T07:23:47.43906+00:00"
+      },
+      "message": null
+    }
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/api/DataIngestion/MockCustomers",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "durationMs": 1134,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:21:55 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": true,
+      "isBadRequest": false,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": [
+        {
+          "id": "a1111111-0000-0000-0000-000000000003",
+          "label": "Al-Sharq Money Exchange"
+        },
+        {
+          "id": "a1111111-0000-0000-0000-000000000005",
+          "label": "Fenwick & Cole Boutique Advisors"
+        },
+        {
+          "id": "a1111111-0000-0000-0000-000000000004",
+          "label": "Global Relief Foundation"
+        },
+        {
+          "id": "a1111111-0000-0000-0000-000000000001",
+          "label": "Meridian Textiles Ltd"
+        },
+        {
+          "id": "a1111111-0000-0000-0000-000000000006",
+          "label": "Novak Family Trust"
+        },
+        {
+          "id": "a1111111-0000-0000-0000-000000000002",
+          "label": "Riya Kapoor"
+        }
+      ],
+      "message": null
+    }
+  }
+}

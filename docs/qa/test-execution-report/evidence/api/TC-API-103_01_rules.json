@@ -1,0 +1,33 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/api/WorkflowRule",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "durationMs": 278,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:23:49 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": true,
+      "isBadRequest": false,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": [
+        {
+          "id": "d2418460-1ad5-418c-bc0f-aded1d1a025c",
+          "ruleKey": "CommitteeQuorum",
+          "ruleValueJson": "{\"quorum\": 2}",
+          "isActive": true,
+          "createdAt": "2026-09-25T07:20:12.71744+00:00"
+        }
+      ],
+      "message": null
+    }
+  }
+}

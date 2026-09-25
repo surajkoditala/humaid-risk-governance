@@ -1,0 +1,30 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/api/WorkflowRule",
+    "body": {
+      "ruleKey": "CommitteeQuorum",
+      "ruleValueJson": "{not json",
+      "reason": "QA invalid JSON test",
+      "actorUserId": "374a3158-6dfa-41f2-9a4d-3d1091dffacf"
+    }
+  },
+  "response": {
+    "status": 500,
+    "durationMs": 273,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:23:50 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": false,
+      "isBadRequest": false,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": "00000000-0000-0000-0000-000000000000",
+      "message": "Failed to update workflow rule."
+    }
+  }
+}

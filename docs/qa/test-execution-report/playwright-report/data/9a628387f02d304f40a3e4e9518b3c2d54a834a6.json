@@ -1,0 +1,50 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/api/ChangeRequest/9c895ced-c6aa-44af-a2f3-d7d96fb72c43/Attachments",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "durationMs": 277,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:22:11 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": true,
+      "isBadRequest": false,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": [
+        {
+          "id": "f707d937-1e2a-41ce-a4d8-f2d6a6843f03",
+          "fileName": "vendor-due-diligence.pdf",
+          "contentType": "application/pdf",
+          "storagePath": "https://stghdev01.blob.core.windows.net/change-request-attachments/a76917d0-5f3a-4f7b-a5bd-6e44b569b94d-vendor-due-diligence.pdf",
+          "versionNumber": 1,
+          "uploadedAt": "2026-09-25T07:22:11.282918+00:00"
+        },
+        {
+          "id": "f1644753-11c1-4cf8-bad3-cd758f6ca7f1",
+          "fileName": "product-spec.docx",
+          "contentType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          "storagePath": "https://stghdev01.blob.core.windows.net/change-request-attachments/43c9cf0c-09a7-4807-94b1-b7fd7bf21b68-product-spec.docx",
+          "versionNumber": 1,
+          "uploadedAt": "2026-09-25T07:22:11.617289+00:00"
+        },
+        {
+          "id": "72abff8e-2572-4136-b919-454bf79fbaae",
+          "fileName": "control-matrix.xlsx",
+          "contentType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "storagePath": "https://stghdev01.blob.core.windows.net/change-request-attachments/77bbf2cd-a48a-488a-b3cc-312b7d58f732-control-matrix.xlsx",
+          "versionNumber": 1,
+          "uploadedAt": "2026-09-25T07:22:11.924679+00:00"
+        }
+      ],
+      "message": null
+    }
+  }
+}

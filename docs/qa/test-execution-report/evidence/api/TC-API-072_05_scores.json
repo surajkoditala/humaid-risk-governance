@@ -1,0 +1,62 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/api/Scoring/eba39f9c-a4ba-40cf-946d-fa0a3da1bb98",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "durationMs": 301,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:23:15 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": true,
+      "isBadRequest": false,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": [
+        {
+          "id": "c3ce38ba-bbcb-41e2-b277-d745d739d730",
+          "riskCategoryId": "22222222-2222-2222-2222-222222222222",
+          "categoryName": "Customers & Entities",
+          "inherentRating": 4,
+          "controlEffectiveness": 0.8,
+          "mitigationFactorApplied": 0.85,
+          "residualRating": 2.5,
+          "isOverride": true,
+          "overrideReason": "Vendor has had two prior regulatory findings",
+          "scoredBy": "System"
+        },
+        {
+          "id": "1912a7b8-c573-4f2e-a1e0-8f2b5d498f2f",
+          "riskCategoryId": "22222222-2222-2222-2222-222222222223",
+          "categoryName": "Geographic Locations",
+          "inherentRating": 1,
+          "controlEffectiveness": 1,
+          "mitigationFactorApplied": 0.85,
+          "residualRating": 0.15,
+          "isOverride": false,
+          "overrideReason": null,
+          "scoredBy": "System"
+        },
+        {
+          "id": "81dd2e07-f2e3-4eb3-901d-101e14fb51b8",
+          "riskCategoryId": "22222222-2222-2222-2222-222222222224",
+          "categoryName": "Delivery Channels",
+          "inherentRating": 3,
+          "controlEffectiveness": 0.5,
+          "mitigationFactorApplied": 0.85,
+          "residualRating": 2.58,
+          "isOverride": false,
+          "overrideReason": null,
+          "scoredBy": "System"
+        }
+      ],
+      "message": null
+    }
+  }
+}

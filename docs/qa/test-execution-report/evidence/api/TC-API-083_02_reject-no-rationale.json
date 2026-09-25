@@ -1,0 +1,29 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/api/Committee/Vote",
+    "body": {
+      "assessmentId": "50f965f9-70e5-4c4d-bec5-36017302898e",
+      "committeeMemberUserId": "083ecfe5-aa01-4703-9168-762f0065078f",
+      "vote": "Reject"
+    }
+  },
+  "response": {
+    "status": 400,
+    "durationMs": 344,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:23:27 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": false,
+      "isBadRequest": true,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": "00000000-0000-0000-0000-000000000000",
+      "message": "Approve-with-conditions requires conditions text; reject/defer require a rationale."
+    }
+  }
+}

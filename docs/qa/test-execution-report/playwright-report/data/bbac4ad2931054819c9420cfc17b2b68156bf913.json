@@ -1,0 +1,68 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/api/User",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "durationMs": 758,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:21:53 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": true,
+      "isBadRequest": false,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": [
+        {
+          "id": "374a3158-6dfa-41f2-9a4d-3d1091dffacf",
+          "auth0Subject": "",
+          "email": "admin1@example.bank",
+          "displayName": "Taylor Finch",
+          "role": "Admin"
+        },
+        {
+          "id": "4fa322d3-2245-44ef-b664-1a804442db23",
+          "auth0Subject": "",
+          "email": "analyst1@example.bank",
+          "displayName": "Amara Chen",
+          "role": "Analyst"
+        },
+        {
+          "id": "1329f6a2-3450-438e-8a5f-b7b9ae219b67",
+          "auth0Subject": "",
+          "email": "analyst2@example.bank",
+          "displayName": "Sam Okafor",
+          "role": "Analyst"
+        },
+        {
+          "id": "083ecfe5-aa01-4703-9168-762f0065078f",
+          "auth0Subject": "",
+          "email": "committee1@example.bank",
+          "displayName": "Jordan Blake",
+          "role": "CommitteeMember"
+        },
+        {
+          "id": "fa142c1c-58cc-4666-b135-7768a2ab33f0",
+          "auth0Subject": "",
+          "email": "committee2@example.bank",
+          "displayName": "Riley Voss",
+          "role": "CommitteeMember"
+        },
+        {
+          "id": "a6a709a7-65e7-4a90-9b58-cbbaec1d651a",
+          "auth0Subject": "",
+          "email": "po1@example.bank",
+          "displayName": "Priya Owens",
+          "role": "ProductOwner"
+        }
+      ],
+      "message": null
+    }
+  }
+}

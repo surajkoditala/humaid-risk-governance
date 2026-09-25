@@ -1,0 +1,23 @@
+[
+  {
+    "id": "button-name",
+    "impact": "critical",
+    "help": "Buttons must have discernible text",
+    "nodes": 2,
+    "sample": [
+      "#base-ui-_r_8_",
+      "#base-ui-_r_r_"
+    ]
+  },
+  {
+    "id": "color-contrast",
+    "impact": "serious",
+    "help": "Elements must meet minimum color contrast ratio thresholds",
+    "nodes": 7,
+    "sample": [
+      "h2",
+      "#base-ui-_r_k_",
+      "#base-ui-_r_l_"
+    ]
+  }
+]

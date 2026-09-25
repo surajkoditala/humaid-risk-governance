@@ -1,0 +1,36 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/api/PolicyResearch/Search?queryText=beneficial%20ownership",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "durationMs": 300,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:22:34 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": true,
+      "isBadRequest": false,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": [
+        {
+          "id": "af07f40f-b9fa-4614-891b-b0fcc9a8f54b",
+          "policyDocumentId": "33333333-3333-3333-3333-333333333331",
+          "documentTitle": "FFIEC BSA/AML Examination Manual",
+          "sourceUrl": "https://bsaaml.ffiec.gov",
+          "effectiveDate": "2014-01-01T00:00:00",
+          "sectionRef": "Risks Associated with Money Laundering and Terrorist Financing - Beneficial Ownership",
+          "chunkText": "Legal entity customers with complex or opaque ownership structures, including shell companies, can be used to obscure the identity of beneficial owners. Banks are expected to identify and verify beneficial owners holding a defined ownership threshold as part of customer due diligence.",
+          "rank": 0.11666006
+        }
+      ],
+      "message": null
+    }
+  }
+}

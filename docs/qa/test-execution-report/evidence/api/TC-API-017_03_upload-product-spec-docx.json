@@ -1,0 +1,32 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/api/ChangeRequest/AttachDocumentFile",
+    "body": {
+      "changeRequestId": "9c895ced-c6aa-44af-a2f3-d7d96fb72c43",
+      "uploadedByUserId": "a6a709a7-65e7-4a90-9b58-cbbaec1d651a",
+      "file": "<file product-spec.docx>"
+    }
+  },
+  "response": {
+    "status": 200,
+    "durationMs": 301,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:22:10 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": true,
+      "isBadRequest": false,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": {
+        "id": "f1644753-11c1-4cf8-bad3-cd758f6ca7f1",
+        "version": 1
+      },
+      "message": null
+    }
+  }
+}

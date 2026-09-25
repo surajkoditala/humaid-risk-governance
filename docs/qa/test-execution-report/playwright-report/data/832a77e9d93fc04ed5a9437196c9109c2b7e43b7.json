@@ -1,0 +1,41 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/api/ChangeRequest/Submit",
+    "body": {
+      "changeType": "Product",
+      "title": "[QA-E2E FINAL09251251] type Product",
+      "description": "Synthetic",
+      "typeSpecificFieldsJson": "{}",
+      "submittedByUserId": "a6a709a7-65e7-4a90-9b58-cbbaec1d651a"
+    }
+  },
+  "response": {
+    "status": 200,
+    "durationMs": 782,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:21:58 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": true,
+      "isBadRequest": false,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": {
+        "id": "83fd772d-e35b-4f9c-9d75-c4064841e157",
+        "requestNumber": "CR-2026-00046",
+        "changeType": "Product",
+        "title": "[QA-E2E FINAL09251251] type Product",
+        "description": "Synthetic",
+        "typeSpecificFieldsJson": "{}",
+        "status": "Submitted",
+        "submittedByUserId": "a6a709a7-65e7-4a90-9b58-cbbaec1d651a",
+        "submittedAt": "2026-09-25T07:21:59.081579+00:00"
+      },
+      "message": null
+    }
+  }
+}

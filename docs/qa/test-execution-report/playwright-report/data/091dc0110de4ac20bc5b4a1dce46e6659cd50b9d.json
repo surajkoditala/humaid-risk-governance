@@ -1,0 +1,42 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/api/Scoring/Calculate",
+    "body": {
+      "assessmentId": "416b67b7-55af-4246-b3e1-22ef35c2202a",
+      "riskCategoryId": "22222222-2222-2222-2222-222222222222",
+      "inherentRating": 3,
+      "controlIdsCredited": [],
+      "controlEffectiveness": 1
+    }
+  },
+  "response": {
+    "status": 200,
+    "durationMs": 315,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:23:47 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": true,
+      "isBadRequest": false,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": {
+        "id": "2efc8859-1b96-4beb-85fc-a1ff7036ba88",
+        "riskCategoryId": "22222222-2222-2222-2222-222222222222",
+        "categoryName": "Customers & Entities",
+        "inherentRating": 3,
+        "controlEffectiveness": 1,
+        "mitigationFactorApplied": 0.8,
+        "residualRating": 2.2,
+        "isOverride": false,
+        "overrideReason": null,
+        "scoredBy": "System"
+      },
+      "message": null
+    }
+  }
+}

@@ -1,0 +1,319 @@
+﻿"Test case ID","Title","Requirement","Type","Priority","Project","Steps","Expected result"
+"TC-A11Y-001","Sign-in gate has no critical or serious WCAG violations","NFR-A11Y","Accessibility","P2","nfr","1. Open Sign-in gate
+2. Run axe-core with wcag2a, wcag2aa, wcag21a, wcag21aa tags","Zero critical / serious violations"
+"TC-A11Y-002","Submit Request has no critical or serious WCAG violations","NFR-A11Y","Accessibility","P2","nfr","1. Open Submit Request
+2. Run axe-core with wcag2a, wcag2aa, wcag21a, wcag21aa tags","Zero critical / serious violations"
+"TC-A11Y-003","My Requests has no critical or serious WCAG violations","NFR-A11Y","Accessibility","P2","nfr","1. Open My Requests
+2. Run axe-core with wcag2a, wcag2aa, wcag21a, wcag21aa tags","Zero critical / serious violations"
+"TC-A11Y-004","Assessments inbox has no critical or serious WCAG violations","NFR-A11Y","Accessibility","P2","nfr","1. Open Assessments inbox
+2. Run axe-core with wcag2a, wcag2aa, wcag21a, wcag21aa tags","Zero critical / serious violations"
+"TC-A11Y-005","Assessment workspace has no critical or serious WCAG violations","NFR-A11Y","Accessibility","P2","nfr","1. Open Assessment workspace
+2. Run axe-core with wcag2a, wcag2aa, wcag21a, wcag21aa tags","Zero critical / serious violations"
+"TC-A11Y-006","Committee Queue has no critical or serious WCAG violations","NFR-A11Y","Accessibility","P2","nfr","1. Open Committee Queue
+2. Run axe-core with wcag2a, wcag2aa, wcag21a, wcag21aa tags","Zero critical / serious violations"
+"TC-A11Y-007","Configuration has no critical or serious WCAG violations","NFR-A11Y","Accessibility","P2","nfr","1. Open Configuration
+2. Run axe-core with wcag2a, wcag2aa, wcag21a, wcag21aa tags","Zero critical / serious violations"
+"TC-A11Y-008","Core flow is keyboard operable","NFR-A11Y","Accessibility","P3","nfr","1. Tab to ""Continue without signing in"" and press Enter
+2. Tab to the user switcher and open it with Enter
+3. Arrow to ""Priya Owens"" and press Enter","Every step works with keyboard only; focus is visible"
+"TC-API-001","Health check endpoint responds","NFR-OPS","API","P1","api","1. GET /api/Ping","200 with data ""pong"" in the OperationResult envelope"
+"TC-API-002","Seeded users cover all four roles","Roles","API","P2","api","1. GET /api/User","Users exist for ProductOwner, Analyst, CommitteeMember and Admin"
+"TC-API-003","Risk categories are exactly the four FFIEC categories, each citable","US-2.1","API","P1","api","1. GET /api/CategoryMapping/Categories","4 categories (Products & Services, Customers & Entities, Geographic Locations, Delivery Channels) each with an FFIEC citation"
+"TC-API-004","Mock-systems lookups (CRM / core banking / vendor mgmt) return synthetic data","Data-Ingestion","API","P2","api","1. GET /api/DataIngestion/MockCustomers
+2. GET .../MockProducts
+3. GET .../MockVendors","Each lookup returns a non-empty id/label list"
+"TC-API-010","Submit a valid change request","US-1.1","API","P1","api","1. POST /api/ChangeRequest/Submit with type Product, title, description, PO user id, linked mock product","200; unique request number CR-YYYY-NNNNN; status ""Submitted""; submittedAt timestamp"
+"TC-API-011","Every one of the six change types is accepted","US-1.1","API","P2","api","1. Submit with changeType=Product
+2. Submit with changeType=Feature
+3. Submit with changeType=Process
+4. Submit with changeType=Vendor
+5. Submit with changeType=Geography
+6. Submit with changeType=CustomerSegment","All six types accepted (200)"
+"TC-API-012","Request numbers are unique","US-1.1","API","P1","api","1. GET /api/ChangeRequest (all)
+2. Compare request numbers","No duplicate request numbers"
+"TC-API-013","Submission with missing mandatory fields is rejected","US-1.1","Negative","P1","api","1. POST Submit with empty title and description
+2. POST Submit with empty changeType","400 Bad Request listing the missing fields; nothing persisted"
+"TC-API-014","Unknown change type is rejected","US-1.1","Negative","P2","api","1. POST Submit with changeType=""Crypto""","400 - only the six defined change types are allowed"
+"TC-API-015","Get change request by id; unknown id returns 404","US-1.3","API","P2","api","1. GET /api/ChangeRequest/{existing id}
+2. GET /api/ChangeRequest/{random guid}
+3. GET /api/ChangeRequest/not-a-guid","200 with record; 404 for unknown guid; 404 for malformed id (route constraint)"
+"TC-API-016","""My requests"" returns only the requesting user's items with days elapsed","US-1.3","API","P2","api","1. GET /api/ChangeRequest/ForUser/{PO id}
+2. GET /api/ChangeRequest/ForUser/{Analyst id}","PO list contains the QA requests with status and daysElapsed; analyst (never submitted) gets an empty list"
+"TC-API-017","Attach PDF, DOCX and XLSX; re-upload creates a new version","US-1.2","API","P1","api","1. Submit a Vendor request
+2. POST AttachDocumentFile with a PDF
+3. POST with a DOCX and an XLSX
+4. POST PDF again with supersedesAttachmentId
+5. GET /{id}/Attachments","All three formats accepted; the replacement is version 2 and version 1 is still listed (not overwritten)"
+"TC-API-018","Unsupported / unsafe file types are rejected with a clear message","US-1.2","Negative","P1","api","1. Upload unsupported.txt as text/plain
+2. Upload malicious.exe as application/x-msdownload
+3. Upload malicious.exe spoofed as application/pdf","All three rejected with 400 and a message naming the allowed formats"
+"TC-API-019","Clarification request is recorded against the change request","US-1.3","API","P3","api","1. POST /api/ChangeRequest/{id}/RequestClarification as analyst
+2. GET audit trail","200 with clarification id; audit trail shows who asked what"
+"TC-API-020","External snapshot is ingested when a mock entity is linked","Data-Ingestion","API","P2","api","1. Submit a Product request linked to mock product ""Cross-Border Wire Transfer Plus""
+2. GET /api/DataIngestion/Snapshot/{id}
+3. Submit a Process request (no linked entity)
+4. GET snapshot","Linked request has a snapshot (200); unlinked request returns 404 ""No external snapshot"""
+"TC-API-030","Open assessment workspace is idempotent","US-6.3","API","P1","api","1. Submit a Vendor request (PO) linked to a mock vendor
+2. POST /api/Assessment/OpenWorkspace/{crId} twice
+3. GET /api/Assessment/ByChangeRequest/{crId}","Both calls return the same assessment id; the request moves to InAssessment"
+"TC-API-031","Finalize and route are blocked while nothing has been reviewed","US-6.3 / US-8.1","Negative","P1","api","1. Submit a separate ""probe"" request and open its workspace (no categories, no narrative, no policy)
+2. GET Readiness
+3. POST Finalize
+4. POST Committee/Route","Readiness is false; Finalize and Route rejected (400) with the outstanding items listed"
+"TC-API-032","AI proposes FFIEC categories with citations for a Vendor request","US-2.1","API","P1","api","1. POST /api/CategoryMapping/Propose?assessmentId&changeRequestId (Azure AI Foundry)","Only FFIEC categories; Vendor maps to Customers & Entities + Delivery Channels; each row has a citation; source AiProposed"
+"TC-API-033","Category override requires a reason; AI original retained","US-2.2 / US-6.1","Negative","P1","api","1. POST CategoryMapping/Override (add Geographic Locations) with empty reason
+2. Repeat with a reason
+3. Remove Delivery Channels with a reason, then re-add it
+4. GET mapping and audit trail","Blank reason -> 400; with reason -> saved; audit shows the AI proposal and each override with its reason"
+"TC-API-040","Policy search returns ranked, citable FFIEC/FATF passages","US-3.1","API","P1","api","1. GET PolicyResearch/Search?queryText=beneficial ownership
+2. GET with riskCategoryId filter
+3. GET with nonsense text","Ranked results (rank desc) each with document title, source URL, section ref and effective date; nonsense -> empty list"
+"TC-API-041","Policy search input validation / injection safety","US-3.1 / NFR-SEC","Security","P2","api","1. Search queryText=' OR 1=1; DROP TABLE policy_chunk;--
+2. Search queryText=<script>alert(1)</script>
+3. Search with empty queryText
+4. Search topK=100000","No 500s; injection payloads treated as literal text; empty query rejected (400) or returns []; topK capped"
+"TC-API-042","Record policy reliance decisions","US-3.2","API","P1","api","1. RecordReliance ReliedUpon for each active category
+2. RecordReliance NotRelevant for another chunk
+3. RecordReliance with decision ""Maybe""
+4. GET reliance","Valid decisions recorded; invalid decision rejected with 400"
+"TC-API-043","One passage relied upon for two categories keeps both decisions","US-3.2 / US-9.1","Negative","P2","api","1. On the probe assessment: RecordReliance chunk X for Customers & Entities
+2. RecordReliance the same chunk X for Delivery Channels
+3. GET reliance","Two reliance rows (one per category) - the second decision does not overwrite the first"
+"TC-API-044","Policy corpus covers the core FFIEC risk topics","US-3.1 / RAG","API","P2","api","1. Search ""wire transfer""
+2. Search ""correspondent banking""
+3. Search ""politically exposed""
+4. Search ""sanctions""
+5. Search ""money services business""
+6. Search ""prepaid""
+7. Search ""cash-intensive""
+8. Search ""high-risk jurisdiction""","At least one relevant passage for each core FFIEC / FATF topic the categories rely on"
+"TC-API-050","AI extracts structured fields from the document with confidence and source excerpts","US-4.1","API","P1","api","1. POST DocumentExtraction/Extract with the due-diligence document text
+2. GET extracted fields","Key/value fields (e.g. jurisdiction = Malta) each with confidence, needsReview flag and source excerpt; source AiExtracted"
+"TC-API-051","Extracted-field correction: material change needs a reason; original retained","US-4.2","Negative","P1","api","1. Correct field with isMaterialChange=true and no reason
+2. Correct with isMaterialChange=false and no reason (formatting)
+3. Correct with material change and a reason
+4. GET fields + audit","Material/no-reason -> 400; trivial/no-reason -> 200; material with reason -> 200; audit keeps AI original and corrected value"
+"TC-API-060","AI drafts one narrative section per category, labelled AiDrafted","US-5.1","API","P1","api","1. POST Narrative/Draft for each active category","One section per category with status AiDrafted and non-empty narrative text"
+"TC-API-061","Finalize is blocked while a section is still AI-drafted","US-5.1 / US-6.3","Negative","P1","api","1. GET Readiness
+2. POST Finalize","Readiness lists every AI-drafted section; Finalize -> 400 naming them"
+"TC-API-062","Regenerate one section with feedback; others untouched; prior version kept","US-5.2","API","P2","api","1. Snapshot all sections
+2. POST Narrative/Draft for category #1 with regenerationFeedback
+3. Compare sections
+4. Check audit for the prior version","Only category #1 text changes; other sections identical; audit retains earlier draft"
+"TC-API-063","Narrative edit requires a reason; review/accept sets analyst status","US-6.1","Negative","P1","api","1. POST Narrative/Edit with empty reason
+2. POST Narrative/Edit on category #1 with reason
+3. POST Narrative/Review (accept as-is) for the rest
+4. GET sections","Blank reason -> 400; edited section = AnalystEdited; accepted sections = AnalystReviewed"
+"TC-API-070","Residual risk = inherent - (effectiveness x mitigation factor), always > 0","US-7.1","API","P1","api","1. Scoring/Calculate inherent=4, effectiveness=0.8 on category #1
+2. Calculate the extreme case inherent=1, effectiveness=1.0 on category #2
+3. GET scores","residual = 4 - 0.8 x mf exactly; extreme case residual still > 0; inherent, mitigation and residual all shown"
+"TC-API-071","Out-of-range scoring inputs are rejected cleanly","US-7.1","Negative","P2","api","1. Calculate inherent=0
+2. Calculate inherent=6
+3. Calculate effectiveness=1.5
+4. Calculate effectiveness=-0.2","Each rejected with 400 and a validation message (never a residual <= 0 persisted)"
+"TC-API-072","Score override: reason mandatory, residual must stay > 0, labelled as override","US-7.2","Negative","P1","api","1. Override residual=2.5 with blank reason
+2. Override residual=0 with reason
+3. Override residual=-1
+4. Override residual=2.5 with reason
+5. GET scores + audit","Blank reason / zero / negative -> 400; valid override saved with isOverride=true, scoredBy Analyst, reason; audit keeps the calculated value"
+"TC-API-073","Controls library per category","US-7.1","API","P3","api","1. GET Scoring/Controls/{categoryId} for each of the 4 categories","Each category has at least one configured control (name + description) so credited controls and their weights are traceable"
+"TC-API-080","Committee vote is rejected before the assessment is routed","US-8.2","Negative","P1","api","1. POST Committee/Vote on an assessment still InAssessment","400 ""not in the committee queue ... Route it first"""
+"TC-API-081","Finalize records the analyst; route puts it in the committee queue","US-6.3 / US-8.1","API","P1","api","1. GET Readiness (expect ready)
+2. POST Finalize as Amara Chen
+3. POST Committee/Route
+4. GET Committee/Queue and change request status
+5. GET audit","Finalize 200; status Finalized; route 200; request appears in queue; CR status PendingCommittee; audit names the finalizing analyst"
+"TC-API-082","Edits after finalization are blocked (assessment locked)","US-6.3","Negative","P1","api","1. After finalize: POST Narrative/Edit
+2. POST Scoring/Override
+3. POST CategoryMapping/Override
+4. POST Finalize again","All rejected - a finalized assessment is locked"
+"TC-API-083","Vote validation: conditions / rationale mandatory; only committee members may vote","US-8.2","Negative","P1","api","1. On the routed probe assessment, as Jordan Blake: vote ApproveWithConditions with blank conditions
+2. Vote Reject with no rationale
+3. Vote Defer with whitespace rationale
+4. Vote ""Maybe""
+5. Vote as the Product Owner (not a committee member)
+6. GET votes + decision","Every case rejected with 400/403; no vote recorded for a non-committee user; no decision reached"
+"TC-API-084","A member vote cannot be silently replaced","US-8.2 / US-9.2","Negative","P2","api","1. On a second routed probe: Jordan Blake votes Approve
+2. Jordan Blake votes again (Reject with rationale)
+3. GET votes","Second vote rejected (400/409) - or, if re-voting is allowed, both versions retained; the first vote is never overwritten in place"
+"TC-API-085","Individual votes recorded; quorum resolves the decision conservatively","US-8.2 / US-8.3","API","P1","api","1. Jordan Blake votes ApproveWithConditions with conditions
+2. Riley Voss votes Approve (quorum = 2)
+3. GET votes, decision, change request
+4. Late vote after decision","Each vote stored with member name; decision ApprovedWithConditions carrying the conditions; CR status Decisioned; late vote rejected"
+"TC-API-090","Audit trail reconstructs the full history in order","US-9.1","API","P1","api","1. GET /api/Audit/{crId}","Chronological events covering submission, upload, AI outputs, overrides with reasons, reliance, scores, finalize, route, each vote, decision; actor shown as a person or system/AI"
+"TC-API-091","Audit records cannot be modified or deleted through the API","US-9.2","Security","P1","api","1. PUT /api/Audit/{crId}
+2. DELETE /api/Audit/{crId}
+3. PATCH /api/Audit/{crId}
+4. GET trail again","No write verbs exposed (404/405); trail unchanged"
+"TC-API-100","Mitigation factor >= 1.0 (or < 0) is rejected at configuration time","US-10.1","Negative","P1","api","1. POST Scoring/Config maxMitigationFactor=1.0
+2. ... =1.5
+3. ... =-0.1
+4. ... =0.999","1.0 / 1.5 / -0.1 rejected with 400 and an explicit ""residual risk would reach zero"" message; 0.999 is the largest accepted value class"
+"TC-API-101","Scoring configuration change requires a reason","US-10.1","Negative","P1","api","1. POST Scoring/Config maxMitigationFactor=0.85 (unchanged) with blank reason","400 - reason is mandatory"
+"TC-API-102","Config change applies only to assessments started afterwards","US-10.1","API","P2","api","1. Open a probe assessment (config at baseline)
+2. Change Customers & Entities cap to 0.80 (reason given)
+3. Calculate a score on the probe assessment
+4. Restore the cap to the baseline","The in-flight probe still uses the cap in force when it started (0.85), not 0.80"
+"TC-API-103","Workflow rules: listed in plain form; reason mandatory; invalid JSON rejected","US-10.2","Negative","P1","api","1. GET /api/WorkflowRule
+2. POST CommitteeQuorum with blank reason
+3. POST CommitteeQuorum with value ""{not json""
+4. POST CommitteeQuorum {""quorum"": 2} (unchanged) with reason","Rules readable (key + JSON value); blank reason -> 400; invalid JSON -> 400; valid save -> 200"
+"TC-PERF-001","Read API latency (10 samples per endpoint)","NFR-PERF","Performance","P2","nfr","1. GET /api/Ping x10
+2. GET /api/User x10
+3. GET /api/ChangeRequest x10
+4. GET /api/Committee/Queue x10
+5. GET /api/CategoryMapping/Categories x10
+6. GET /api/PolicyResearch/Search?queryText=customer&topK=5 x10","p95 < 1,500 ms for every read endpoint; no errors"
+"TC-PERF-002","Burst of 25 concurrent reads","NFR-PERF","Performance","P3","nfr","1. Fire 25 parallel GET /api/ChangeRequest","All 200; p95 < 3,000 ms (Burstable-tier DB, 1 container)"
+"TC-PERF-003","Initial page load and bundle size","NFR-PERF","Performance","P2","nfr","1. Cold load / in a fresh context
+2. Read Navigation Timing and resource sizes","DOMContentLoaded < 2 s, load < 3 s; JS transferred < 500 KB"
+"TC-PERF-004","Screen-to-screen navigation responsiveness","NFR-PERF","Performance","P3","nfr","1. As Amara Chen click Assessments until the table renders
+2. Open the first request until tabs render","Each transition renders in < 2 s"
+"TC-RWD-001","Sidebar collapses behind a menu button on mobile","NFR-UX","Responsive","P2","ui-mobile","1. Open the app on a Pixel 7 viewport as Priya Owens
+2. Check the sidebar is off-canvas
+3. Tap the menu button
+4. Tap ""My Requests""","Sidebar hidden by default, slides in on menu tap, closes after navigating"
+"TC-RWD-002","""Submit Request"" fits a 412 px viewport without horizontal scrolling","NFR-UX","Responsive","P3","ui-mobile","1. As Priya Owens open Submit Request on Pixel 7
+2. Measure document scroll width vs viewport","scrollWidth <= clientWidth (no page-level horizontal scroll); content readable"
+"TC-RWD-003","""My Requests"" fits a 412 px viewport without horizontal scrolling","NFR-UX","Responsive","P3","ui-mobile","1. As Priya Owens open My Requests on Pixel 7
+2. Measure document scroll width vs viewport","scrollWidth <= clientWidth (no page-level horizontal scroll); content readable"
+"TC-RWD-004","""Assessments"" fits a 412 px viewport without horizontal scrolling","NFR-UX","Responsive","P3","ui-mobile","1. As Amara Chen open Assessments on Pixel 7
+2. Measure document scroll width vs viewport","scrollWidth <= clientWidth (no page-level horizontal scroll); content readable"
+"TC-RWD-005","""Committee Queue"" fits a 412 px viewport without horizontal scrolling","NFR-UX","Responsive","P3","ui-mobile","1. As Jordan Blake open Committee Queue on Pixel 7
+2. Measure document scroll width vs viewport","scrollWidth <= clientWidth (no page-level horizontal scroll); content readable"
+"TC-RWD-006","""Configuration"" fits a 412 px viewport without horizontal scrolling","NFR-UX","Responsive","P3","ui-mobile","1. As Taylor Finch open Configuration on Pixel 7
+2. Measure document scroll width vs viewport","scrollWidth <= clientWidth (no page-level horizontal scroll); content readable"
+"TC-RWD-007","Assessment workspace tabs are reachable on mobile","NFR-UX","Responsive","P3","ui-mobile","1. As Amara Chen open the first request in Assessments
+2. Scroll the tab strip to ""Audit"" and open it","Tab strip scrolls horizontally inside its container; page itself does not overflow; Audit tab opens"
+"TC-SEC-001","Protected endpoints require authentication","NFR-SEC","Security","P1","api","1. GET /api/User with no Authorization header
+2. GET /api/ChangeRequest with no Authorization header
+3. GET /api/Committee/Queue with no Authorization header
+4. GET /api/WorkflowRule with no Authorization header
+5. GET /api/CategoryMapping/Categories with no Authorization header
+6. GET /api/DataIngestion/MockCustomers with no Authorization header","Every [Authorize] endpoint returns 401 to an anonymous caller"
+"TC-SEC-002","A forged bearer token is rejected","NFR-SEC","Security","P1","api","1. GET /api/User with ""Authorization: Bearer forged.jwt.token""","401 invalid_token"
+"TC-SEC-003","Server-side role enforcement - actor ids cannot be spoofed","NFR-SEC / US-6.3 / US-10.1","Security","P1","api","1. Finalize a probe assessment with actorUserId = Product Owner
+2. Save scoring config (unchanged value) with actorUserId = Product Owner
+3. GET audit to see who is recorded","Both rejected with 403 - only Analysts finalize, only Admin/Analyst configure; the acting user comes from the token, not the request body"
+"TC-SEC-004","API specification is not publicly exposed in the deployed environment","NFR-SEC","Security","P2","api","1. GET /openapi/v1.json","404 - OpenAPI is mapped only in Development; the deployed app should not run as Development"
+"TC-SEC-005","Security response headers","NFR-SEC","Security","P2","api","1. GET / and GET /api/Ping
+2. Inspect response headers","Strict-Transport-Security, Content-Security-Policy, X-Content-Type-Options: nosniff, X-Frame-Options/frame-ancestors and Referrer-Policy present; no Server banner"
+"TC-SEC-006","CORS does not trust arbitrary origins","NFR-SEC","Security","P1","api","1. OPTIONS /api/ChangeRequest/Submit with Origin: https://evil.example and Access-Control-Request-Method: POST","No Access-Control-Allow-Origin for the foreign origin"
+"TC-SEC-007","Error responses do not leak internals","NFR-SEC","Security","P3","api","1. POST Submit with malformed JSON
+2. POST Scoring/Calculate with an unknown assessment id
+3. POST Narrative/Edit with blank reason","Generic messages - no stack traces, SQL, Npgsql/PL-pgSQL error codes or table names"
+"TC-SEC-008","Uploaded documents are not publicly readable from blob storage","NFR-SEC / US-1.2","Security","P1","api","1. Read a storagePath from an attachment list
+2. GET it anonymously
+3. List the container anonymously","403/404 - documents are private"
+"TC-SEC-009","HTTP is redirected to HTTPS","NFR-SEC","Security","P2","api","1. GET http://<host>/ without following redirects","301/302/307/308 to https://"
+"TC-SEC-010","Input length limits on free-text fields","NFR-SEC / US-1.1","Security","P3","api","1. Submit a change request with a 20,000-character title","400 - title length is bounded"
+"TC-UI-001","Deployed environment requires sign-in (no anonymous bypass)","NFR-SEC","Security","P1","ui-desktop","1. Open the deployed URL in a fresh browser session","Visitor is redirected to Auth0 Universal Login; no ""continue without signing in"" option exists outside local dev"
+"TC-UI-002","Entering the console lands on the first user with a user switcher","Roles","Functional","P2","ui-desktop","1. Open the app and continue past the gate
+2. Open the ""Acting as"" switcher","Header shows the acting user; switcher lists all six seeded users with their roles"
+"TC-UI-003","Navigation for Priya Owens shows only their role's screens","Roles","Functional","P1","ui-desktop","1. Act as Priya Owens
+2. Read the sidebar navigation","Sidebar shows exactly: Submit Request, My Requests"
+"TC-UI-004","Navigation for Amara Chen shows only their role's screens","Roles","Functional","P1","ui-desktop","1. Act as Amara Chen
+2. Read the sidebar navigation","Sidebar shows exactly: Assessments"
+"TC-UI-005","Navigation for Sam Okafor shows only their role's screens","Roles","Functional","P1","ui-desktop","1. Act as Sam Okafor
+2. Read the sidebar navigation","Sidebar shows exactly: Assessments"
+"TC-UI-006","Navigation for Jordan Blake shows only their role's screens","Roles","Functional","P1","ui-desktop","1. Act as Jordan Blake
+2. Read the sidebar navigation","Sidebar shows exactly: Committee Queue"
+"TC-UI-007","Navigation for Riley Voss shows only their role's screens","Roles","Functional","P1","ui-desktop","1. Act as Riley Voss
+2. Read the sidebar navigation","Sidebar shows exactly: Committee Queue"
+"TC-UI-008","Navigation for Taylor Finch shows only their role's screens","Roles","Functional","P1","ui-desktop","1. Act as Taylor Finch
+2. Read the sidebar navigation","Sidebar shows exactly: Configuration"
+"TC-UI-009","Selected user persists across reloads","Roles","Functional","P3","ui-desktop","1. Act as Amara Chen
+2. Reload the page and pass the gate again","Still acting as Amara Chen (stored in localStorage)"
+"TC-UI-010","Role screens are protected server-side, not only hidden in the menu","NFR-SEC","Security","P1","ui-desktop","1. Act as Priya Owens (Product Owner)
+2. From the PO browser session call the analyst-only Finalize and committee-only Vote endpoints with the PO id","The server refuses (401/403) - hiding menu items is not access control"
+"TC-UI-020","Change type offers exactly the six defined types","US-1.1","Functional","P1","ui-desktop","1. Open Submit Request
+2. Open the Change type dropdown","Product, Feature, Process, Vendor, Geography, CustomerSegment"
+"TC-UI-021","Submitting with mandatory fields empty is blocked with a message","US-1.1","Negative","P1","ui-desktop","1. Leave all fields empty
+2. Click Submit request
+3. Fill only title
+4. Click Submit request","Submission blocked; message lists the missing fields"
+"TC-UI-022","Type-specific fields appear for each change type","US-1.1","Functional","P1","ui-desktop","1. Select Vendor
+2. Look for vendor name / jurisdiction / data access scope fields
+3. Select Geography
+4. Look for target country/region field
+5. Select Process","Vendor shows vendor name, jurisdiction and data-access-scope fields; Geography shows target country/region; linked-entity lookup appears for Product/Feature/Vendor/Geography/CustomerSegment, not Process"
+"TC-UI-023","Submit a Vendor change request end to end","US-1.1","E2E","P1","ui-desktop","1. Select Vendor
+2. Enter title, description, details
+3. Pick a linked vendor from the bank systems
+4. Submit","Success toast with new CR number; form resets"
+"TC-UI-024","Attach PDF, DOCX and XLSX to the request","US-1.2","Functional","P1","ui-desktop","1. In ""Attach a supporting document"" pick the new request
+2. Choose vendor-due-diligence.pdf, Attach
+3. Repeat with product-spec.docx and control-matrix.xlsx","Each upload shows ""Document attached - text extracted server-side"""
+"TC-UI-025","Unsupported file type is rejected with a clear message","US-1.2","Negative","P1","ui-desktop","1. Pick the request
+2. Force-select unsupported.txt (bypassing the picker filter)
+3. Attach","Error message naming the allowed formats (PDF, DOCX, XLSX)"
+"TC-UI-026","Attach without choosing a file is blocked","US-1.2","Negative","P3","ui-desktop","1. Click Attach document with nothing selected","Toast ""Pick a request and a file."""
+"TC-UI-027","My Requests shows status and days elapsed","US-1.3","Functional","P1","ui-desktop","1. Open My Requests
+2. Find the new request","Row shows request #, type Vendor, title, status Submitted, days elapsed 0"
+"TC-UI-030","Analyst inbox lists the request; workspace opens with seven tabs","US-6.3","Functional","P1","ui-desktop","1. Act as Amara Chen (Analyst)
+2. Open Assessments
+3. Click Open on the new request","Workspace header shows CR number + title; tabs Categories, Policy, Extraction, Narrative, Scoring, Finalize, Audit; status InProgress"
+"TC-UI-031","Finalize tab on an untouched assessment does not offer finalization","US-6.3","Negative","P1","ui-desktop","1. Open the workspace before any category, policy or narrative work
+2. Open the Finalize tab","Outstanding work is listed and the Finalize button is disabled"
+"TC-UI-032","Propose categories with AI - FFIEC categories with citations","US-2.1","Functional","P1","ui-desktop","1. Categories tab -> Propose with AI
+2. Wait for ""AI proposal saved""","Mapped categories list shows FFIEC categories, each labelled ""AI - <citation>"""
+"TC-UI-033","Adding or removing a category requires a reason","US-2.2 / US-6.1","Negative","P1","ui-desktop","1. Select ""Geographic Locations"" in Add a category, leave Reason blank, click Add
+2. Click Remove on a mapped category with Reason blank
+3. Enter a reason and Add Geographic Locations","Both blank-reason attempts blocked with ""A reason is required...""; with a reason the category is added as ""Analyst added"""
+"TC-UI-034","Policy search, relied-upon decisions per category","US-3.1 / US-3.2","Functional","P1","ui-desktop","1. Policy tab
+2. For each mapped category: pick it in the filter, search ""risk"", mark a passage not used before as ""Relied upon""
+3. Search nonsense text","Results show section reference + passage; each decision toast ""Marked ReliedUpon"" and appears under Reliance decisions recorded; nonsense -> ""No matches."""
+"TC-UI-035","Search results show source document, version and effective date","US-3.1","Functional","P2","ui-desktop","1. Policy tab -> search ""beneficial ownership""
+2. Inspect a result","Each result shows its relevance rationale, a link to the source document and its effective date"
+"TC-UI-036","AI extraction runs against the uploaded document content","US-4.1","Functional","P1","ui-desktop","1. Extraction tab
+2. Click ""Extract with AI"" on vendor-due-diligence.pdf (v1)
+3. Wait for ""Extraction complete""
+4. Read extracted fields","Fields populated from the PDF text (vendor QuickPay, jurisdiction Malta, PII scope) with source excerpts; low-confidence fields flagged ""Needs review"""
+"TC-UI-037","Correct an extracted field","US-4.2","Functional","P2","ui-desktop","1. Extraction tab
+2. Type a corrected value for the first field
+3. Click Correct","Toast ""Field corrected""; field shows the new value with source AnalystCorrected; original retained in audit"
+"TC-UI-038","Draft narratives with AI; labelled pending review","US-5.1","Functional","P1","ui-desktop","1. Narrative tab
+2. Click ""Draft with AI"" on each category card","Each card shows AI narrative text and the badge ""AI-drafted - pending analyst review"""
+"TC-UI-039","Finalize is blocked while narratives are AI-drafted","US-5.1 / US-6.3","Negative","P1","ui-desktop","1. Finalize tab","""Narrative not reviewed: <categories>"" shown; Finalize and Route disabled"
+"TC-UI-040","Narrative edit needs a reason; accept-as-is and edit clear the AI label","US-6.1","Negative","P1","ui-desktop","1. Narrative tab
+2. Category #1: type new text, leave reason blank, Save edit
+3. Enter a reason, Save edit
+4. Other categories: Accept as-is","Blank reason blocked (""New text and a reason are both required.""); edited card -> ""Analyst edited""; accepted -> ""Analyst reviewed"""
+"TC-UI-041","Calculate scores - residual shown and always > 0","US-7.1","Functional","P1","ui-desktop","1. Scoring tab
+2. Category #1: inherent 5, effectiveness 1 -> Calculate
+3. Other categories: inherent 3, effectiveness 0.5 -> Calculate","Inherent, Mitigation and Residual shown; residual = inherent - effectiveness x mitigation; even at full effectiveness residual > 0"
+"TC-UI-042","Invalid score input shows a validation message","US-7.1","Negative","P2","ui-desktop","1. Scoring tab
+2. Category #1: inherent 9 -> Calculate","Clear validation message (""inherent must be 1-5""); stored score unchanged"
+"TC-UI-043","Score override: reason required, zero rejected, override labelled","US-7.2","Negative","P1","ui-desktop","1. Scoring tab, category #1
+2. Override residual 2 with blank reason
+3. Override residual 0 with a reason
+4. Override residual 2.5 with a reason","Blank reason blocked; 0 rejected (""must be greater than zero""); valid override shows ""Analyst override"" badge"
+"TC-UI-044","Finalize and route to committee","US-6.3 / US-8.1","E2E","P1","ui-desktop","1. Finalize tab: expect ""Ready to finalize.""
+2. Click Finalize
+3. Click Route to committee","Toasts ""Assessment finalized"" and ""Routed to committee""; header badge Finalized; Finalize button reads ""Finalized"""
+"TC-UI-045","Finalized assessment is read-only in the workspace","US-6.3","Negative","P1","ui-desktop","1. Re-open the finalized workspace
+2. Check Propose / Add / Save edit / Calculate / Override controls","Editing controls disabled or hidden once finalized"
+"TC-UI-046","Audit tab reconstructs every AI output and human decision with reasons","US-9.1 / US-6.2","Functional","P1","ui-desktop","1. Audit tab","Chronological list including ChangeRequest.Submitted, Attachment.Uploaded, CategoryMapping (AI + overrides with reasons), NarrativeSection, RiskScore Calculated/Overridden, Assessment.Finalized, routing; actor names shown; export available"
+"TC-UI-050","Routed assessment appears in the committee queue","US-8.1","Functional","P1","ui-desktop","1. Act as Jordan Blake (Committee)
+2. Open Committee Queue","Queue row shows request #, type and title with a Review button"
+"TC-UI-051","Committee sees the full assessment before voting","US-8.2","Functional","P1","ui-desktop","1. Open Review on the queue item","Panel shows the narrative per category, residual scores, cited policy and the analyst override history, read-only"
+"TC-UI-052","Vote validation: conditions / rationale mandatory","US-8.2","Negative","P1","ui-desktop","1. Choose ApproveWithConditions, leave conditions blank, Submit vote
+2. Choose Reject, leave rationale blank, Submit
+3. Choose Defer, leave rationale blank, Submit","Each blocked with the matching message; nothing recorded"
+"TC-UI-053","First member votes Approve-with-Conditions","US-8.2","Functional","P1","ui-desktop","1. As Jordan Blake choose ApproveWithConditions
+2. Enter conditions
+3. Submit vote","Toast ""Vote cast""; vote list shows ""Jordan Blake - ApproveWithConditions"" with the conditions; no decision yet (quorum 2)"
+"TC-UI-054","Second vote reaches quorum and records the decision with conditions","US-8.2 / US-8.3","E2E","P1","ui-desktop","1. As Riley Voss open the item
+2. Vote Approve","Decision banner ""Resolved: ApprovedWithConditions"" with the merged conditions; both votes listed individually"
+"TC-UI-055","Decided item leaves the queue; Product Owner sees the outcome and conditions","US-8.3 / US-1.3","Functional","P1","ui-desktop","1. As Jordan Blake reload Committee Queue
+2. As Priya Owens open My Requests","Item no longer queued; PO row shows the decision ""Approved with Conditions"" and the attached conditions"
+"TC-UI-060","Workflow rules are listed in plain structured form","US-10.2","Functional","P2","ui-desktop","1. Open Configuration","Each rule shows its key and JSON value (e.g. CommitteeQuorum {""quorum"": 2})"
+"TC-UI-061","Workflow rule save requires a reason and valid JSON","US-10.2","Negative","P1","ui-desktop","1. Click Save rule with Reason blank
+2. Enter a reason, set value to ""{quorum: 2"" and save
+3. Restore value {""quorum"": 2} and save with a reason","Blank reason blocked; invalid JSON blocked (""Rule value must be valid JSON.""); valid save -> ""Workflow rule updated"""
+"TC-UI-062","Mitigation factor >= 1.0 is rejected; valid value saves","US-10.1","Negative","P1","ui-desktop","1. Scoring configuration: click Save with nothing filled
+2. Pick Customers & Entities, factor 1.0, reason, Save
+3. Factor 0.85 (unchanged), reason, Save","Missing fields blocked; 1.0 rejected with the ""residual risk reach zero"" error; valid value -> ""Scoring configuration updated"""
+"TC-UI-070","Stored XSS payloads in a request title are rendered as text","NFR-SEC","Security","P1","ui-desktop","1. Submit (API) a request titled <img src=x onerror=window.__xss=1><script>window.__xss=2</script>
+2. Open My Requests (PO) and Assessments (Analyst)
+3. Check window.__xss and dialogs","Payload shown literally; no script executes"

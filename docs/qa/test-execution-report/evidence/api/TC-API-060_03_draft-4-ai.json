@@ -1,0 +1,36 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/api/Narrative/Draft",
+    "body": {
+      "assessmentId": "eba39f9c-a4ba-40cf-946d-fa0a3da1bb98",
+      "riskCategoryId": "22222222-2222-2222-2222-222222222224",
+      "regenerationFeedback": null
+    }
+  },
+  "response": {
+    "status": 200,
+    "durationMs": 3786,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:23:01 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": true,
+      "isBadRequest": false,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": {
+        "id": "07c0ea68-5e6e-4418-af8d-1115d57822d0",
+        "riskCategoryId": "22222222-2222-2222-2222-222222222224",
+        "categoryName": "Delivery Channels",
+        "narrativeText": "The proposed vendor onboarding involves a Malta-based card settlement processor, QA corrected value, which will access cardholder personally identifiable information (PII) and settlement files through an API delivery channel. This onboarding represents a non-face-to-face delivery channel, which inherently carries risk considerations for money laundering and terrorist financing due to the lack of in-person verification. As noted in the FFIEC BSA/AML Manual, delivery channels such as APIs facilitating remote transactions necessitate heightened vigilance in monitoring for suspicious activity (Delivery Channels section).\n\nGiven that Malta is a foreign jurisdiction, this relationship may be analogously considered in light of correspondent banking risk principles related to foreign financial institutions. Specifically, the policy excerpt emphasizes enhanced due diligence for foreign correspondent relationships, especially in higher-risk jurisdictions (Risks Associated with Money Laundering and Terrorist Financing - Correspondent Banking). While Malta is not explicitly classified here, the principle of assessing the adequacy of the vendor's AML controls and monitoring the transaction patterns remains critical.\n\nThe affected customer types include retail cardholders and MSB merchants, both of which could present diverse risk profiles. Accordingly, robust AML controls and continuous monitoring of transaction activity flowing through this API-based settlement vendor should be maintained to effectively mitigate delivery channel risks and align with the supervisory expectations delineated in the FFIEC guidance.",
+        "status": "AiDrafted",
+        "unsupportedClaimFlagsJson": "[\"Malta is considered a higher-risk jurisdiction for AML purposes\", \"The vendor uses nested account arrangements\"]"
+      },
+      "message": null
+    }
+  }
+}

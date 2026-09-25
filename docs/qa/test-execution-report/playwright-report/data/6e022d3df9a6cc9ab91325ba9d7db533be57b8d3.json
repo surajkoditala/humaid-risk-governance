@@ -1,0 +1,35 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/api/ChangeRequest/ef797803-aaf9-4a7a-b7af-a86f6f010f9a",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "durationMs": 278,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:23:38 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": true,
+      "isBadRequest": false,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": {
+        "id": "ef797803-aaf9-4a7a-b7af-a86f6f010f9a",
+        "requestNumber": "CR-2026-00060",
+        "changeType": "Vendor",
+        "title": "[QA-E2E FINAL09251251] API lifecycle - onboard settlement vendor",
+        "description": "Onboard a Malta-based card settlement processor with access to cardholder PII.",
+        "typeSpecificFieldsJson": "{\"details\": \"Vendor: QuickPay; jurisdiction: Malta; data access: cardholder PII\"}",
+        "status": "Decisioned",
+        "submittedByUserId": "a6a709a7-65e7-4a90-9b58-cbbaec1d651a",
+        "submittedAt": "2026-09-25T07:22:21.121384+00:00"
+      },
+      "message": null
+    }
+  }
+}
