@@ -1,0 +1,65 @@
+# =============================================================================
+# SRE watchdog (US-18.2) -- scheduled, not triggered by pushes or PRs.
+# =============================================================================
+# Every 30 minutes: queries Application Insights/Log Analytics for the same
+# two hard-threshold conditions main.monitor.tf's scheduled query rules email
+# on, plus two trend/anomaly conditions as a leading indicator ahead of
+# either threshold breaching. Claude turns the raw rows into a plain-
+# language verdict; post.sh opens/updates/closes one pinned GitHub issue per
+# condition, using issue state as the dedupe store.
+#
+# Read-only: the azure-cloud service connection only ever runs `az monitor
+# log-analytics query` here.
+#
+# Needs the `ai-review-secrets` variable group: CLAUDE_CODE_OAUTH_TOKEN
+# (`claude setup-token`, uses the Claude subscription, no API billing) and
+# GITHUB_PAT (repo scope, to open/close the watchdog issues).
+# =============================================================================
+
+trigger: none
+pr: none
+
+schedules:
+  - cron: "*/30 * * * *"
+    displayName: 'Every 30 minutes'
+    branches:
+      include:
+        - main
+    always: true
+
+variables:
+  - group: ai-review-secrets   # CLAUDE_CODE_OAUTH_TOKEN, GITHUB_PAT
+  - name: SRE_RESOURCE_GROUP
+    value: 'rg-gh-dev'
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+  - checkout: self
+
+  - task: AzureCLI@2
+    displayName: 'Query Log Analytics for watchdog signals'
+    inputs:
+      azureSubscription: 'azure-cloud'
+      scriptType: bash
+      scriptLocation: scriptPath
+      scriptPath: .azure-pipelines/scripts/sre-watchdog/query.sh
+    env:
+      SRE_RESOURCE_GROUP: $(SRE_RESOURCE_GROUP)
+
+  - script: bash .azure-pipelines/scripts/sre-watchdog/summarize.sh
+    displayName: 'Classify signals (Claude)'
+    timeoutInMinutes: 10
+    env:
+      CLAUDE_CODE_OAUTH_TOKEN: $(CLAUDE_CODE_OAUTH_TOKEN)
+
+  - script: bash .azure-pipelines/scripts/sre-watchdog/post.sh
+    displayName: 'Open/update/close SRE watchdog issues'
+    env:
+      GITHUB_PAT: $(GITHUB_PAT)
+
+  - publish: $(Build.ArtifactStagingDirectory)
+    artifact: 'sre-watchdog-$(Build.BuildId)'
+    displayName: 'Publish signals & verdict for audit trail'
+    condition: always()
