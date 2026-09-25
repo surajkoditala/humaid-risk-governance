@@ -50,3 +50,7 @@ dependency) and are mirrored below for review/audit — if you change one, chang
 - [`prompts/category-mapping.md`](prompts/category-mapping.md) ↔ `CategoryMappingAiClient.SystemPrompt`
 - [`prompts/document-extraction.md`](prompts/document-extraction.md) ↔ `DocumentExtractionAiClient.SystemPrompt`
 - [`prompts/narrative-drafting.md`](prompts/narrative-drafting.md) ↔ `NarrativeDraftingAiClient.SystemPrompt`
+
+## See also
+
+- [`docs/architecture/langgraph-evaluation.md`](../docs/architecture/langgraph-evaluation.md) — whether an orchestration framework (LangGraph) should replace the harness described above, and why the current recommendation is no (proposal, pending team decision).
