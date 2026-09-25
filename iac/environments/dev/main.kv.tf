@@ -17,17 +17,15 @@ module "keyvault" {
     ]
   }
 
-  #   # Enabling diagnostic settings	- 	#disabled for now to avoid costs
-  #   diagnostic_settings = {
-  #     kv_diag_setting = {
-  #       name                                     = "kv-${var.tags.product}-${var.tags.environment}-diagnostic-setting"
-  #       event_hub_authorization_rule_resource_id = module.evhns.eventhub_namespace_authorization_rule_id["evhns-auth-rule"]
-  #       workspace_resource_id                    = module.log_analytics_workspace.log_analytics_workspace_resource_id
-  #       log_analytics_destination_type           = "Dedicated"
-  #       log_groups                               = ["allLogs"]
-  #       metric_categories                        = ["AllMetrics"]
-  #     }
-  #   }
+  diagnostic_settings = {
+    kv_diag_setting = {
+      name                           = "kv-${var.tags.product}-${var.tags.environment}-diagnostic-setting"
+      workspace_resource_id          = module.log_analytics_workspace.log_analytics_workspace_resource_id
+      log_analytics_destination_type = "Dedicated"
+      log_groups                     = ["audit"] # secret/access events only, not every read
+      metric_categories              = ["AllMetrics"]
+    }
+  }
 
   private_endpoints = {
     kv_pe = {
