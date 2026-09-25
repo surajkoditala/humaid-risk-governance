@@ -179,6 +179,10 @@ module "container_app_gh_riskgovernance_backend_app" {
           {
             name  = "CORS_ALLOWED_ORIGINS__0"
             value = local.CORS_ALLOWED_ORIGINS__0
+          },
+          {
+            name  = "APPLICATIONINSIGHTS_CONNECTION_STRING"
+            value = local.APPLICATIONINSIGHTS_CONNECTION_STRING
           }
         ]
       }

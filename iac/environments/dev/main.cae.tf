@@ -5,7 +5,8 @@ module "container_app_env" {
   resource_group_name = module.rg.resource_group_name
   tags                = var.tags
 
-  # log_analytics_workspace_id = module.log_analytics_workspace.log_analytics_workspace_resource_id #disabled for now to avoid costs
+  # Console + system logs for both container apps, capped by the workspace's daily quota.
+  log_analytics_workspace_id = module.log_analytics_workspace.log_analytics_workspace_resource_id
 
   # No workload_profiles override -> defaults to [] -> pure Consumption plan.
   # A "D4" profile requests real Dedicated-plan VM cores

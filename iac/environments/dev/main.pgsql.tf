@@ -105,16 +105,14 @@ module "pgsql" {
     }
   }
 
-  #   # Enabling diagnostic settings - cost control
-  #   diagnostic_settings = {
-  #     pgsql_diag_setting = {
-  #       event_hub_authorization_rule_resource_id = module.evhns.eventhub_namespace_authorization_rule_id["evhns-auth-rule"]
-  #       workspace_resource_id                    = module.log_analytics_workspace.log_analytics_workspace_resource_id
-  #       log_analytics_destination_type           = "Dedicated" # Or "AzureDiagnostics"
-  #       log_groups                               = ["allLogs"]
-  #       metric_categories                        = ["AllMetrics"]
-  #     }
-  #   }
+  diagnostic_settings = {
+    pgsql_diag_setting = {
+      workspace_resource_id          = module.log_analytics_workspace.log_analytics_workspace_resource_id
+      log_analytics_destination_type = "Dedicated"
+      log_groups                     = ["allLogs"] # low volume: dev DB, no query logging enabled
+      metric_categories              = ["AllMetrics"]
+    }
+  }
 
   # private end point creation
   private_endpoints = {

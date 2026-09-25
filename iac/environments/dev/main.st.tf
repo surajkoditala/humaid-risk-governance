@@ -32,28 +32,26 @@ module "storage" {
     ]
   }
 
-  # # Diagnostic settings on the storage account - #disabled for now to avoid costs
-  # diagnostic_settings_storage_account = {
-  #   st_diag_setting = {
-  #     name                                     = "st-${var.tags.product}-${var.tags.environment}-diagnostic-setting"
-  #     event_hub_authorization_rule_resource_id = module.evhns.eventhub_namespace_authorization_rule_id["evhns-auth-rule"]
-  #     workspace_resource_id                    = module.log_analytics_workspace.log_analytics_workspace_resource_id
-  #     log_analytics_destination_type           = "Dedicated"
-  #     metric_categories                        = ["Capacity", "Transaction"]
-  #   }
-  # }
+  # Metrics only (aggregated counts, cheap) -- no request-level logs at the account level.
+  diagnostic_settings_storage_account = {
+    st_diag_setting = {
+      name                           = "st-${var.tags.product}-${var.tags.environment}-diagnostic-setting"
+      workspace_resource_id          = module.log_analytics_workspace.log_analytics_workspace_resource_id
+      log_analytics_destination_type = "Dedicated"
+      metric_categories              = ["Capacity", "Transaction"]
+    }
+  }
 
-  # # Diagnostic settings on Blob service - disabled for now to avoid costs
-  # diagnostic_settings_blob = {
-  #   st_blob_diag_setting = {
-  #     name                                     = "st-blob-${var.tags.product}-${var.tags.environment}-diagnostic-setting"
-  #     event_hub_authorization_rule_resource_id = module.evhns.eventhub_namespace_authorization_rule_id["evhns-auth-rule"]
-  #     workspace_resource_id                    = module.log_analytics_workspace.log_analytics_workspace_resource_id
-  #     log_analytics_destination_type           = "Dedicated"
-  #     log_groups                               = ["audit", "allLogs"]
-  #     metric_categories                        = ["Capacity", "Transaction"]
-  #   }
-  # }
+  # audit only -- "allLogs" would log every single blob read/write (document uploads), skip that.
+  diagnostic_settings_blob = {
+    st_blob_diag_setting = {
+      name                           = "st-blob-${var.tags.product}-${var.tags.environment}-diagnostic-setting"
+      workspace_resource_id          = module.log_analytics_workspace.log_analytics_workspace_resource_id
+      log_analytics_destination_type = "Dedicated"
+      log_groups                     = ["audit"]
+      metric_categories              = ["Capacity", "Transaction"]
+    }
+  }
 
   # Private Endpoints -- referencing the private DNS zone modules already
   # created in main.pdns.tf (not a data lookup -- those zones are managed here)
