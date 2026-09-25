@@ -28,7 +28,17 @@ resource "azurerm_monitor_action_group" "sre" {
 # anomaly baseline built into Application Insights, no thresholds to tune.
 # One rule covers both apps: FailureAnomaliesDetector breaks results down by
 # AppRoleName internally.
+#
+# Smart Detector rules live in the Microsoft.AlertsManagement namespace, which
+# is not in the provider's default "core" registration set -- register it here
+# or the subscription rejects the rule with MissingSubscriptionRegistration.
+resource "azurerm_resource_provider_registration" "alerts_management" {
+  name = "Microsoft.AlertsManagement"
+}
+
 resource "azurerm_monitor_smart_detector_alert_rule" "failure_anomalies" {
+  depends_on = [azurerm_resource_provider_registration.alerts_management]
+
   name                = "smart-failure-anomalies-${var.tags.product}-${var.tags.environment}"
   resource_group_name = module.rg.resource_group_name
   severity            = "Sev2"
