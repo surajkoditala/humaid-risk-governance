@@ -1,0 +1,50 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/api/Narrative/eba39f9c-a4ba-40cf-946d-fa0a3da1bb98",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "durationMs": 767,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:23:03 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": true,
+      "isBadRequest": false,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": [
+        {
+          "id": "a4483065-c1c3-4d27-8aa8-421a0a6dff45",
+          "riskCategoryId": "22222222-2222-2222-2222-222222222222",
+          "categoryName": "Customers & Entities",
+          "narrativeText": "The proposed business change involves onboarding QA corrected value, a Malta-based card settlement processor, which will have access to sensitive customer data including cardholder Personally Identifiable Information (PII) and settlement files. Given this processor's jurisdiction in Malta and the nature of the data access scope, there is an inherent risk related to the confidentiality and security of customer information, particularly involving retail cardholders and Money Services Business (MSB) merchants. The delivery channel for settlement processing will be through API without face-to-face contact, which aligns with categories of products and services identified in the FFIEC BSA/AML Manual as vulnerable to money laundering risks due to rapid movement of funds and limited physical interaction (Risks Associated with Money Laundering and Terrorist Financing - Products and Services).",
+          "status": "AiDrafted",
+          "unsupportedClaimFlagsJson": "[]"
+        },
+        {
+          "id": "d41ca34c-ab7b-4f0b-81f9-fc03ca6af113",
+          "riskCategoryId": "22222222-2222-2222-2222-222222222223",
+          "categoryName": "Geographic Locations",
+          "narrativeText": "The proposed change involves onboarding a Malta-based card settlement processor, QA corrected value, which will have access to cardholder PII and settlement files. This vendor will serve retail cardholders and MSB merchants through an API delivery channel, which is a non-face-to-face method. According to the FFIEC BSA/AML Manual on Risks Associated with Money Laundering and Terrorist Financing, non-face-to-face delivery channels, including reliance on third-party agents or correspondent relationships to deliver products, reduce a bank's ability to verify customer identity and intent directly, thereby increasing risk (Delivery Channels). Given that Malta is the vendor jurisdiction, it is critical to consider the geographic risk factors associated with operating in or contracting with vendors in that location, as outlined in the supervisory citation for Geographic Locations.",
+          "status": "AiDrafted",
+          "unsupportedClaimFlagsJson": "[]"
+        },
+        {
+          "id": "07c0ea68-5e6e-4418-af8d-1115d57822d0",
+          "riskCategoryId": "22222222-2222-2222-2222-222222222224",
+          "categoryName": "Delivery Channels",
+          "narrativeText": "The proposed vendor onboarding involves a Malta-based card settlement processor, QA corrected value, which will access cardholder personally identifiable information (PII) and settlement files through an API delivery channel. This onboarding represents a non-face-to-face delivery channel, which inherently carries risk considerations for money laundering and terrorist financing due to the lack of in-person verification. As noted in the FFIEC BSA/AML Manual, delivery channels such as APIs facilitating remote transactions necessitate heightened vigilance in monitoring for suspicious activity (Delivery Channels section).\n\nGiven that Malta is a foreign jurisdiction, this relationship may be analogously considered in light of correspondent banking risk principles related to foreign financial institutions. Specifically, the policy excerpt emphasizes enhanced due diligence for foreign correspondent relationships, especially in higher-risk jurisdictions (Risks Associated with Money Laundering and Terrorist Financing - Correspondent Banking). While Malta is not explicitly classified here, the principle of assessing the adequacy of the vendor's AML controls and monitoring the transaction patterns remains critical.\n\nThe affected customer types include retail cardholders and MSB merchants, both of which could present diverse risk profiles. Accordingly, robust AML controls and continuous monitoring of transaction activity flowing through this API-based settlement vendor should be maintained to effectively mitigate delivery channel risks and align with the supervisory expectations delineated in the FFIEC guidance.",
+          "status": "AiDrafted",
+          "unsupportedClaimFlagsJson": "[\"Malta is considered a higher-risk jurisdiction for AML purposes\", \"The vendor uses nested account arrangements\"]"
+        }
+      ],
+      "message": null
+    }
+  }
+}

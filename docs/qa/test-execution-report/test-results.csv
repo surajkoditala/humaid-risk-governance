@@ -1,0 +1,297 @@
+﻿"Test case ID","Title","Project","Status","Duration (s)","Actual result","Defects","Failure detail","Evidence files"
+"TC-A11Y-001","Sign-in gate has no critical or serious WCAG violations","nfr","PASSED","4.1","no violations","","","evidence/nfr/TC-A11Y-001_01_axe-violations.json
+evidence/nfr/TC-A11Y-001_02_sign-in-gate.png"
+"TC-A11Y-002","Submit Request has no critical or serious WCAG violations","nfr","FAILED","5.6","button-name [critical] x3","DEF-029","Error: expect(received).toEqual(expected) // deep equality  - Expected  - 1 + Received  + 3","evidence/nfr/TC-A11Y-002_01_axe-violations.json
+evidence/nfr/TC-A11Y-002_02_submit-request.png"
+"TC-A11Y-003","My Requests has no critical or serious WCAG violations","nfr","FAILED","8.6","button-name [critical] x1; scrollable-region-focusable [serious] x1","DEF-029","Error: expect(received).toEqual(expected) // deep equality  - Expected  - 1 + Received  + 4","evidence/nfr/TC-A11Y-003_01_axe-violations.json
+evidence/nfr/TC-A11Y-003_02_my-requests.png"
+"TC-A11Y-004","Assessments inbox has no critical or serious WCAG violations","nfr","FAILED","8.1","button-name [critical] x1","DEF-029","Error: expect(received).toEqual(expected) // deep equality  - Expected  - 1 + Received  + 3","evidence/nfr/TC-A11Y-004_01_axe-violations.json
+evidence/nfr/TC-A11Y-004_02_assessments-inbox.png"
+"TC-A11Y-005","Assessment workspace has no critical or serious WCAG violations","nfr","FAILED","7.4","button-name [critical] x2; color-contrast [serious] x7","DEF-029","Error: expect(received).toEqual(expected) // deep equality  - Expected  - 1 + Received  + 4","evidence/nfr/TC-A11Y-005_01_axe-violations.json
+evidence/nfr/TC-A11Y-005_02_assessment-workspace.png"
+"TC-A11Y-006","Committee Queue has no critical or serious WCAG violations","nfr","FAILED","7.0","button-name [critical] x1","DEF-029","Error: expect(received).toEqual(expected) // deep equality  - Expected  - 1 + Received  + 3","evidence/nfr/TC-A11Y-006_01_axe-violations.json
+evidence/nfr/TC-A11Y-006_02_committee-queue.png"
+"TC-A11Y-007","Configuration has no critical or serious WCAG violations","nfr","FAILED","6.3","button-name [critical] x2; label [critical] x4","DEF-029","Error: expect(received).toEqual(expected) // deep equality  - Expected  - 1 + Received  + 4","evidence/nfr/TC-A11Y-007_01_axe-violations.json
+evidence/nfr/TC-A11Y-007_02_configuration.png"
+"TC-A11Y-008","Core flow is keyboard operable","nfr","PASSED","4.3","gate, switcher and user choice all operable by keyboard","","","evidence/nfr/TC-A11Y-008_01_keyboard-selected-po.png"
+"TC-API-001","Health check endpoint responds","api","PASSED","0.9","200 ""pong"" in 866 ms","","","evidence/api/TC-API-001_01_get-api-ping.json"
+"TC-API-002","Seeded users cover all four roles","api","PASSED","0.8","6 users; roles = Admin, Analyst, CommitteeMember, ProductOwner","","","evidence/api/TC-API-002_01_get-api-user.json"
+"TC-API-003","Risk categories are exactly the four FFIEC categories, each citable","api","PASSED","0.8","Categories: Customers & Entities | Delivery Channels | Geographic Locations | Products & Services; all cite FFIEC BSA/AML Manual","","","evidence/api/TC-API-003_01_get-api-categorymapping-categories.json"
+"TC-API-004","Mock-systems lookups (CRM / core banking / vendor mgmt) return synthetic data","api","PASSED","1.8","MockCustomers=6, MockProducts=5, MockVendors=4","","","evidence/api/TC-API-004_01_get-api-dataingestion-mockcustomers.json
+evidence/api/TC-API-004_02_get-api-dataingestion-mockproducts.json
+evidence/api/TC-API-004_03_get-api-dataingestion-mockvendors.json"
+"TC-API-010","Submit a valid change request","api","PASSED","1.2","CR-2026-00045, status Submitted, submittedAt 2026-09-25T07:21:58.094958+00:00","","","evidence/api/TC-API-010_01_post-api-changerequest-submit.json"
+"TC-API-011","Every one of the six change types is accepted","api","PASSED","2.3","Product=200, Feature=200, Process=200, Vendor=200, Geography=200, CustomerSegment=200","","","evidence/api/TC-API-011_01_submit-product.json
+evidence/api/TC-API-011_02_submit-feature.json
+evidence/api/TC-API-011_03_submit-process.json
+evidence/api/TC-API-011_04_submit-vendor.json
+evidence/api/TC-API-011_05_submit-geography.json
+evidence/api/TC-API-011_06_submit-customersegment.json"
+"TC-API-012","Request numbers are unique","api","PASSED","1.1","46 requests, 46 distinct numbers","","","evidence/api/TC-API-012_01_get-api-changerequest.json"
+"TC-API-013","Submission with missing mandatory fields is rejected","api","FAILED","1.2","empty title/description -> 200 CR-2026-00052; empty changeType -> 500 Failed to submit change request.","DEF-009 DEF-005","Error: expect(received).toBe(expected) // Object.is equality  Expected: 400 Received: 200 | Error: expect(received).toBe(expected) // Object.is equality  Expected: 400 Received: 500","evidence/api/TC-API-013_01_empty-title-description.json
+evidence/api/TC-API-013_02_empty-changetype.json"
+"TC-API-014","Unknown change type is rejected","api","FAILED","1.2","500 Failed to submit change request.","DEF-005","Error: expect(received).toBe(expected) // Object.is equality  Expected: 400 Received: 500","evidence/api/TC-API-014_01_post-api-changerequest-submit.json"
+"TC-API-015","Get change request by id; unknown id returns 404","api","PASSED","2.4","existing=200, unknown=404 ""Change request not found."", malformed=404","","","evidence/api/TC-API-015_01_list.json
+evidence/api/TC-API-015_02_get-api-changerequest-fc726513-8a52-42e1-a104-fcbf7d023ab2.json
+evidence/api/TC-API-015_03_get-api-changerequest-00000000-0000-0000-0000-000000000abc.json
+evidence/api/TC-API-015_04_get-api-changerequest-not-a-guid.json"
+"TC-API-016","""My requests"" returns only the requesting user's items with days elapsed","api","PASSED","1.7","PO has 47 requests; analyst has 0","","","evidence/api/TC-API-016_01_po-requests.json
+evidence/api/TC-API-016_02_analyst-requests.json"
+"TC-API-017","Attach PDF, DOCX and XLSX; re-upload creates a new version","api","FAILED","2.5","pdf v1, docx v1, xlsx v1; replacement (supersedesAttachmentId) -> 500 ""Failed to attach document.""; pdf versions stored: [1]","DEF-008","Error: replacing a document must create version 2  expect(received).toBe(expected) // Object.is equality","evidence/api/TC-API-017_01_submit.json
+evidence/api/TC-API-017_02_upload-vendor-due-diligence-pdf.json
+evidence/api/TC-API-017_03_upload-product-spec-docx.json
+evidence/api/TC-API-017_04_upload-control-matrix-xlsx.json
+evidence/api/TC-API-017_05_upload-vendor-due-diligence-pdf-replacement.json
+evidence/api/TC-API-017_06_attachments.json"
+"TC-API-018","Unsupported / unsafe file types are rejected with a clear message","api","FAILED","2.0","txt -> 500 ""Failed to attach document.""; exe -> 500 ""Failed to attach document.""; exe-as-pdf -> 200 ""{""id"":""6aaa2f77-6005-46ec-a4ed-4b47a76a5d83"",""version"":1}""","DEF-006","Error: expect(received).toBe(expected) // Object.is equality  Expected: 400 Received: 500 | Error: expect(received).toBe(expected) // Object.is equality  Expected: 400 Received: 500 | Error: expect(received).toBe(expected) // Object.is equality  Expected: 400 Received: 200 | Error: expect(received).toMatch(expected)  Expected pattern: /PDF, DOCX, XLSX/ Received string:  ""Failed to attach document.""","evidence/api/TC-API-018_01_submit.json
+evidence/api/TC-API-018_02_txt.json
+evidence/api/TC-API-018_03_exe.json
+evidence/api/TC-API-018_04_exe-spoofed-as-pdf.json"
+"TC-API-019","Clarification request is recorded against the change request","api","PASSED","1.7","clarification id 7be6b406-d0e6-4907-aa52-7afc7ea12b65; audit events: ChangeRequest.Created, Clarification.Requested","","","evidence/api/TC-API-019_01_submit.json
+evidence/api/TC-API-019_02_post-api-changerequest-ba127540-de51-4e40-989e-29b7bb56ec57-requestclarification.json
+evidence/api/TC-API-019_03_audit.json"
+"TC-API-020","External snapshot is ingested when a mock entity is linked","api","PASSED","1.9","linked -> 200; unlinked -> 404 ""No external snapshot linked to this change request.""","","","evidence/api/TC-API-020_01_submit-linked.json
+evidence/api/TC-API-020_02_submit-plain.json
+evidence/api/TC-API-020_03_snapshot-linked.json
+evidence/api/TC-API-020_04_snapshot-none.json"
+"TC-API-030","Open assessment workspace is idempotent","api","PASSED","2.4","CR-2026-00060: assessment eba39f9c-a4ba-40cf-946d-fa0a3da1bb98 (same on 2nd open: true); status InAssessment","","","evidence/api/TC-API-030_01_vendors.json
+evidence/api/TC-API-030_02_submit.json
+evidence/api/TC-API-030_03_attach-pdf.json
+evidence/api/TC-API-030_04_open-1.json
+evidence/api/TC-API-030_05_open-2.json
+evidence/api/TC-API-030_06_cr-after-open.json"
+"TC-API-031","Finalize and route are blocked while nothing has been reviewed","api","FAILED","2.6","CR-2026-00061: readiness.isReady=true with 0 categories; finalize -> 200 ""Finalized""; route -> 200 ""Routed""; in committee queue: true","DEF-001","Error: an assessment with no mapped categories is not ""ready""  expect(received).toBe(expected) // Object.is equality | Error: finalize with zero categories mapped must be blocked  expect(received).toBe(expected) // Object.is equality | Error: expect(received).toBe(expected) // Object.is equality  Expected: 400 Received: 200","evidence/api/TC-API-031_01_submit-probe.json
+evidence/api/TC-API-031_02_open-probe.json
+evidence/api/TC-API-031_03_readiness.json
+evidence/api/TC-API-031_04_finalize.json
+evidence/api/TC-API-031_05_route.json
+evidence/api/TC-API-031_06_queue.json"
+"TC-API-032","AI proposes FFIEC categories with citations for a Vendor request","api","FAILED","2.2","AI proposed in 2122 ms: Customers & Entities [AiProposed] ""FFIEC BSA/AML Manual - Risks Associated with Money Laundering and Terrorist Fina""","DEF-012","Error: CLAUDE.md mapping: Vendor onboarding -> Customers/Entities + Delivery Channels  expect(received).toEqual(expected) // deep equality","evidence/api/TC-API-032_01_propose-ai.json"
+"TC-API-033","Category override requires a reason; AI original retained","api","PASSED","2.8","blank reason -> 400 ""P0001: A reason is required to override a category mapping""; add -> 200; remove -> 200; re-add -> 200; active now: Customers & Entities, Geographic Locations, Delivery Channels; 4 category audit events","","","evidence/api/TC-API-033_01_override-blank-reason.json
+evidence/api/TC-API-033_02_add-geo.json
+evidence/api/TC-API-033_03_remove-channels.json
+evidence/api/TC-API-033_04_re-add-channels.json
+evidence/api/TC-API-033_05_mapping.json
+evidence/api/TC-API-033_06_audit.json"
+"TC-API-040","Policy search returns ranked, citable FFIEC/FATF passages","api","PASSED","1.7","""beneficial ownership"": 1 hits in 792 ms, top = FFIEC BSA/AML Examination Manual Risks Associated with Money Laundering and Terrorist Financing - Beneficial Ownership (https://bsaaml.ffiec.gov), effectiveDate=2014-01-01T00:00:00; filtered: 2; nonsense: 0","","","evidence/api/TC-API-040_01_search.json
+evidence/api/TC-API-040_02_search-filtered.json
+evidence/api/TC-API-040_03_search-nonsense.json
+evidence/api/TC-API-040_04_search-broad.json"
+"TC-API-041","Policy search input validation / injection safety","api","PASSED","2.1","sqli -> 200 (0 rows); xss -> 200; empty -> 400; topK=100000 -> 200 (5 rows); corpus intact -> 1 rows","","","evidence/api/TC-API-041_01_sqli.json
+evidence/api/TC-API-041_02_xss.json
+evidence/api/TC-API-041_03_empty.json
+evidence/api/TC-API-041_04_topk-huge.json
+evidence/api/TC-API-041_05_corpus-still-intact.json"
+"TC-API-042","Record policy reliance decisions","api","FAILED","2.8","3 ReliedUpon + NotRelevant(200) recorded; list has 4; invalid ""Maybe"" -> 500 ""Failed to record policy reliance.""","DEF-005","Error: invalid enum should be a 400, not a 500  expect(received).toBe(expected) // Object.is equality","evidence/api/TC-API-042_01_relied-2.json
+evidence/api/TC-API-042_02_relied-3.json
+evidence/api/TC-API-042_03_relied-4.json
+evidence/api/TC-API-042_04_not-relevant.json
+evidence/api/TC-API-042_05_invalid-decision.json
+evidence/api/TC-API-042_06_reliance.json"
+"TC-API-043","One passage relied upon for two categories keeps both decisions","api","FAILED","1.9","ids returned: fa89511e-927e-4f91-b3a4-1168a983f4ba / fa89511e-927e-4f91-b3a4-1168a983f4ba (SAME row); rows for chunk X: 2","DEF-011","Error: expect(received).toBe(expected) // Object.is equality  Expected: 2 Received: 1","evidence/api/TC-API-043_01_chunk-x-for-customers.json
+evidence/api/TC-API-043_02_chunk-x-for-channels.json
+evidence/api/TC-API-043_03_reliance.json"
+"TC-API-044","Policy corpus covers the core FFIEC risk topics","api","FAILED","3.2","wire transfer=0, correspondent banking=3, politically exposed=1, sanctions=1, money services business=1, prepaid=1, cash-intensive=1, high-risk jurisdiction=0; 2/8 topics have no passage; broad query returns 5 passages in total","DEF-032","Error: wire transfer  expect(received).toBeGreaterThan(expected) | Error: high-risk jurisdiction  expect(received).toBeGreaterThan(expected)","evidence/api/TC-API-044_01_wire-transfer.json
+evidence/api/TC-API-044_02_correspondent-banking.json
+evidence/api/TC-API-044_03_politically-exposed.json
+evidence/api/TC-API-044_04_sanctions.json
+evidence/api/TC-API-044_05_money-services-business.json
+evidence/api/TC-API-044_06_prepaid.json
+evidence/api/TC-API-044_07_cash-intensive.json
+evidence/api/TC-API-044_08_high-risk-jurisdiction.json
+evidence/api/TC-API-044_09_corpus-size-probe.json"
+"TC-API-050","AI extracts structured fields from the document with confidence and source excerpts","api","PASSED","3.4","3312 ms: vendor_name=QuickPay Processing Ltd (conf 1, review=false); vendor_jurisdiction=Malta (conf 1, review=false); data_access_scope=cardholder PII and settlement files (conf 1, review=false); customer_types_affected=retail cardholders, MSB merchants (conf 1, review=false); delivery_channel=API, non-face-to-face (conf 1, review=false)","","","evidence/api/TC-API-050_01_extract-ai.json"
+"TC-API-051","Extracted-field correction: material change needs a reason; original retained","api","PASSED","2.5","material/no reason -> 400 ""A reason is required for this correction - it materially changes the field's meaning.""; trivial -> 200; material+reason -> 200; 7 extraction audit events; field vendor_name now ""QA corrected value""","","","evidence/api/TC-API-051_01_material-no-reason.json
+evidence/api/TC-API-051_02_trivial-no-reason.json
+evidence/api/TC-API-051_03_material-with-reason.json
+evidence/api/TC-API-051_04_fields.json
+evidence/api/TC-API-051_05_audit.json"
+"TC-API-060","AI drafts one narrative section per category, labelled AiDrafted","api","PASSED","10.4","Customers & Entities: 896 chars in 3550 ms, flags=[] | Geographic Locations: 885 chars in 3000 ms, flags=[] | Delivery Channels: 1626 chars in 3786 ms, flags=[""Malta is considered a higher-risk jurisdiction for AML purposes"", ""The vendor uses nested account arrangements""]","","","evidence/api/TC-API-060_01_draft-2-ai.json
+evidence/api/TC-API-060_02_draft-3-ai.json
+evidence/api/TC-API-060_03_draft-4-ai.json"
+"TC-API-061","Finalize is blocked while a section is still AI-drafted","api","PASSED","1.2","outstanding=[""Customers & Entities"",""Geographic Locations"",""Delivery Channels""]; finalize -> 400 ""Narrative not yet reviewed for: Customers & Entities, Geographic Locations, Delivery Channels""","","","evidence/api/TC-API-061_01_readiness.json
+evidence/api/TC-API-061_02_finalize.json"
+"TC-API-062","Regenerate one section with feedback; others untouched; prior version kept","api","PASSED","4.2","regenerated in 2559 ms; section #1 changed, 2 other sections unchanged; narrative audit events: AiDrafted, AiDrafted, AiDrafted, AiDrafted","","","evidence/api/TC-API-062_01_before.json
+evidence/api/TC-API-062_02_regenerate-ai.json
+evidence/api/TC-API-062_03_after.json
+evidence/api/TC-API-062_04_audit.json"
+"TC-API-063","Narrative edit requires a reason; review/accept sets analyst status","api","PASSED","1.9","no reason -> 400 ""P0001: A reason is required to edit an AI-drafted narrative section""; edit -> 200; statuses: Customers & Entities=AnalystEdited, Geographic Locations=AnalystReviewed, Delivery Channels=AnalystReviewed","","","evidence/api/TC-API-063_01_edit-no-reason.json
+evidence/api/TC-API-063_02_edit-with-reason.json
+evidence/api/TC-API-063_03_accept-3.json
+evidence/api/TC-API-063_04_accept-4.json
+evidence/api/TC-API-063_05_sections.json"
+"TC-API-070","Residual risk = inherent - (effectiveness x mitigation factor), always > 0","api","PASSED","1.5","cat#1: 4 - 0.8 x 0.85 = 3.32; extreme 1 - 1.0 x 0.85 = 0.15 (> 0)","","","evidence/api/TC-API-070_01_calc-4-0-8.json
+evidence/api/TC-API-070_02_calc-1-1-0-extreme.json
+evidence/api/TC-API-070_03_calc-4.json"
+"TC-API-071","Out-of-range scoring inputs are rejected cleanly","api","FAILED","2.0","(0, 0.5) -> 500 ""Failed to calculate risk score.""; (6, 0.5) -> 500 ""Failed to calculate risk score.""; (3, 1.5) -> 500 ""Failed to calculate risk score.""; (3, -0.2) -> 500 ""Failed to calculate risk score.""","","Error: should be a 400 validation error, not a 500  expect(received).toBe(expected) // Object.is equality | Error: should be a 400 validation error, not a 500  expect(received).toBe(expected) // Object.is equality | Error: should be a 400 validation error, not a 500  expect(received).toBe(expected) // Object.is equality | Error: should be a 400 validation error, not a 500  expect(received).toBe(expected) // Object.is equality","evidence/api/TC-API-071_01_inherent-0-eff-0-5.json
+evidence/api/TC-API-071_02_inherent-6-eff-0-5.json
+evidence/api/TC-API-071_03_inherent-3-eff-1-5.json
+evidence/api/TC-API-071_04_inherent-3-eff-0-2.json
+evidence/api/TC-API-071_05_scores-unchanged.json"
+"TC-API-072","Score override: reason mandatory, residual must stay > 0, labelled as override","api","FAILED","2.9","blank -> 400; zero -> 400 ""residual_rating must be greater than zero - controls mitigate risk, they never eliminate it.""; negative -> 400; valid -> 200; row: residual 2.5, isOverride=true, scoredBy=System, reason=""Vendor has had two prior regulatory findings""; RiskScore audit: Calculated, Calculated, Calculated, Overridden","DEF-014","Error: an analyst override should be attributed to the Analyst, not System  expect(received).toBe(expected) // Object.is equality","evidence/api/TC-API-072_01_blank-reason.json
+evidence/api/TC-API-072_02_zero.json
+evidence/api/TC-API-072_03_negative.json
+evidence/api/TC-API-072_04_valid.json
+evidence/api/TC-API-072_05_scores.json
+evidence/api/TC-API-072_06_audit.json"
+"TC-API-073","Controls library per category","api","FAILED","1.8","controls per category: products=0, customers=0, geo=0, channels=0","DEF-013","Error: US-7.1 AC3 needs a controls library to credit and trace  expect(received).toBeGreaterThan(expected)","evidence/api/TC-API-073_01_controls-products.json
+evidence/api/TC-API-073_02_controls-customers.json
+evidence/api/TC-API-073_03_controls-geo.json
+evidence/api/TC-API-073_04_controls-channels.json"
+"TC-API-080","Committee vote is rejected before the assessment is routed","api","PASSED","1.2","400 ""Assessment eba39f9c-a4ba-40cf-946d-fa0a3da1bb98 is not in the committee queue (change request status: InAssessment). Route it first.""","","","evidence/api/TC-API-080_01_post-api-committee-vote.json"
+"TC-API-081","Finalize records the analyst; route puts it in the committee queue","api","PASSED","2.7","finalize 200, route 200; in queue: true; CR status PendingCommittee; finalize audit actor ""Amara Chen""","","","evidence/api/TC-API-081_01_readiness.json
+evidence/api/TC-API-081_02_finalize.json
+evidence/api/TC-API-081_03_route.json
+evidence/api/TC-API-081_04_queue.json
+evidence/api/TC-API-081_05_cr.json
+evidence/api/TC-API-081_06_audit.json"
+"TC-API-082","Edits after finalization are blocked (assessment locked)","api","FAILED","1.8","narrative edit -> 200; score override -> 200; category add -> 200; re-finalize -> 400","DEF-007","Error: narrative edit after finalize  expect(received).not.toBe(expected) // Object.is equality | Error: score override after finalize  expect(received).not.toBe(expected) // Object.is equality | Error: category change after finalize  expect(received).not.toBe(expected) // Object.is equality","evidence/api/TC-API-082_01_narrative-edit.json
+evidence/api/TC-API-082_02_score-override.json
+evidence/api/TC-API-082_03_category-add.json
+evidence/api/TC-API-082_04_finalize-again.json"
+"TC-API-083","Vote validation: conditions / rationale mandatory; only committee members may vote","api","FAILED","3.7","AWC blank -> 200; Reject none -> 400; Defer whitespace -> 200; ""Maybe"" -> 400 ""Approve-with-conditions requires conditions text; reject/defer require a rationale.""; PO vote -> 200; recorded votes: Jordan Blake=Defer, Priya Owens=Approve; decision: Deferred","DEF-002 DEF-030","Error: blank conditions  expect(received).toBe(expected) // Object.is equality | Error: whitespace-only rationale  expect(received).toBe(expected) // Object.is equality | Error: Product Owner must not be able to vote  expect(received).toContain(expected) // indexOf | Error: no decision should result from invalid / non-member votes  expect(received).toBe(expected) // Object.is equality","evidence/api/TC-API-083_01_awc-blank.json
+evidence/api/TC-API-083_02_reject-no-rationale.json
+evidence/api/TC-API-083_03_defer-blank-rationale.json
+evidence/api/TC-API-083_04_invalid-vote.json
+evidence/api/TC-API-083_05_po-votes.json
+evidence/api/TC-API-083_06_votes.json
+evidence/api/TC-API-083_07_decision.json"
+"TC-API-084","A member vote cannot be silently replaced","api","FAILED","4.3","first -> 200 id 90d10b72-34ab-4700-8eee-2e4e68b76145; second -> 200 id 90d10b72-34ab-4700-8eee-2e4e68b76145 (SAME row - overwritten); votes table now: Jordan Blake=Reject; vote audit events: 2","DEF-003","Error: re-vote should be rejected  expect(received).toContain(expected) // indexOf | Error: first vote must not be overwritten  expect(received).toBe(expected) // Object.is equality","evidence/api/TC-API-084_01_submit-probe-2.json
+evidence/api/TC-API-084_02_open.json
+evidence/api/TC-API-084_03_finalize.json
+evidence/api/TC-API-084_04_route.json
+evidence/api/TC-API-084_05_first-vote.json
+evidence/api/TC-API-084_06_second-vote.json
+evidence/api/TC-API-084_07_votes.json
+evidence/api/TC-API-084_08_audit.json"
+"TC-API-085","Individual votes recorded; quorum resolves the decision conservatively","api","PASSED","3.3","vote1 200; vote2 200; votes: Jordan Blake=ApproveWithConditions, Riley Voss=Approve; decision ApprovedWithConditions ""Jordan Blake: Annual on-site audit of the vendor; PII encrypted at rest""; CR Decisioned; late vote -> 400","","","evidence/api/TC-API-085_01_vote-1-awc.json
+evidence/api/TC-API-085_02_vote-2-approve.json
+evidence/api/TC-API-085_03_votes.json
+evidence/api/TC-API-085_04_decision.json
+evidence/api/TC-API-085_05_cr.json
+evidence/api/TC-API-085_06_late-vote.json"
+"TC-API-090","Audit trail reconstructs the full history in order","api","PASSED","1.1","38 events, chronological; entity types: ChangeRequest, ExternalSnapshot, Attachment, CategoryMapping, PolicyReliance, ExtractedField, NarrativeSection, RiskScore, Assessment, CommitteeVote, CommitteeDecision, MockSystemsFeedback","","","evidence/api/TC-API-090_01_audit-trail.json"
+"TC-API-091","Audit records cannot be modified or deleted through the API","api","PASSED","2.2","PUT 405, DELETE 405, PATCH 405; events before=38 after=38","","","evidence/api/TC-API-091_01_before.json
+evidence/api/TC-API-091_02_put.json
+evidence/api/TC-API-091_03_delete.json
+evidence/api/TC-API-091_04_patch.json
+evidence/api/TC-API-091_05_after.json"
+"TC-API-100","Mitigation factor >= 1.0 (or < 0) is rejected at configuration time","api","PASSED","1.3","1 -> 400 ""max_mitigation_factor must be in [0, 1.0) - a value of 1.0 or more would let residual risk reach zero.""; 1.5 -> 400 ""max_mitigation_factor must be in [0, 1.0) - a value of 1.0 or more would let residual risk reach zero.""; -0.1 -> 400 ""max_mitigation_factor must be in [0, 1.0) - a value of 1.0 or more would let residual risk reach zero.""","","","evidence/api/TC-API-100_01_mf-1.json
+evidence/api/TC-API-100_02_mf-1-5.json
+evidence/api/TC-API-100_03_mf-0-1.json"
+"TC-API-101","Scoring configuration change requires a reason","api","FAILED","0.8","500 ""Failed to update scoring configuration.""","DEF-005","Error: expect(received).toBe(expected) // Object.is equality  Expected: 400 Received: 500","evidence/api/TC-API-101_01_post-api-scoring-config.json"
+"TC-API-102","Config change applies only to assessments started afterwards","api","FAILED","2.5","probe started at 0.85; after change to 0.80 the in-flight calc used mf=0.8 (residual 2.2)","DEF-016","Error: expect(received).toBe(expected) // Object.is equality  Expected: 0.85 Received: 0.8","evidence/api/TC-API-102_01_submit-probe.json
+evidence/api/TC-API-102_02_open.json
+evidence/api/TC-API-102_03_set-0-80.json
+evidence/api/TC-API-102_04_calculate-on-in-flight.json
+evidence/api/TC-API-102_05_restore-baseline.json"
+"TC-API-103","Workflow rules: listed in plain form; reason mandatory; invalid JSON rejected","api","FAILED","2.3","rules: CommitteeQuorum={""quorum"": 2}; blank reason -> 400 ""A reason is required to change a workflow rule.""; invalid JSON -> 500 ""Failed to update workflow rule.""; valid -> 200; quorum now {""quorum"": 2}","DEF-005","Error: invalid JSON should be a 400, not a 500  expect(received).toBe(expected) // Object.is equality","evidence/api/TC-API-103_01_rules.json
+evidence/api/TC-API-103_02_blank-reason.json
+evidence/api/TC-API-103_03_invalid-json.json
+evidence/api/TC-API-103_04_valid-unchanged.json
+evidence/api/TC-API-103_05_rules-after.json"
+"TC-PERF-001","Read API latency (10 samples per endpoint)","nfr","PASSED","19.3","Ping: p50 271 / p95 905 ms; User: p50 301 / p95 310 ms; ChangeRequest: p50 322 / p95 835 ms; Committee/Queue: p50 301 / p95 304 ms; CategoryMapping/Categories: p50 301 / p95 307 ms; PolicyResearch/Search?queryText=customer&topK=5: p50 299 / p95 304 ms","","","evidence/nfr/TC-PERF-001_01_latency-table.json"
+"TC-PERF-002","Burst of 25 concurrent reads","nfr","PASSED","1.9","25 parallel: 0 errors; p50 1459 ms, p95 1807 ms, max 1819 ms; wall 1842 ms","","","evidence/nfr/TC-PERF-002_01_burst-results.json"
+"TC-PERF-003","Initial page load and bundle size","nfr","FAILED","3.5","TTFB 776 ms, DOMContentLoaded 2704 ms, load 2716 ms, JS 654 KB, CSS 55 KB","DEF-031","Error: expect(received).toBeLessThan(expected)  Expected: < 2000 Received:   2704 | Error: expect(received).toBeLessThan(expected)  Expected: < 500 Received:   654","evidence/nfr/TC-PERF-003_01_navigation-timing.json
+evidence/nfr/TC-PERF-003_02_loaded.png"
+"TC-PERF-004","Screen-to-screen navigation responsiveness","nfr","PASSED","7.0","inbox table 953 ms; workspace 449 ms","","","evidence/nfr/TC-PERF-004_01_workspace-rendered.png"
+"TC-RWD-001","Sidebar collapses behind a menu button on mobile","ui-mobile","PASSED","6.4","sidebar off-canvas by default; opens on menu tap; closes after choosing a screen","","","evidence/ui-mobile/TC-RWD-001_01_mobile-default.png
+evidence/ui-mobile/TC-RWD-001_02_mobile-menu-open.png
+evidence/ui-mobile/TC-RWD-001_03_mobile-after-navigate.png"
+"TC-RWD-002","""Submit Request"" fits a 412 px viewport without horizontal scrolling","ui-mobile","PASSED","6.0","scrollWidth 412 px vs viewport 412 px","","","evidence/ui-mobile/TC-RWD-002_01_submit-request-mobile.png"
+"TC-RWD-003","""My Requests"" fits a 412 px viewport without horizontal scrolling","ui-mobile","PASSED","6.8","scrollWidth 412 px vs viewport 412 px","","","evidence/ui-mobile/TC-RWD-003_01_my-requests-mobile.png"
+"TC-RWD-004","""Assessments"" fits a 412 px viewport without horizontal scrolling","ui-mobile","PASSED","6.9","scrollWidth 412 px vs viewport 412 px","","","evidence/ui-mobile/TC-RWD-004_01_assessments-mobile.png"
+"TC-RWD-005","""Committee Queue"" fits a 412 px viewport without horizontal scrolling","ui-mobile","PASSED","6.0","scrollWidth 412 px vs viewport 412 px","","","evidence/ui-mobile/TC-RWD-005_01_committee-queue-mobile.png"
+"TC-RWD-006","""Configuration"" fits a 412 px viewport without horizontal scrolling","ui-mobile","PASSED","5.9","scrollWidth 412 px vs viewport 412 px","","","evidence/ui-mobile/TC-RWD-006_01_configuration-mobile.png"
+"TC-RWD-007","Assessment workspace tabs are reachable on mobile","ui-mobile","PASSED","6.3","Audit tab opened; page scrollWidth 412 vs 412","","","evidence/ui-mobile/TC-RWD-007_01_workspace-audit-tab-mobile.png"
+"TC-SEC-001","Protected endpoints require authentication","api","FAILED","2.8","anonymous access: /api/User=200, /api/ChangeRequest=200, /api/Committee/Queue=200, /api/WorkflowRule=200, /api/CategoryMapping/Categories=200, /api/DataIngestion/MockCustomers=200 (includes user e-mails and all change requests)","DEF-010","Error: /api/User  expect(received).toBe(expected) // Object.is equality | Error: /api/ChangeRequest  expect(received).toBe(expected) // Object.is equality | Error: /api/Committee/Queue  expect(received).toBe(expected) // Object.is equality | Error: /api/WorkflowRule  expect(received).toBe(expected) // Object.is equality | Error: /api/CategoryMapping/Categories  expect(received).toBe(expected) // Object.is equality | Error: /api/DataIngestion/MockCustomers  expect(received).toBe(expected) // Object.is equality","evidence/api/TC-SEC-001_01_anon-api-user.json
+evidence/api/TC-SEC-001_02_anon-api-changerequest.json
+evidence/api/TC-SEC-001_03_anon-api-committee-queue.json
+evidence/api/TC-SEC-001_04_anon-api-workflowrule.json
+evidence/api/TC-SEC-001_05_anon-api-categorymapping-categories.json
+evidence/api/TC-SEC-001_06_anon-api-dataingestion-mockcustomers.json"
+"TC-SEC-002","A forged bearer token is rejected","api","FAILED","0.9","200","DEF-010","Error: expect(received).toBe(expected) // Object.is equality  Expected: 401 Received: 200","evidence/api/TC-SEC-002_01_get-api-user.json"
+"TC-SEC-003","Server-side role enforcement - actor ids cannot be spoofed","api","FAILED","2.5","finalize as Product Owner -> 200 (audit records finalizer ""Priya Owens""); scoring config as Product Owner -> 200","DEF-002","Error: expect(received).toBe(expected) // Object.is equality  Expected: 403 Received: 200 | Error: expect(received).toBe(expected) // Object.is equality  Expected: 403 Received: 200","evidence/api/TC-SEC-003_01_submit-probe.json
+evidence/api/TC-SEC-003_02_open.json
+evidence/api/TC-SEC-003_03_finalize-as-po.json
+evidence/api/TC-SEC-003_04_config-as-po.json
+evidence/api/TC-SEC-003_05_audit.json"
+"TC-SEC-004","API specification is not publicly exposed in the deployed environment","api","FAILED","1.1","200; 45 API paths disclosed","DEF-010","Error: expect(received).toBe(expected) // Object.is equality  Expected: 404 Received: 200","evidence/api/TC-SEC-004_01_get-openapi-v1-json.json"
+"TC-SEC-005","Security response headers","api","FAILED","0.8","missing: strict-transport-security, content-security-policy, x-content-type-options, x-frame-options, referrer-policy; server: ""Kestrel""","DEF-017","Error: strict-transport-security  expect(received).toBeTruthy() | Error: content-security-policy  expect(received).toBeTruthy() | Error: x-content-type-options  expect(received).toBeTruthy() | Error: x-frame-options  expect(received).toBeTruthy() | Error: referrer-policy  expect(received).toBeTruthy() | Error: server banner  expect(received).toBeFalsy()","evidence/api/TC-SEC-005_01_get.json"
+"TC-SEC-006","CORS does not trust arbitrary origins","api","FAILED","1.1","GET ACAO=""https://evil.example""; preflight 200 ACAO=""https://evil.example""","DEF-019","Error: expect(received).toBeUndefined()  Received: ""https://evil.example""","evidence/api/TC-SEC-006_01_get-with-foreign-origin.json"
+"TC-SEC-007","Error responses do not leak internals","api","FAILED","1.5","malformed JSON -> 400; unknown assessment -> 500 ""Failed to calculate risk score.""; blank reason -> 400 ""P0001: A reason is required to edit an AI-drafted narrative section""; leak markers found: P0001","DEF-018","Error: internal error codes in user-facing messages  expect(received).toEqual(expected) // deep equality","evidence/api/TC-SEC-007_01_unknown-assessment.json
+evidence/api/TC-SEC-007_02_blank-reason.json"
+"TC-SEC-008","Uploaded documents are not publicly readable from blob storage","api","PASSED","4.1","blob GET 403, container list 403 (storage account name is disclosed in API responses)","","","evidence/api/TC-SEC-008_01_list.json"
+"TC-SEC-009","HTTP is redirected to HTTPS","api","PASSED","0.6","301 -> https://ca-gh-hrg-workbench-dev.jollyplant-1cbb4459.eastus2.azurecontainerapps.io/","","",""
+"TC-SEC-010","Input length limits on free-text fields","api","FAILED","1.7","200 CR-2026-00065","DEF-009","Error: expect(received).toBe(expected) // Object.is equality  Expected: 400 Received: 200","evidence/api/TC-SEC-010_01_huge-title.json"
+"TC-UI-001","Deployed environment requires sign-in (no anonymous bypass)","ui-desktop","FAILED","4.6","Page shows ""Auth0 is not configured"" notice with a ""Continue without signing in (local dev only)"" button - one click gives full access","DEF-010","Error: anonymous bypass must not be offered on a deployed environment  expect(received).toBe(expected) // Object.is equality","evidence/ui-desktop/TC-UI-001_01_landing-page.png"
+"TC-UI-002","Entering the console lands on the first user with a user switcher","ui-desktop","PASSED","5.0","6 users: Taylor Finch — Admin | Amara Chen — Analyst | Sam Okafor — Analyst | Jordan Blake — CommitteeMember | Riley Voss — CommitteeMember | Priya Owens — ProductOwner; console errors: 0","","","evidence/ui-desktop/TC-UI-002_01_user-switcher-open.png"
+"TC-UI-003","Navigation for Priya Owens shows only their role's screens","ui-desktop","PASSED","4.3","sidebar: Submit Request, My Requests","","","evidence/ui-desktop/TC-UI-003_01_nav-as-priya-owens.png"
+"TC-UI-004","Navigation for Amara Chen shows only their role's screens","ui-desktop","PASSED","3.8","sidebar: Assessments","","","evidence/ui-desktop/TC-UI-004_01_nav-as-amara-chen.png"
+"TC-UI-005","Navigation for Sam Okafor shows only their role's screens","ui-desktop","PASSED","3.9","sidebar: Assessments","","","evidence/ui-desktop/TC-UI-005_01_nav-as-sam-okafor.png"
+"TC-UI-006","Navigation for Jordan Blake shows only their role's screens","ui-desktop","PASSED","4.1","sidebar: Committee Queue","","","evidence/ui-desktop/TC-UI-006_01_nav-as-jordan-blake.png"
+"TC-UI-007","Navigation for Riley Voss shows only their role's screens","ui-desktop","PASSED","4.3","sidebar: Committee Queue","","","evidence/ui-desktop/TC-UI-007_01_nav-as-riley-voss.png"
+"TC-UI-008","Navigation for Taylor Finch shows only their role's screens","ui-desktop","PASSED","3.8","sidebar: Configuration","","","evidence/ui-desktop/TC-UI-008_01_nav-as-taylor-finch.png"
+"TC-UI-009","Selected user persists across reloads","ui-desktop","PASSED","5.3","after reload the switcher reads ""Amara Chen — Analyst▼""","","","evidence/ui-desktop/TC-UI-009_01_after-reload.png"
+"TC-UI-010","Role screens are protected server-side, not only hidden in the menu","ui-desktop","FAILED","4.7","From the Product Owner session: committee queue readable (2 items), workflow config readable (HTTP 200); menu hiding is the only restriction","DEF-002","Error: PO should not read config  expect(received).toBe(expected) // Object.is equality","evidence/ui-desktop/TC-UI-010_01_po-session.png"
+"TC-UI-020","Change type offers exactly the six defined types","ui-desktop","PASSED","4.6","Product, Feature, Process, Vendor, Geography, CustomerSegment","","","evidence/ui-desktop/TC-UI-020_01_change-type-options.png"
+"TC-UI-021","Submitting with mandatory fields empty is blocked with a message","ui-desktop","FAILED","6.2","blocked with toast ""Change type, title, and description are required."" (generic - does not list which fields are missing; no inline field errors)","DEF-023","Error: message should name only the missing fields (change type, description)  expect(received).not.toMatch(expected)","evidence/ui-desktop/TC-UI-021_01_empty-form-blocked.png
+evidence/ui-desktop/TC-UI-021_02_partial-form-blocked.png"
+"TC-UI-022","Type-specific fields appear for each change type","ui-desktop","FAILED","6.1","Vendor: 0 jurisdiction field(s); Geography: 0 country/region field(s); only a generic free-text ""Type-specific details"" box plus a linked-entity lookup; Process linked lookup shown: false","DEF-024","Error: Vendor requires structured vendor name / jurisdiction / data scope fields  expect(received).toBeGreaterThan(expected) | Error: Geography requires a target country/region field  expect(received).toBeGreaterThan(expected)","evidence/ui-desktop/TC-UI-022_01_vendor-selected.png
+evidence/ui-desktop/TC-UI-022_02_geography-selected.png
+evidence/ui-desktop/TC-UI-022_03_process-selected.png"
+"TC-UI-023","Submit a Vendor change request end to end","ui-desktop","PASSED","6.9","created CR-2026-00066; form reset","","","evidence/ui-desktop/TC-UI-023_01_form-filled.png
+evidence/ui-desktop/TC-UI-023_02_submitted-toast.png"
+"TC-UI-024","Attach PDF, DOCX and XLSX to the request","ui-desktop","PASSED","20.2","vendor-due-diligence.pdf: attached; product-spec.docx: attached; control-matrix.xlsx: attached","","","evidence/ui-desktop/TC-UI-024_01_attached-vendor-due-diligence-pdf.png
+evidence/ui-desktop/TC-UI-024_02_attached-product-spec-docx.png
+evidence/ui-desktop/TC-UI-024_03_attached-control-matrix-xlsx.png"
+"TC-UI-025","Unsupported file type is rejected with a clear message","ui-desktop","FAILED","6.1","toast: ""Failed to attach document.""","DEF-006","Error: message should state the allowed formats  expect(received).toMatch(expected)","evidence/ui-desktop/TC-UI-025_01_unsupported-file-result.png"
+"TC-UI-026","Attach without choosing a file is blocked","ui-desktop","PASSED","4.5","Toast ""Pick a request and a file."" shown","","","evidence/ui-desktop/TC-UI-026_01_attach-blocked.png"
+"TC-UI-027","My Requests shows status and days elapsed","ui-desktop","PASSED","5.7","CR-2026-00066 | Vendor | [QA-E2E FINAL09251251] UI lifecycle - onboard Malta settlement vendor | Submitted | 0","","","evidence/ui-desktop/TC-UI-027_01_my-requests.png"
+"TC-UI-030","Analyst inbox lists the request; workspace opens with seven tabs","ui-desktop","PASSED","5.3","CR-2026-00066 opened; tabs: Categories, Policy, Extraction, Narrative, Scoring, Finalize, Audit","","","evidence/ui-desktop/TC-UI-030_01_analyst-inbox.png
+evidence/ui-desktop/TC-UI-030_02_workspace-opened.png"
+"TC-UI-031","Finalize tab on an untouched assessment does not offer finalization","ui-desktop","FAILED","6.6","Readiness card says ""Ready to finalize.""; Finalize button enabled = true (nothing has been mapped, reviewed or scored). Not clicked, so the flow can continue.","DEF-001","Error: Finalize must be disabled on an empty assessment  expect(received).toBe(expected) // Object.is equality","evidence/ui-desktop/TC-UI-031_01_finalize-tab-untouched.png"
+"TC-UI-032","Propose categories with AI - FFIEC categories with citations","ui-desktop","PASSED","8.1","AI mapped: Customers & Entities, Delivery Channels; citations: AI — FFIEC BSA/AML Manual - Risks Associated with Money Laundering and Terrorist Financing: Customers | AI — FFIEC BSA/AML Manual - Risks Associated with Money Laundering and Terrorist Financing: Products and Services (Delivery Channels)","","","evidence/ui-desktop/TC-UI-032_01_proposing.png
+evidence/ui-desktop/TC-UI-032_02_ai-proposal.png"
+"TC-UI-033","Adding or removing a category requires a reason","ui-desktop","PASSED","8.0","blank reason blocked for add and remove; mapped now: Customers & Entities, Delivery Channels, Geographic Locations; sources: AI — FFIEC BSA/AML Manual - Risks Associated with Money Laundering and Terrorist Financing: Customers | AI — FFIEC BSA/AML Manual - Risks Associated with Money Laundering and Terrorist Financing: Products and Services (Delivery Channels) | Analyst added","","","evidence/ui-desktop/TC-UI-033_01_add-blocked-without-reason.png
+evidence/ui-desktop/TC-UI-033_02_remove-blocked-without-reason.png
+evidence/ui-desktop/TC-UI-033_03_categories-after-analyst-overrides.png"
+"TC-UI-034","Policy search, relied-upon decisions per category","ui-desktop","PASSED","10.1","3 distinct passages relied upon across 3 categories; 3 decisions listed; nonsense query -> ""No matches.""","","","evidence/ui-desktop/TC-UI-034_01_relied-upon-for-customers-entities.png
+evidence/ui-desktop/TC-UI-034_02_relied-upon-for-delivery-channels.png
+evidence/ui-desktop/TC-UI-034_03_relied-upon-for-geographic-locations.png
+evidence/ui-desktop/TC-UI-034_04_reliance-recorded-no-matches.png"
+"TC-UI-035","Search results show source document, version and effective date","ui-desktop","FAILED","6.1","result shows section ref + passage text only; links to source: 0; effective date shown: false; relevance rationale: none (API returns sourceUrl/effectiveDate but the UI drops them)","DEF-026","Error: link to source document  expect(received).toBeGreaterThan(expected) | Error: effective date visible  expect(received).toBe(expected) // Object.is equality","evidence/ui-desktop/TC-UI-035_01_search-result-detail.png"
+"TC-UI-036","AI extraction runs against the uploaded document content","ui-desktop","FAILED","10.7","0 fields (); 0 flagged ""Needs review""; mentions Malta: false; mentions QuickPay: false. The UI sends documentText = attachment.fileName, so the model only ever sees ""vendor-due-diligence.pdf"".","DEF-020","Error: expect(received).toBeGreaterThan(expected)  Expected: > 0 Received:   0","evidence/ui-desktop/TC-UI-036_01_attachments-listed.png
+evidence/ui-desktop/TC-UI-036_02_extracted-fields.png"
+"TC-UI-037","Correct an extracted field","ui-desktop","FAILED","11.6","clicked Correct on vendor_name with ""Malta (QA corrected)"" -> toast ""Failed to correct extracted field.""; badges: AiExtracted. The UI request carries no actorUserId (and a hard-coded reason ""Analyst correction""), so the API rejects it; the same correction via API with an actor id succeeds (TC-API-051).","DEF-033 DEF-027","Error: correction should be saved  expect(received).toMatch(expected) | Error: a reason input should exist for material corrections  expect(received).toBeGreaterThan(expected)","evidence/ui-desktop/TC-UI-037_01_after-correct.png"
+"TC-UI-038","Draft narratives with AI; labelled pending review","ui-desktop","PASSED","19.4","3 of 3 sections drafted and labelled ""AI-drafted — pending analyst review""","","","evidence/ui-desktop/TC-UI-038_01_narratives-drafted.png"
+"TC-UI-039","Finalize is blocked while narratives are AI-drafted","ui-desktop","PASSED","5.6","Narrative not reviewed: Customers & Entities, Delivery Channels, Geographic Locations; Finalize enabled=false","","","evidence/ui-desktop/TC-UI-039_01_blocked-by-ai-drafts.png"
+"TC-UI-040","Narrative edit needs a reason; accept-as-is and edit clear the AI label","ui-desktop","PASSED","10.4","Customers & Entities = Analyst edited; Delivery Channels, Geographic Locations = Analyst reviewed","","","evidence/ui-desktop/TC-UI-040_01_edit-blocked-without-reason.png
+evidence/ui-desktop/TC-UI-040_02_narratives-reviewed.png"
+"TC-UI-041","Calculate scores - residual shown and always > 0","ui-desktop","PASSED","8.7","Customers & Entities: 5 - 1 x 0.85 = 4.15; Delivery Channels: 3 - 0.5 x 0.85 = 2.58; Geographic Locations: 3 - 0.5 x 0.85 = 2.58","","","evidence/ui-desktop/TC-UI-041_01_scores-calculated.png"
+"TC-UI-042","Invalid score input shows a validation message","ui-desktop","FAILED","6.1","message shown: ""Failed to calculate risk score.""","DEF-005","Error: should say what is wrong, not a generic failure  expect(received).not.toMatch(expected)","evidence/ui-desktop/TC-UI-042_01_invalid-inherent.png"
+"TC-UI-043","Score override: reason required, zero rejected, override labelled","ui-desktop","PASSED","8.9","blank reason blocked; 0 rejected; 2.5 saved with ""Analyst override"" badge; residual now 2.5","","","evidence/ui-desktop/TC-UI-043_01_override-blocked-no-reason.png
+evidence/ui-desktop/TC-UI-043_02_override-zero-rejected.png
+evidence/ui-desktop/TC-UI-043_03_override-applied.png"
+"TC-UI-044","Finalize and route to committee","ui-desktop","PASSED","6.9","finalized + routed; header status badge ""Finalized""","","","evidence/ui-desktop/TC-UI-044_01_ready-to-finalize.png
+evidence/ui-desktop/TC-UI-044_02_finalized-and-routed.png"
+"TC-UI-045","Finalized assessment is read-only in the workspace","ui-desktop","FAILED","6.3","after finalize: ""Propose with AI"" enabled=true, ""Calculate"" enabled=true","DEF-007","Error: expect(received).toBe(expected) // Object.is equality  Expected: false Received: true | Error: expect(received).toBe(expected) // Object.is equality  Expected: false Received: true","evidence/ui-desktop/TC-UI-045_01_finalized-scoring-tab-still-editable.png"
+"TC-UI-046","Audit tab reconstructs every AI output and human decision with reasons","ui-desktop","PASSED","7.4","33 events; includes reasons ""geographic exposure"": true, ""EDD"": true, override: true; export button: true Export PDF downloaded ""audit-trail-CR-2026-00066.pdf"" (73383 bytes, header %PDF-)","DEF-028","","evidence/ui-desktop/TC-UI-046_01_audit-trail.png
+evidence/ui-desktop/TC-UI-046_03_audit-trail-CR-2026-00066.pdf
+evidence/ui-desktop/TC-UI-046_99_final-state.png"
+"TC-UI-050","Routed assessment appears in the committee queue","ui-desktop","PASSED","4.3","queue row: CR-2026-00066Vendor[QA-E2E FINAL09251251] UI lifecycle - onboard Malta settlement vendorReview","","","evidence/ui-desktop/TC-UI-050_01_committee-queue.png"
+"TC-UI-051","Committee sees the full assessment before voting","ui-desktop","FAILED","4.8","vote panel contains only the title, vote form and vote list - narrative:false scores:false policy:false overrides:false","DEF-021","Error: scores visible to committee  expect(received).toBe(expected) // Object.is equality | Error: cited policy visible to committee  expect(received).toBe(expected) // Object.is equality","evidence/ui-desktop/TC-UI-051_01_vote-panel.png"
+"TC-UI-052","Vote validation: conditions / rationale mandatory","ui-desktop","PASSED","6.0","all three blank submissions blocked client-side; ""No votes yet."" still shown","","","evidence/ui-desktop/TC-UI-052_01_awc-blank-blocked.png
+evidence/ui-desktop/TC-UI-052_02_reject-defer-blank-blocked.png"
+"TC-UI-053","First member votes Approve-with-Conditions","ui-desktop","PASSED","6.5","vote row: Jordan BlakeAnnual on-site audit of the vendor; cardholder PII encrypted at rest (QA)ApproveWithConditions; no decision yet","","","evidence/ui-desktop/TC-UI-053_01_first-vote-cast.png"
+"TC-UI-054","Second vote reaches quorum and records the decision with conditions","ui-desktop","PASSED","8.6","Resolved: ApprovedWithConditions; conditions ""Jordan Blake: Annual on-site audit of the vendor; cardholder PII encrypted at rest (QA)""; votes: Jordan BlakeAnnual on-site audit of the vendor; cardholder PII encrypted at rest (QA)ApproveWithConditions | Riley VossApprove","","","evidence/ui-desktop/TC-UI-054_01_decision-recorded.png"
+"TC-UI-055","Decided item leaves the queue; Product Owner sees the outcome and conditions","ui-desktop","FAILED","8.3","still in queue: false; PO row status ""Decisioned"" - decision and conditions not shown to the requester","DEF-022","Error: PO should see the actual decision  expect(received).toMatch(expected)","evidence/ui-desktop/TC-UI-055_01_queue-after-decision.png
+evidence/ui-desktop/TC-UI-055_02_po-sees-outcome.png"
+"TC-UI-060","Workflow rules are listed in plain structured form","ui-desktop","PASSED","4.2","rules shown: CommitteeQuorum{""quorum"": 2}","","","evidence/ui-desktop/TC-UI-060_01_configuration-screen.png"
+"TC-UI-061","Workflow rule save requires a reason and valid JSON","ui-desktop","PASSED","5.3","blank reason blocked; invalid JSON blocked; unchanged value re-saved with reason","","","evidence/ui-desktop/TC-UI-061_01_rule-blocked-no-reason.png
+evidence/ui-desktop/TC-UI-061_02_rule-blocked-invalid-json.png
+evidence/ui-desktop/TC-UI-061_03_rule-saved.png"
+"TC-UI-062","Mitigation factor >= 1.0 is rejected; valid value saves","ui-desktop","PASSED","5.8","1.0 rejected: ""max_mitigation_factor must be in [0, 1.0) - a value of 1.0 or more would let residual risk reach zero.""; 0.85 saved","","","evidence/ui-desktop/TC-UI-062_01_mf-1-0-rejected.png
+evidence/ui-desktop/TC-UI-062_02_mf-saved.png"
+"TC-UI-070","Stored XSS payloads in a request title are rendered as text","ui-desktop","PASSED","9.7","CR-2026-00067: payload rendered as literal text; window.__xss=undefined; dialog=false","","","evidence/ui-desktop/TC-UI-070_01_payload-in-my-requests.png
+evidence/ui-desktop/TC-UI-070_02_payload-in-inbox.png"

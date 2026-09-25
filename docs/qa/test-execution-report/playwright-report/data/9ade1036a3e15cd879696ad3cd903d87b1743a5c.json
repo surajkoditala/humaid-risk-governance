@@ -1,0 +1,76 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/api/DocumentExtraction/Extract",
+    "body": {
+      "changeRequestId": "ef797803-aaf9-4a7a-b7af-a86f6f010f9a",
+      "attachmentId": "bec64b5e-fcf3-4dfb-9805-490a757c5a5c",
+      "changeType": "Vendor",
+      "documentText": "QA-E2E Vendor Due Diligence Summary. Vendor name: QuickPay Processing Ltd. Juris diction: Malta. Data access scope: cardholder PII and settlement files. Customer  types affected: retail cardholders, MSB merchants. Delivery channel: API, non-f ace-to-face."
+    }
+  },
+  "response": {
+    "status": 200,
+    "durationMs": 3312,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:22:48 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": true,
+      "isBadRequest": false,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": [
+        {
+          "id": "f6778bcd-f06c-457f-ab03-3bba2471ec7f",
+          "fieldKey": "vendor_name",
+          "fieldValue": "QuickPay Processing Ltd",
+          "confidence": 1,
+          "needsReview": false,
+          "sourceExcerpt": "Vendor name: QuickPay Processing Ltd",
+          "source": "AiExtracted"
+        },
+        {
+          "id": "6c02deaf-9b1c-47ed-b377-c781a4e508c9",
+          "fieldKey": "vendor_jurisdiction",
+          "fieldValue": "Malta",
+          "confidence": 1,
+          "needsReview": false,
+          "sourceExcerpt": "Jurisdiction: Malta",
+          "source": "AiExtracted"
+        },
+        {
+          "id": "77882651-65c8-49d0-b0aa-9e7fe938daee",
+          "fieldKey": "data_access_scope",
+          "fieldValue": "cardholder PII and settlement files",
+          "confidence": 1,
+          "needsReview": false,
+          "sourceExcerpt": "Data access scope: cardholder PII and settlement files",
+          "source": "AiExtracted"
+        },
+        {
+          "id": "477bd9fe-ca0e-4e34-b2b7-018adf0f114c",
+          "fieldKey": "customer_types_affected",
+          "fieldValue": "retail cardholders, MSB merchants",
+          "confidence": 1,
+          "needsReview": false,
+          "sourceExcerpt": "Customer types affected: retail cardholders, MSB merchants",
+          "source": "AiExtracted"
+        },
+        {
+          "id": "85804a91-c955-43d2-a964-1f0273b36ce1",
+          "fieldKey": "delivery_channel",
+          "fieldValue": "API, non-face-to-face",
+          "confidence": 1,
+          "needsReview": false,
+          "sourceExcerpt": "Delivery channel: API, non-face-to-face",
+          "source": "AiExtracted"
+        }
+      ],
+      "message": null
+    }
+  }
+}

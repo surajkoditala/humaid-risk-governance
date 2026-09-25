@@ -1,0 +1,1714 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/openapi/v1.json",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "durationMs": 1061,
+    "headers": {
+      "content-type": "application/json;charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:24:01 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "openapi": "3.1.1",
+      "info": {
+        "title": "Humaid.RiskGovernance.AdminUI.Web | v1",
+        "version": "1.0.0"
+      },
+      "servers": [
+        {
+          "url": "http://ca-gh-hrg-workbench-dev.jollyplant-1cbb4459.eastus2.azurecontainerapps.io/"
+        }
+      ],
+      "paths": {
+        "/api/User": {
+          "get": {
+            "tags": [
+              "User"
+            ],
+            "responses": {
+              "200": {
+                "description": "OK"
+              }
+            }
+          }
+        },
+        "/api/Scoring/Config": {
+          "post": {
+            "tags": [
+              "Scoring"
+            ],
+            "requestBody": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/UpsertScoringConfigInput"
+                  }
+                },
+                "text/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/UpsertScoringConfigInput"
+                  }
+                },
+                "application/*+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/UpsertScoringConfigInput"
+                  }
+                }
+              },
+              "required": true
+            },
+            "responses": {
+              "200": {
+                "description": "OK"
+              }
+            }
+          }
+        },
+        "/api/Scoring/Calculate": {
+          "post": {
+            "tags": [
+              "Scoring"
+            ],
+            "requestBody": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/CalculateRiskScoreInput"
+                  }
+                },
+                "text/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/CalculateRiskScoreInput"
+                  }
+                },
+                "application/*+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/CalculateRiskScoreInput"
+                  }
+                }
+              },
+              "required": true
+            },
+            "responses": {
+              "200": {
+                "description": "OK"
+              }
+            }
+          }
+        },
+        "/api/Scoring/Override": {
+          "post": {
+            "tags": [
+              "Scoring"
+            ],
+            "requestBody": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/OverrideRiskScoreInput"
+                  }
+                },
+                "text/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/OverrideRiskScoreInput"
+                  }
+                },
+                "application/*+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/OverrideRiskScoreInput"
+                  }
+                }
+              },
+              "required": true
+            },
+            "responses": {
+              "200": {
+                "description": "OK"
+              }
+            }
+          }
+        },
+        "/api/Scoring/{assessmentId}": {
+          "get": {
+            "tags": [
+              "Scoring"
+            ],
+            "parameters": [
+              {
+                "name": "assessmentId",
+                "in": "path",
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            ],
+            "responses": {
+              "200": {
+                "description": "OK"
+              }
+            }
+          }
+        },
+        "/api/Scoring/Controls/{riskCategoryId}": {
+          "get": {
+            "tags": [
+              "Scoring"
+            ],
+            "parameters": [
+              {
+                "name": "riskCategoryId",
+                "in": "path",
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            ],
+            "responses": {
+              "200": {
+                "description": "OK"
+              }
+            }
+          }
+        },
+        "/api/PolicyResearch/Search": {
+          "get": {
+            "tags": [
+              "PolicyResearch"
+            ],
+            "parameters": [
+              {
+                "name": "queryText",
+                "in": "query",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              {
+                "name": "riskCategoryId",
+                "in": "query",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              {
+                "name": "topK",
+                "in": "query",
+                "schema": {
+                  "pattern": "^-?(?:0|[1-9]\\d*)$",
+                  "type": [
+                    "integer",
+                    "string"
+                  ],
+                  "format": "int32",
+                  "default": 5
+                }
+              }
+            ],
+            "responses": {
+              "200": {
+                "description": "OK"
+              }
+            }
+          }
+        },
+        "/api/PolicyResearch/RecordReliance": {
+          "post": {
+            "tags": [
+              "PolicyResearch"
+            ],
+            "requestBody": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/RecordPolicyRelianceInput"
+                  }
+                },
+                "text/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/RecordPolicyRelianceInput"
+                  }
+                },
+                "application/*+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/RecordPolicyRelianceInput"
+                  }
+                }
+              },
+              "required": true
+            },
+            "responses": {
+              "200": {
+                "description": "OK"
+              }
+            }
+          }
+        },
+        "/api/PolicyResearch/{assessmentId}/Reliance": {
+          "get": {
+            "tags": [
+              "PolicyResearch"
+            ],
+            "parameters": [
+              {
+                "name": "assessmentId",
+                "in": "path",
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            ],
+            "responses": {
+              "200": {
+                "description": "OK"
+              }
+            }
+          }
+        },
+        "/api/Narrative/Draft": {
+          "post": {
+            "tags": [
+              "Narrative"
+            ],
+            "requestBody": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/DraftRequest"
+                  }
+                },
+                "text/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/DraftRequest"
+                  }
+                },
+                "application/*+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/DraftRequest"
+                  }
+                }
+              },
+              "required": true
+            },
+            "responses": {
+              "200": {
+                "description": "OK"
+              }
+            }
+          }
+        },
+        "/api/Narrative/Review": {
+          "post": {
+            "tags": [
+              "Narrative"
+            ],
+            "requestBody": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/ReviewRequest"
+                  }
+                },
+                "text/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/ReviewRequest"
+                  }
+                },
+                "application/*+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/ReviewRequest"
+                  }
+                }
+              },
+              "required": true
+            },
+            "responses": {
+              "200": {
+                "description": "OK"
+              }
+            }
+          }
+        },
+        "/api/Narrative/Edit": {
+          "post": {
+            "tags": [
+              "Narrative"
+            ],
+            "requestBody": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/EditNarrativeSectionInput"
+                  }
+                },
+                "text/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/EditNarrativeSectionInput"
+                  }
+                },
+                "application/*+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/EditNarrativeSectionInput"
+                  }
+                }
+              },
+              "required": true
+            },
+            "responses": {
+              "200": {
+                "description": "OK"
+              }
+            }
+          }
+        },
+        "/api/Narrative/{assessmentId}": {
+          "get": {
+            "tags": [
+              "Narrative"
+            ],
+            "parameters": [
+              {
+                "name": "assessmentId",
+                "in": "path",
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            ],
+            "responses": {
+              "200": {
+                "description": "OK"
+              }
+            }
+          }
+        },
+        "/api/DocumentExtraction/Extract": {
+          "post": {
+            "tags": [
+              "DocumentExtraction"
+            ],
+            "requestBody": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/ExtractRequest"
+                  }
+                },
+                "text/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/ExtractRequest"
+                  }
+                },
+                "application/*+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/ExtractRequest"
+                  }
+                }
+              },
+              "required": true
+            },
+            "responses": {
+              "200": {
+                "description": "OK"
+              }
+            }
+          }
+        },
+        "/api/DocumentExtraction/Correct": {
+          "post": {
+            "tags": [
+              "DocumentExtraction"
+            ],
+            "requestBody": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/CorrectRequest"
+                  }
+                },
+                "text/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/CorrectRequest"
+                  }
+                },
+                "application/*+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/CorrectRequest"
+                  }
+                }
+              },
+              "required": true
+            },
+            "responses": {
+              "200": {
+                "description": "OK"
+              }
+            }
+          }
+        },
+        "/api/DocumentExtraction/{changeRequestId}": {
+          "get": {
+            "tags": [
+              "DocumentExtraction"
+            ],
+            "parameters": [
+              {
+                "name": "changeRequestId",
+                "in": "path",
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            ],
+            "responses": {
+              "200": {
+                "description": "OK"
+              }
+            }
+          }
+        },
+        "/api/DataIngestion/MockCustomers": {
+          "get": {
+            "tags": [
+              "DataIngestion"
+            ],
+            "responses": {
+              "200": {
+                "description": "OK"
+              }
+            }
+          }
+        },
+        "/api/DataIngestion/MockProducts": {
+          "get": {
+            "tags": [
+              "DataIngestion"
+            ],
+            "responses": {
+              "200": {
+                "description": "OK"
+              }
+            }
+          }
+        },
+        "/api/DataIngestion/MockVendors": {
+          "get": {
+            "tags": [
+              "DataIngestion"
+            ],
+            "responses": {
+              "200": {
+                "description": "OK"
+              }
+            }
+          }
+        },
+        "/api/DataIngestion/Snapshot/{changeRequestId}": {
+          "get": {
+            "tags": [
+              "DataIngestion"
+            ],
+            "parameters": [
+              {
+                "name": "changeRequestId",
+                "in": "path",
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            ],
+            "responses": {
+              "200": {
+                "description": "OK"
+              }
+            }
+          }
+        },
+        "/api/Ping": {
+          "get": {
+            "tags": [
+              "Ping"
+            ],
+            "responses": {
+              "200": {
+                "description": "OK"
+              }
+            }
+          }
+        },
+        "/api/WorkflowRule": {
+          "get": {
+            "tags": [
+              "WorkflowRule"
+            ],
+            "responses": {
+              "200": {
+                "description": "OK"
+              }
+            }
+          },
+          "post": {
+            "tags": [
+              "WorkflowRule"
+            ],
+            "requestBody": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/UpsertWorkflowRuleInput"
+                  }
+                },
+                "text/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/UpsertWorkflowRuleInput"
+                  }
+                },
+                "application/*+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/UpsertWorkflowRuleInput"
+                  }
+                }
+              },
+              "required": true
+            },
+            "responses": {
+              "200": {
+                "description": "OK"
+              }
+            }
+          }
+        },
+        "/api/Committee/Route": {
+          "post": {
+            "tags": [
+              "Committee"
+            ],
+            "requestBody": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/RouteRequest"
+                  }
+                },
+                "text/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/RouteRequest"
+                  }
+                },
+                "application/*+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/RouteRequest"
+                  }
+                }
+              },
+              "required": true
+            },
+            "responses": {
+              "200": {
+                "description": "OK"
+              }
+            }
+          }
+        },
+        "/api/Committee/Queue": {
+          "get": {
+            "tags": [
+              "Committee"
+            ],
+            "responses": {
+              "200": {
+                "description": "OK"
+              }
+            }
+          }
+        },
+        "/api/Committee/Vote": {
+          "post": {
+            "tags": [
+              "Committee"
+            ],
+            "requestBody": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/CastCommitteeVoteInput"
+                  }
+                },
+                "text/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/CastCommitteeVoteInput"
+                  }
+                },
+                "application/*+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/CastCommitteeVoteInput"
+                  }
+                }
+              },
+              "required": true
+            },
+            "responses": {
+              "200": {
+                "description": "OK"
+              }
+            }
+          }
+        },
+        "/api/Committee/{assessmentId}/Votes": {
+          "get": {
+            "tags": [
+              "Committee"
+            ],
+            "parameters": [
+              {
+                "name": "assessmentId",
+                "in": "path",
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            ],
+            "responses": {
+              "200": {
+                "description": "OK"
+              }
+            }
+          }
+        },
+        "/api/Committee/{assessmentId}/Decision": {
+          "get": {
+            "tags": [
+              "Committee"
+            ],
+            "parameters": [
+              {
+                "name": "assessmentId",
+                "in": "path",
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            ],
+            "responses": {
+              "200": {
+                "description": "OK"
+              }
+            }
+          }
+        },
+        "/api/ChangeRequest/Submit": {
+          "post": {
+            "tags": [
+              "ChangeRequest"
+            ],
+            "requestBody": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/SubmitChangeRequestInput"
+                  }
+                },
+                "text/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/SubmitChangeRequestInput"
+                  }
+                },
+                "application/*+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/SubmitChangeRequestInput"
+                  }
+                }
+              },
+              "required": true
+            },
+            "responses": {
+              "200": {
+                "description": "OK"
+              }
+            }
+          }
+        },
+        "/api/ChangeRequest/{changeRequestId}": {
+          "get": {
+            "tags": [
+              "ChangeRequest"
+            ],
+            "parameters": [
+              {
+                "name": "changeRequestId",
+                "in": "path",
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            ],
+            "responses": {
+              "200": {
+                "description": "OK"
+              }
+            }
+          }
+        },
+        "/api/ChangeRequest/ForUser/{userId}": {
+          "get": {
+            "tags": [
+              "ChangeRequest"
+            ],
+            "parameters": [
+              {
+                "name": "userId",
+                "in": "path",
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            ],
+            "responses": {
+              "200": {
+                "description": "OK"
+              }
+            }
+          }
+        },
+        "/api/ChangeRequest": {
+          "get": {
+            "tags": [
+              "ChangeRequest"
+            ],
+            "responses": {
+              "200": {
+                "description": "OK"
+              }
+            }
+          }
+        },
+        "/api/ChangeRequest/AttachDocument": {
+          "post": {
+            "tags": [
+              "ChangeRequest"
+            ],
+            "requestBody": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/AttachDocumentInput"
+                  }
+                },
+                "text/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/AttachDocumentInput"
+                  }
+                },
+                "application/*+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/AttachDocumentInput"
+                  }
+                }
+              },
+              "required": true
+            },
+            "responses": {
+              "200": {
+                "description": "OK"
+              }
+            }
+          }
+        },
+        "/api/ChangeRequest/AttachDocumentFile": {
+          "post": {
+            "tags": [
+              "ChangeRequest"
+            ],
+            "requestBody": {
+              "content": {
+                "multipart/form-data": {
+                  "schema": {
+                    "type": "object",
+                    "allOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "changeRequestId": {
+                            "type": "string",
+                            "format": "uuid"
+                          }
+                        }
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "uploadedByUserId": {
+                            "type": "string",
+                            "format": "uuid"
+                          }
+                        }
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "supersedesAttachmentId": {
+                            "type": "string",
+                            "format": "uuid"
+                          }
+                        }
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "file": {
+                            "$ref": "#/components/schemas/IFormFile"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              "required": true
+            },
+            "responses": {
+              "200": {
+                "description": "OK"
+              }
+            }
+          }
+        },
+        "/api/ChangeRequest/{changeRequestId}/Attachments": {
+          "get": {
+            "tags": [
+              "ChangeRequest"
+            ],
+            "parameters": [
+              {
+                "name": "changeRequestId",
+                "in": "path",
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            ],
+            "responses": {
+              "200": {
+                "description": "OK"
+              }
+            }
+          }
+        },
+        "/api/ChangeRequest/{changeRequestId}/RequestClarification": {
+          "post": {
+            "tags": [
+              "ChangeRequest"
+            ],
+            "parameters": [
+              {
+                "name": "changeRequestId",
+                "in": "path",
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            ],
+            "requestBody": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/RequestClarificationBody"
+                  }
+                },
+                "text/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/RequestClarificationBody"
+                  }
+                },
+                "application/*+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/RequestClarificationBody"
+                  }
+                }
+              },
+              "required": true
+            },
+            "responses": {
+              "200": {
+                "description": "OK"
+              }
+            }
+          }
+        },
+        "/api/CategoryMapping/Propose": {
+          "post": {
+            "tags": [
+              "CategoryMapping"
+            ],
+            "parameters": [
+              {
+                "name": "assessmentId",
+                "in": "query",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              {
+                "name": "changeRequestId",
+                "in": "query",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            ],
+            "responses": {
+              "200": {
+                "description": "OK"
+              }
+            }
+          }
+        },
+        "/api/CategoryMapping/Override": {
+          "post": {
+            "tags": [
+              "CategoryMapping"
+            ],
+            "requestBody": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/OverrideCategoryMappingInput"
+                  }
+                },
+                "text/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/OverrideCategoryMappingInput"
+                  }
+                },
+                "application/*+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/OverrideCategoryMappingInput"
+                  }
+                }
+              },
+              "required": true
+            },
+            "responses": {
+              "200": {
+                "description": "OK"
+              }
+            }
+          }
+        },
+        "/api/CategoryMapping/Categories": {
+          "get": {
+            "tags": [
+              "CategoryMapping"
+            ],
+            "responses": {
+              "200": {
+                "description": "OK"
+              }
+            }
+          }
+        },
+        "/api/CategoryMapping/{assessmentId}": {
+          "get": {
+            "tags": [
+              "CategoryMapping"
+            ],
+            "parameters": [
+              {
+                "name": "assessmentId",
+                "in": "path",
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            ],
+            "responses": {
+              "200": {
+                "description": "OK"
+              }
+            }
+          }
+        },
+        "/api/Audit/{changeRequestId}": {
+          "get": {
+            "tags": [
+              "Audit"
+            ],
+            "parameters": [
+              {
+                "name": "changeRequestId",
+                "in": "path",
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            ],
+            "responses": {
+              "200": {
+                "description": "OK"
+              }
+            }
+          }
+        },
+        "/api/Audit/{changeRequestId}/Export": {
+          "get": {
+            "tags": [
+              "Audit"
+            ],
+            "parameters": [
+              {
+                "name": "changeRequestId",
+                "in": "path",
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            ],
+            "responses": {
+              "200": {
+                "description": "OK"
+              }
+            }
+          }
+        },
+        "/api/Assessment/OpenWorkspace/{changeRequestId}": {
+          "post": {
+            "tags": [
+              "Assessment"
+            ],
+            "parameters": [
+              {
+                "name": "changeRequestId",
+                "in": "path",
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            ],
+            "responses": {
+              "200": {
+                "description": "OK"
+              }
+            }
+          }
+        },
+        "/api/Assessment/ByChangeRequest/{changeRequestId}": {
+          "get": {
+            "tags": [
+              "Assessment"
+            ],
+            "parameters": [
+              {
+                "name": "changeRequestId",
+                "in": "path",
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            ],
+            "responses": {
+              "200": {
+                "description": "OK"
+              }
+            }
+          }
+        },
+        "/api/Assessment/{assessmentId}/Readiness": {
+          "get": {
+            "tags": [
+              "Assessment"
+            ],
+            "parameters": [
+              {
+                "name": "assessmentId",
+                "in": "path",
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            ],
+            "responses": {
+              "200": {
+                "description": "OK"
+              }
+            }
+          }
+        },
+        "/api/Assessment/{assessmentId}/Finalize": {
+          "post": {
+            "tags": [
+              "Assessment"
+            ],
+            "parameters": [
+              {
+                "name": "assessmentId",
+                "in": "path",
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            ],
+            "requestBody": {
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/FinalizeBody"
+                  }
+                },
+                "text/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/FinalizeBody"
+                  }
+                },
+                "application/*+json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/FinalizeBody"
+                  }
+                }
+              },
+              "required": true
+            },
+            "responses": {
+              "200": {
+                "description": "OK"
+              }
+            }
+          }
+        }
+      },
+      "components": {
+        "schemas": {
+          "AttachDocumentInput": {
+            "type": "object",
+            "properties": {
+              "changeRequestId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "fileName": {
+                "type": "string"
+              },
+              "contentType": {
+                "type": "string"
+              },
+              "storagePath": {
+                "type": "string"
+              },
+              "extractedText": {
+                "type": [
+                  "null",
+                  "string"
+                ]
+              },
+              "uploadedByUserId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "supersedesAttachmentId": {
+                "type": [
+                  "null",
+                  "string"
+                ],
+                "format": "uuid"
+              }
+            }
+          },
+          "CalculateRiskScoreInput": {
+            "type": "object",
+            "properties": {
+              "assessmentId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "riskCategoryId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "inherentRating": {
+                "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+                "type": [
+                  "number",
+                  "string"
+                ],
+                "format": "double"
+              },
+              "controlIdsCredited": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "controlEffectiveness": {
+                "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+                "type": [
+                  "number",
+                  "string"
+                ],
+                "format": "double"
+              }
+            }
+          },
+          "CastCommitteeVoteInput": {
+            "type": "object",
+            "properties": {
+              "assessmentId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "committeeMemberUserId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "vote": {
+                "type": "string"
+              },
+              "conditionsText": {
+                "type": [
+                  "null",
+                  "string"
+                ]
+              },
+              "rationale": {
+                "type": [
+                  "null",
+                  "string"
+                ]
+              }
+            }
+          },
+          "CorrectExtractedFieldInput": {
+            "type": "object",
+            "properties": {
+              "changeRequestId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "fieldKey": {
+                "type": "string"
+              },
+              "newValue": {
+                "type": "string"
+              },
+              "reason": {
+                "type": [
+                  "null",
+                  "string"
+                ]
+              },
+              "actorUserId": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          },
+          "CorrectRequest": {
+            "required": [
+              "input",
+              "isMaterialChange"
+            ],
+            "type": "object",
+            "properties": {
+              "input": {
+                "$ref": "#/components/schemas/CorrectExtractedFieldInput"
+              },
+              "isMaterialChange": {
+                "type": "boolean"
+              }
+            }
+          },
+          "DraftRequest": {
+            "required": [
+              "assessmentId",
+              "riskCategoryId",
+              "regenerationFeedback"
+            ],
+            "type": "object",
+            "properties": {
+              "assessmentId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "riskCategoryId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "regenerationFeedback": {
+                "type": [
+                  "null",
+                  "string"
+                ]
+              }
+            }
+          },
+          "EditNarrativeSectionInput": {
+            "type": "object",
+            "properties": {
+              "assessmentId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "riskCategoryId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "newText": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "actorUserId": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          },
+          "ExtractRequest": {
+            "required": [
+              "changeRequestId",
+              "attachmentId",
+              "changeType",
+              "documentText"
+            ],
+            "type": "object",
+            "properties": {
+              "changeRequestId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "attachmentId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "changeType": {
+                "type": "string"
+              },
+              "documentText": {
+                "type": "string"
+              }
+            }
+          },
+          "FinalizeBody": {
+            "required": [
+              "actorUserId"
+            ],
+            "type": "object",
+            "properties": {
+              "actorUserId": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          },
+          "IFormFile": {
+            "type": "string",
+            "format": "binary"
+          },
+          "OverrideCategoryMappingInput": {
+            "type": "object",
+            "properties": {
+              "assessmentId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "riskCategoryId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "isActive": {
+                "type": "boolean"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "actorUserId": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          },
+          "OverrideRiskScoreInput": {
+            "type": "object",
+            "properties": {
+              "assessmentId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "riskCategoryId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "newResidualRating": {
+                "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+                "type": [
+                  "number",
+                  "string"
+                ],
+                "format": "double"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "actorUserId": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          },
+          "RecordPolicyRelianceInput": {
+            "type": "object",
+            "properties": {
+              "assessmentId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "riskCategoryId": {
+                "type": [
+                  "null",
+                  "string"
+                ],
+                "format": "uuid"
+              },
+              "policyChunkId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "decision": {
+                "type": "string"
+              },
+              "decidedByUserId": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          },
+          "RequestClarificationBody": {
+            "required": [
+              "requestedByUserId",
+              "question"
+            ],
+            "type": "object",
+            "properties": {
+              "requestedByUserId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "question": {
+                "type": "string"
+              }
+            }
+          },
+          "ReviewRequest": {
+            "required": [
+              "assessmentId",
+              "riskCategoryId",
+              "actorUserId"
+            ],
+            "type": "object",
+            "properties": {
+              "assessmentId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "riskCategoryId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "actorUserId": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          },
+          "RouteRequest": {
+            "required": [
+              "assessmentId",
+              "actorUserId"
+            ],
+            "type": "object",
+            "properties": {
+              "assessmentId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "actorUserId": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          },
+          "SubmitChangeRequestInput": {
+            "type": "object",
+            "properties": {
+              "changeType": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "typeSpecificFieldsJson": {
+                "type": "string"
+              },
+              "submittedByUserId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "mockCustomerId": {
+                "type": [
+                  "null",
+                  "string"
+                ],
+                "format": "uuid"
+              },
+              "mockProductId": {
+                "type": [
+                  "null",
+                  "string"
+                ],
+                "format": "uuid"
+              },
+              "mockVendorId": {
+                "type": [
+                  "null",
+                  "string"
+                ],
+                "format": "uuid"
+              }
+            }
+          },
+          "UpsertScoringConfigInput": {
+            "type": "object",
+            "properties": {
+              "riskCategoryId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "maxMitigationFactor": {
+                "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+                "type": [
+                  "number",
+                  "string"
+                ],
+                "format": "double"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "actorUserId": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          },
+          "UpsertWorkflowRuleInput": {
+            "type": "object",
+            "properties": {
+              "ruleKey": {
+                "type": "string"
+              },
+              "ruleValueJson": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "actorUserId": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          }
+        }
+      },
+      "tags": [
+        {
+          "name": "User"
+        },
+        {
+          "name": "Scoring"
+        },
+        {
+          "name": "PolicyResearch"
+        },
+        {
+          "name": "Narrative"
+        },
+        {
+          "name": "DocumentExtraction"
+        },
+        {
+          "name": "DataIngestion"
+        },
+        {
+          "name": "Ping"
+        },
+        {
+          "name": "WorkflowRule"
+        },
+        {
+          "name": "Committee"
+        },
+        {
+          "name": "ChangeRequest"
+        },
+        {
+          "name": "CategoryMapping"
+        },
+        {
+          "name": "Audit"
+        },
+        {
+          "name": "Assessment"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/api/PolicyResearch/Search?queryText=sanctions&topK=5",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "durationMs": 274,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:22:36 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": true,
+      "isBadRequest": false,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": [
+        {
+          "id": "79e625c1-e99c-43d0-9c93-4f2ee8b6f914",
+          "policyDocumentId": "33333333-3333-3333-3333-333333333331",
+          "documentTitle": "FFIEC BSA/AML Examination Manual",
+          "sourceUrl": "https://bsaaml.ffiec.gov",
+          "effectiveDate": "2014-01-01T00:00:00",
+          "sectionRef": "Risks Associated with Money Laundering and Terrorist Financing - Geographic Locations",
+          "chunkText": "Geographic risk considers a bank's exposure to jurisdictions identified by FATF as having strategic AML/CFT deficiencies, countries subject to OFAC sanctions programs, and domestic High Intensity Financial Crime Areas (HIFCAs). Products, customers, and transactions tied to these locations warrant additional scrutiny.",
+          "rank": 0.06079271
+        }
+      ],
+      "message": null
+    }
+  }
+}

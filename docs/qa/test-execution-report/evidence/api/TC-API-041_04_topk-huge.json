@@ -1,0 +1,76 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/api/PolicyResearch/Search?queryText=bank&topK=100000",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "durationMs": 305,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:22:34 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": true,
+      "isBadRequest": false,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": [
+        {
+          "id": "3f171e93-f2ca-40a4-af6a-18ede9021c9b",
+          "policyDocumentId": "33333333-3333-3333-3333-333333333331",
+          "documentTitle": "FFIEC BSA/AML Examination Manual",
+          "sourceUrl": "https://bsaaml.ffiec.gov",
+          "effectiveDate": "2014-01-01T00:00:00",
+          "sectionRef": "Risks Associated with Money Laundering and Terrorist Financing - Products and Services",
+          "chunkText": "Certain products and services are inherently vulnerable to money laundering because they involve rapid movement of funds or limited face-to-face contact, including electronic funds transfers, correspondent banking, private banking, trade finance, and prepaid access products. Examiners assess whether a bank has identified, measured, and mitigated the risks these offerings present before launch.",
+          "rank": 0.082745634
+        },
+        {
+          "id": "539e307e-5d18-454b-a33c-fbcf3ff8c407",
+          "policyDocumentId": "33333333-3333-3333-3333-333333333331",
+          "documentTitle": "FFIEC BSA/AML Examination Manual",
+          "sourceUrl": "https://bsaaml.ffiec.gov",
+          "effectiveDate": "2014-01-01T00:00:00",
+          "sectionRef": "Risks Associated with Money Laundering and Terrorist Financing - Delivery Channels",
+          "chunkText": "Non-face-to-face account opening and transaction channels, including online and mobile banking, and reliance on third-party agents or correspondent relationships to deliver products, reduce a bank's ability to verify customer identity and intent directly, and should be factored into the overall risk assessment of a proposed change.",
+          "rank": 0.075990885
+        },
+        {
+          "id": "8fc9b915-62af-410e-af73-373e51aac522",
+          "policyDocumentId": "33333333-3333-3333-3333-333333333331",
+          "documentTitle": "FFIEC BSA/AML Examination Manual",
+          "sourceUrl": "https://bsaaml.ffiec.gov",
+          "effectiveDate": "2014-01-01T00:00:00",
+          "sectionRef": "Risks Associated with Money Laundering and Terrorist Financing - Correspondent Banking",
+          "chunkText": "Correspondent accounts, particularly those for foreign financial institutions, can expose a bank to the risks of the respondent's own customer base and the adequacy of its AML controls. Enhanced due diligence is expected for correspondent relationships involving higher-risk jurisdictions or nested account arrangements.",
+          "rank": 0.06079271
+        },
+        {
+          "id": "af07f40f-b9fa-4614-891b-b0fcc9a8f54b",
+          "policyDocumentId": "33333333-3333-3333-3333-333333333331",
+          "documentTitle": "FFIEC BSA/AML Examination Manual",
+          "sourceUrl": "https://bsaaml.ffiec.gov",
+          "effectiveDate": "2014-01-01T00:00:00",
+          "sectionRef": "Risks Associated with Money Laundering and Terrorist Financing - Beneficial Ownership",
+          "chunkText": "Legal entity customers with complex or opaque ownership structures, including shell companies, can be used to obscure the identity of beneficial owners. Banks are expected to identify and verify beneficial owners holding a defined ownership threshold as part of customer due diligence.",
+          "rank": 0.06079271
+        },
+        {
+          "id": "79e625c1-e99c-43d0-9c93-4f2ee8b6f914",
+          "policyDocumentId": "33333333-3333-3333-3333-333333333331",
+          "documentTitle": "FFIEC BSA/AML Examination Manual",
+          "sourceUrl": "https://bsaaml.ffiec.gov",
+          "effectiveDate": "2014-01-01T00:00:00",
+          "sectionRef": "Risks Associated with Money Laundering and Terrorist Financing - Geographic Locations",
+          "chunkText": "Geographic risk considers a bank's exposure to jurisdictions identified by FATF as having strategic AML/CFT deficiencies, countries subject to OFAC sanctions programs, and domestic High Intensity Financial Crime Areas (HIFCAs). Products, customers, and transactions tied to these locations warrant additional scrutiny.",
+          "rank": 0.06079271
+        }
+      ],
+      "message": null
+    }
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/api/PolicyResearch/Search?queryText=",
+    "body": null
+  },
+  "response": {
+    "status": 400,
+    "durationMs": 270,
+    "headers": {
+      "content-type": "application/problem+json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:22:34 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "type": "https://tools.ietf.org/html/rfc9110#section-15.5.1",
+      "title": "One or more validation errors occurred.",
+      "status": 400,
+      "errors": {
+        "queryText": [
+          "The queryText field is required."
+        ]
+      },
+      "traceId": "00-1ccc19b4f0a37cd17c017f284fe2032c-da2b3978d7aaefaa-01"
+    }
+  }
+}

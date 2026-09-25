@@ -1,0 +1,91 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/api/Audit/b1c408c0-01d2-4d51-b5e9-20cb5fdfba0a",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "durationMs": 283,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:23:34 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": true,
+      "isBadRequest": false,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": [
+        {
+          "id": "9e3cb07c-3e0e-472d-a7f8-ce8b7fc28b4f",
+          "entityType": "ChangeRequest",
+          "entityId": "b1c408c0-01d2-4d51-b5e9-20cb5fdfba0a",
+          "action": "Created",
+          "actorUserId": "a6a709a7-65e7-4a90-9b58-cbbaec1d651a",
+          "actorName": "Priya Owens",
+          "actorLabel": "human",
+          "beforeValueJson": null,
+          "afterValueJson": "{\"title\": \"[QA-E2E FINAL09251251] API probe - re-vote\", \"status\": \"Submitted\", \"changeType\": \"Feature\"}",
+          "reason": null,
+          "createdAt": "2026-09-25T07:23:33.329633+00:00"
+        },
+        {
+          "id": "92f0f048-8990-42c6-893d-54b4ba0d4ba8",
+          "entityType": "Assessment",
+          "entityId": "25ab4813-e18f-49c9-a50e-8541b5d63a10",
+          "action": "Finalized",
+          "actorUserId": "4fa322d3-2245-44ef-b664-1a804442db23",
+          "actorName": "Amara Chen",
+          "actorLabel": "human",
+          "beforeValueJson": null,
+          "afterValueJson": "{\"finalizedBy\": \"4fa322d3-2245-44ef-b664-1a804442db23\"}",
+          "reason": null,
+          "createdAt": "2026-09-25T07:23:34.030714+00:00"
+        },
+        {
+          "id": "19cc818d-b8b2-4a5a-9450-6edbd73aabf7",
+          "entityType": "ChangeRequest",
+          "entityId": "b1c408c0-01d2-4d51-b5e9-20cb5fdfba0a",
+          "action": "Routed",
+          "actorUserId": "4fa322d3-2245-44ef-b664-1a804442db23",
+          "actorName": "Amara Chen",
+          "actorLabel": "human",
+          "beforeValueJson": null,
+          "afterValueJson": "{\"status\": \"PendingCommittee\"}",
+          "reason": null,
+          "createdAt": "2026-09-25T07:23:34.3205+00:00"
+        },
+        {
+          "id": "1f0922a1-10a3-4821-9134-562dddc8c890",
+          "entityType": "CommitteeVote",
+          "entityId": "90d10b72-34ab-4700-8eee-2e4e68b76145",
+          "action": "Voted",
+          "actorUserId": "083ecfe5-aa01-4703-9168-762f0065078f",
+          "actorName": "Jordan Blake",
+          "actorLabel": "human",
+          "beforeValueJson": null,
+          "afterValueJson": "{\"vote\": \"Approve\", \"rationale\": null, \"conditionsText\": null}",
+          "reason": null,
+          "createdAt": "2026-09-25T07:23:34.68056+00:00"
+        },
+        {
+          "id": "81de8856-f39d-4b58-bc56-77f85ea25fcd",
+          "entityType": "CommitteeVote",
+          "entityId": "90d10b72-34ab-4700-8eee-2e4e68b76145",
+          "action": "Voted",
+          "actorUserId": "083ecfe5-aa01-4703-9168-762f0065078f",
+          "actorName": "Jordan Blake",
+          "actorLabel": "human",
+          "beforeValueJson": null,
+          "afterValueJson": "{\"vote\": \"Reject\", \"rationale\": \"changed my mind\", \"conditionsText\": null}",
+          "reason": null,
+          "createdAt": "2026-09-25T07:23:35.129533+00:00"
+        }
+      ],
+      "message": null
+    }
+  }
+}

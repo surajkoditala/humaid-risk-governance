@@ -1,0 +1,30 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/api/WorkflowRule",
+    "body": {
+      "ruleKey": "CommitteeQuorum",
+      "ruleValueJson": "{\"quorum\": 2}",
+      "reason": "QA: re-save unchanged value",
+      "actorUserId": "374a3158-6dfa-41f2-9a4d-3d1091dffacf"
+    }
+  },
+  "response": {
+    "status": 200,
+    "durationMs": 277,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:23:50 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": true,
+      "isBadRequest": false,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": "a3000747-47f1-4f54-94ed-fc92a4f1ddbf",
+      "message": null
+    }
+  }
+}

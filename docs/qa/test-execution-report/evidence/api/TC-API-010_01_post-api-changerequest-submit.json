@@ -1,0 +1,42 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/api/ChangeRequest/Submit",
+    "body": {
+      "changeType": "Product",
+      "title": "[QA-E2E FINAL09251251] API intake - prepaid card",
+      "description": "Synthetic QA request",
+      "typeSpecificFieldsJson": "{\"details\":\"US only\"}",
+      "submittedByUserId": "a6a709a7-65e7-4a90-9b58-cbbaec1d651a",
+      "mockProductId": "b2222222-0000-0000-0000-000000000003"
+    }
+  },
+  "response": {
+    "status": 200,
+    "durationMs": 365,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:21:57 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": true,
+      "isBadRequest": false,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": {
+        "id": "7e97dfcc-50bd-40a8-b0cb-5db666f40111",
+        "requestNumber": "CR-2026-00045",
+        "changeType": "Product",
+        "title": "[QA-E2E FINAL09251251] API intake - prepaid card",
+        "description": "Synthetic QA request",
+        "typeSpecificFieldsJson": "{\"details\":\"US only\"}",
+        "status": "Submitted",
+        "submittedByUserId": "a6a709a7-65e7-4a90-9b58-cbbaec1d651a",
+        "submittedAt": "2026-09-25T07:21:58.094958+00:00"
+      },
+      "message": null
+    }
+  }
+}

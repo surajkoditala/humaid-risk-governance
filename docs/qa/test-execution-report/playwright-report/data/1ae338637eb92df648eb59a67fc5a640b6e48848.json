@@ -1,0 +1,27 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/api/Assessment/eba39f9c-a4ba-40cf-946d-fa0a3da1bb98/Finalize",
+    "body": {
+      "actorUserId": "4fa322d3-2245-44ef-b664-1a804442db23"
+    }
+  },
+  "response": {
+    "status": 400,
+    "durationMs": 336,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:23:25 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": false,
+      "isBadRequest": true,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": null,
+      "message": "Narrative not yet reviewed for: Products & Services No policy reviewed for: Products & Services"
+    }
+  }
+}

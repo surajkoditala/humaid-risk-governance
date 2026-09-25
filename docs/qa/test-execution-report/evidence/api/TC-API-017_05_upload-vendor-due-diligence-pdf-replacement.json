@@ -1,0 +1,30 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/api/ChangeRequest/AttachDocumentFile",
+    "body": {
+      "changeRequestId": "9c895ced-c6aa-44af-a2f3-d7d96fb72c43",
+      "uploadedByUserId": "a6a709a7-65e7-4a90-9b58-cbbaec1d651a",
+      "supersedesAttachmentId": "f707d937-1e2a-41ce-a4d8-f2d6a6843f03",
+      "file": "<file vendor-due-diligence.pdf>"
+    }
+  },
+  "response": {
+    "status": 500,
+    "durationMs": 300,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:22:11 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": false,
+      "isBadRequest": false,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": null,
+      "message": "Failed to attach document."
+    }
+  }
+}

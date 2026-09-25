@@ -1,0 +1,13 @@
+[
+  {
+    "id": "button-name",
+    "impact": "critical",
+    "help": "Buttons must have discernible text",
+    "nodes": 3,
+    "sample": [
+      "#base-ui-_r_8_",
+      "#base-ui-_r_j_",
+      "#base-ui-_r_n_"
+    ]
+  }
+]

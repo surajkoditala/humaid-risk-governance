@@ -1,0 +1,34 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/api/DocumentExtraction/Correct",
+    "body": {
+      "input": {
+        "changeRequestId": "ef797803-aaf9-4a7a-b7af-a86f6f010f9a",
+        "fieldKey": "vendor_name",
+        "newValue": "QA value",
+        "reason": "",
+        "actorUserId": "4fa322d3-2245-44ef-b664-1a804442db23"
+      },
+      "isMaterialChange": true
+    }
+  },
+  "response": {
+    "status": 400,
+    "durationMs": 281,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:22:49 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": false,
+      "isBadRequest": true,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": "00000000-0000-0000-0000-000000000000",
+      "message": "A reason is required for this correction - it materially changes the field's meaning."
+    }
+  }
+}

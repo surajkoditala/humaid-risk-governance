@@ -1,0 +1,29 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/api/ChangeRequest/AttachDocumentFile",
+    "body": {
+      "changeRequestId": "7a6ea15a-41be-4f29-9882-0921a6ffbe48",
+      "uploadedByUserId": "a6a709a7-65e7-4a90-9b58-cbbaec1d651a",
+      "file": "<file unsupported.txt>"
+    }
+  },
+  "response": {
+    "status": 500,
+    "durationMs": 248,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:22:14 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": false,
+      "isBadRequest": false,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": null,
+      "message": "Failed to attach document."
+    }
+  }
+}

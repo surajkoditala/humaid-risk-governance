@@ -1,0 +1,52 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/api/Audit/eee96cea-4f87-4d0d-95bd-565397ba8cea",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "durationMs": 262,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:23:59 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": true,
+      "isBadRequest": false,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": [
+        {
+          "id": "0777d3cc-ab75-43a7-bb5b-44e7abe9c75c",
+          "entityType": "ChangeRequest",
+          "entityId": "eee96cea-4f87-4d0d-95bd-565397ba8cea",
+          "action": "Created",
+          "actorUserId": "a6a709a7-65e7-4a90-9b58-cbbaec1d651a",
+          "actorName": "Priya Owens",
+          "actorLabel": "human",
+          "beforeValueJson": null,
+          "afterValueJson": "{\"title\": \"[QA-E2E FINAL09251251] API probe - actor spoofing\", \"status\": \"Submitted\", \"changeType\": \"Process\"}",
+          "reason": null,
+          "createdAt": "2026-09-25T07:23:58.882002+00:00"
+        },
+        {
+          "id": "d5efdc28-6fc8-4729-8c63-fa96543226a6",
+          "entityType": "Assessment",
+          "entityId": "7942e391-5a34-46ca-a3d7-6cbf46a5d164",
+          "action": "Finalized",
+          "actorUserId": "a6a709a7-65e7-4a90-9b58-cbbaec1d651a",
+          "actorName": "Priya Owens",
+          "actorLabel": "human",
+          "beforeValueJson": null,
+          "afterValueJson": "{\"finalizedBy\": \"a6a709a7-65e7-4a90-9b58-cbbaec1d651a\"}",
+          "reason": null,
+          "createdAt": "2026-09-25T07:23:59.557587+00:00"
+        }
+      ],
+      "message": null
+    }
+  }
+}

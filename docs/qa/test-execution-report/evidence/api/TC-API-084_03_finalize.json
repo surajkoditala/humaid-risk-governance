@@ -1,0 +1,27 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/api/Assessment/25ab4813-e18f-49c9-a50e-8541b5d63a10/Finalize",
+    "body": {
+      "actorUserId": "4fa322d3-2245-44ef-b664-1a804442db23"
+    }
+  },
+  "response": {
+    "status": 200,
+    "durationMs": 368,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:23:33 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": true,
+      "isBadRequest": false,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": "Finalized",
+      "message": null
+    }
+  }
+}

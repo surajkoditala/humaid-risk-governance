@@ -1,0 +1,21 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "durationMs": 780,
+    "headers": {
+      "content-length": "414",
+      "content-type": "text/html",
+      "date": "Fri, 25 Sep 2026 07:24:02 GMT",
+      "server": "Kestrel",
+      "accept-ranges": "bytes",
+      "etag": "\"1dd4c4c86932b1e\"",
+      "last-modified": "Thu, 24 Sep 2026 17:45:45 GMT"
+    },
+    "body": "<!doctype html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"UTF-8\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n    <title>Risk Governance Admin Console</title>\n    <script type=\"module\" crossorigin src=\"/assets/index-YRyGki1L.js\"></script>\n    <link rel=\"stylesheet\" crossorigin href=\"/assets/index-Bac5L2_m.css\">\n  </head>\n  <body>\n    <div id=\"root\"></div>\n  </body>\n</html>\n"
+  }
+}

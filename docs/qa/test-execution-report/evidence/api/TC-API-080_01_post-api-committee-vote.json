@@ -1,0 +1,29 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/api/Committee/Vote",
+    "body": {
+      "assessmentId": "eba39f9c-a4ba-40cf-946d-fa0a3da1bb98",
+      "committeeMemberUserId": "083ecfe5-aa01-4703-9168-762f0065078f",
+      "vote": "Approve"
+    }
+  },
+  "response": {
+    "status": 400,
+    "durationMs": 307,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:23:20 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": false,
+      "isBadRequest": true,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": "00000000-0000-0000-0000-000000000000",
+      "message": "Assessment eba39f9c-a4ba-40cf-946d-fa0a3da1bb98 is not in the committee queue (change request status: InAssessment). Route it first."
+    }
+  }
+}

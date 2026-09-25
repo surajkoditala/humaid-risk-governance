@@ -1,0 +1,40 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/api/ChangeRequest/Submit",
+    "body": {
+      "changeType": "Feature",
+      "title": "[QA-E2E FINAL09251251] API probe - re-vote",
+      "description": "x",
+      "submittedByUserId": "a6a709a7-65e7-4a90-9b58-cbbaec1d651a"
+    }
+  },
+  "response": {
+    "status": 200,
+    "durationMs": 854,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:23:32 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": true,
+      "isBadRequest": false,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": {
+        "id": "b1c408c0-01d2-4d51-b5e9-20cb5fdfba0a",
+        "requestNumber": "CR-2026-00062",
+        "changeType": "Feature",
+        "title": "[QA-E2E FINAL09251251] API probe - re-vote",
+        "description": "x",
+        "typeSpecificFieldsJson": "{}",
+        "status": "Submitted",
+        "submittedByUserId": "a6a709a7-65e7-4a90-9b58-cbbaec1d651a",
+        "submittedAt": "2026-09-25T07:23:33.329633+00:00"
+      },
+      "message": null
+    }
+  }
+}

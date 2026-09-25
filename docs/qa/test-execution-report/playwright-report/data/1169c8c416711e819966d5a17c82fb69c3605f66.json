@@ -1,0 +1,31 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/api/CategoryMapping/Override",
+    "body": {
+      "assessmentId": "eba39f9c-a4ba-40cf-946d-fa0a3da1bb98",
+      "riskCategoryId": "22222222-2222-2222-2222-222222222224",
+      "isActive": true,
+      "reason": "QA: restore - API channel is non-face-to-face",
+      "actorUserId": "4fa322d3-2245-44ef-b664-1a804442db23"
+    }
+  },
+  "response": {
+    "status": 200,
+    "durationMs": 299,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:22:30 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": true,
+      "isBadRequest": false,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": "aafa75fc-965b-4f03-bc3e-d02c0f89aa81",
+      "message": null
+    }
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/api/Assessment/50f965f9-70e5-4c4d-bec5-36017302898e/Readiness",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "durationMs": 358,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:22:23 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": true,
+      "isBadRequest": false,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": {
+        "isReady": true,
+        "outstandingNarrativeSections": [],
+        "categoriesMissingPolicyReliance": []
+      },
+      "message": null
+    }
+  }
+}
