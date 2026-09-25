@@ -146,7 +146,7 @@ Prepared by the team's BA (epics 1–10), plus Epics 11–13 raised by QA on 17 
 15. Terraform Modules for Azure Infrastructure (10 reusable modules under `iac/modules`)
 16. Dev Environment Infrastructure Set Up (the dev environment provisioned from those modules)
 17. Set Up DevOps CI/CD Pipelines (infrastructure and application pipelines in Azure DevOps) — US-17.4 and US-17.8 are tagged **[AI]**: AI reviews pull requests in the pipeline, not in the product
-18. Observability (placeholder: telemetry to Application Insights / Log Analytics, and an SRE watchdog agent)
+18. Observability (application telemetry to Application Insights delivered — US-18.1; an SRE watchdog agent — US-18.2 — is still open)
 
 **Open questions logged by the BA — resolve with team before locking design:**
 1. Do Product Owners see analyst scoring rationale, or only status?
@@ -161,7 +161,7 @@ Every AI-touchpoint epic (2, 3, 4, 5) pairs with a human review/override story b
 
 ## Infrastructure, DevOps & Observability — see Epics 15–18 in `docs/requirements/user-stories.md`
 
-Orientation only, as of 21 Sep 2026; the acceptance criteria in the user stories are the spec. This section is separate from the application architecture above.
+Orientation only, as of 25 Sep 2026; the acceptance criteria in the user stories are the spec. This section is separate from the application architecture above.
 
 ### Where the code lives
 - **`main`** holds the infrastructure: `iac/` (Terraform) and the infrastructure pipelines in `.azure-pipelines/iac/`. It has no application code.
@@ -190,8 +190,9 @@ Orientation only, as of 21 Sep 2026; the acceptance criteria in the user stories
 - **Access to Azure** goes through the `azure-cloud` service connection (Workload Identity Federation, no stored client secret). Secrets live in the variable groups `ai-review-secrets` (`CLAUDE_CODE_OAUTH_TOKEN`, `GITHUB_PAT`) and `checkov-secrets`; never commit them.
 - Failure and attention notifications @mention the PR author on GitHub.
 
-### Observability (Epic 18 — placeholder)
-- The Log Analytics workspace and Application Insights are provisioned in dev, but nothing sends telemetry to them yet (kept off for cost). Planned: US-18.1 sends logs, metrics, and application telemetry to them; US-18.2 adds an SRE watchdog agent that watches Application Insights and notifies the team of critical issues. Open: which conditions are critical, and which notification channel.
+### Observability (Epic 18)
+- **US-18.1 is delivered.** Both container apps' `APPLICATIONINSIGHTS_CONNECTION_STRING` env var points at the dev Application Insights instance, and both `Program.cs` files register `AddOpenTelemetry().UseAzureMonitor(...)` conditional on that variable being set — so requests, outbound calls, and errors are flowing now that real images are deployed (see Epic 17). Resource-level diagnostic settings (Key Vault, Storage, PostgreSQL, the container apps environment) stay disabled — a deliberate cost-control decision, not a gap.
+- **US-18.2 (an SRE watchdog agent that watches Application Insights and notifies the team of critical issues) is still open.** Open: which conditions are critical, and which notification channel.
 - US-12.2 (build and publish images) and US-12.3 (observe an environment) in Epic 12 are expected to be largely covered by Epics 17 and 18.
 
 ### Azure DevOps Boards (how to add or change work items)

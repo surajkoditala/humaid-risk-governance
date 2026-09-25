@@ -9,7 +9,7 @@
 ## How to read this document
 
 - Stories are grouped into epics. Epics 1–10 map to the functional requirements in the problem statement. Epics 11–13 (Access Control, Deployment and Operations, Non-Functional Requirements) and US-9.3 (examiner-ready audit export) were raised by QA on 17 Sep 2026 after reviewing the built increment, and are cross-cutting rather than feature epics. Epic 14 (mock external systems and data ingestion) was added from the Platform Ecosystem Diagram (`docs/architecture/ecosystem-diagram.md`) and is deterministic integration, not an AI touchpoint.
-- Epics 15–18 (Terraform modules, dev environment infrastructure, CI/CD pipelines, and observability) were added from the infrastructure-as-code and pipeline work in `iac/` and `.azure-pipelines/`. They are engineering-delivery epics written for the DevOps Engineer, and none of them changes what the product does for its users. US-17.4 and US-17.8 are tagged **[AI]** because AI reviews pull requests in the delivery pipeline (not in the product); a human still decides whether a pull request merges. Epic 18 is a placeholder: its scope is still to be refined.
+- Epics 15–18 (Terraform modules, dev environment infrastructure, CI/CD pipelines, and observability) were added from the infrastructure-as-code and pipeline work in `iac/` and `.azure-pipelines/`. They are engineering-delivery epics written for the DevOps Engineer, and none of them changes what the product does for its users. US-17.4 and US-17.8 are tagged **[AI]** because AI reviews pull requests in the delivery pipeline (not in the product); a human still decides whether a pull request merges. Epic 18's application-telemetry story (US-18.1) is delivered; its SRE-agent story (US-18.2) is still open, with its scope to be refined.
 - Numbering note: Epic 14 follows Epic 13 because 11–13 were already taken in Azure Boards when the mock-systems epic was written up. The IDs here match the Boards work items one-to-one, and Epics 15–18 continue the same numbering.
 - Each story follows: *As a [actor], I want [capability], so that [outcome].*
 - Acceptance criteria use **Given / When / Then** so they're directly testable.
@@ -864,7 +864,7 @@ All pipelines reach Azure through federated, keyless authentication, so no long-
 
 Builds on the dev environment (Epic 16) and the pipelines (Epic 17).
 
-> Placeholder epic: the scope, the conditions that count as critical, and the notification channel are to be refined before work starts.
+> US-18.1 (application telemetry) is delivered. What remains is the SRE watchdog agent (US-18.2) — the critical conditions it checks for and the notification channel are still to be decided before that work starts.
 
 ### US-18.1 — Send logs and metrics from the resources to Application Insights and Log Analytics
 *As a DevOps Engineer, I want the logs, metrics, and application telemetry from the dev resources sent to Application Insights and the Log Analytics workspace, so that a failure can be diagnosed from the collected data without redeploying to reproduce it.*
@@ -910,7 +910,7 @@ Builds on the dev environment (Epic 16) and the pipelines (Epic 17).
 | Reusable, versioned Terraform modules for every Azure resource the platform runs on — *from the `iac/modules` code, not the original brief* | Epic 15 |
 | The dev environment provisioned from code with remote state, private networking, and the container apps — *from the `iac/environments/dev` code, not the original brief* | Epic 16 (builds on Epic 15) |
 | Automated check, build, and deploy pipelines for infrastructure and both services — *from the `.azure-pipelines/` code, not the original brief* | Epic 17 (deploys to the Epic 16 environment) |
-| Logs, metrics, and telemetry collected from the resources, and an SRE agent that watches them and notifies of critical issues — *placeholder* | Epic 18 |
+| Logs, metrics, and telemetry collected from the resources, and an SRE agent that watches them and notifies of critical issues — *telemetry delivered (US-18.1); SRE agent still open (US-18.2)* | Epic 18 |
 
 ## Open Questions Requiring Stakeholder Input (consolidated)
 
