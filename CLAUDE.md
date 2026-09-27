@@ -139,7 +139,7 @@ Prepared by the team's BA (epics 1–10), plus Epics 11–13 raised by QA on 17 
 8. Committee Review & Voting
 9. Immutable Audit Trail (append-only at data layer)
 10. Platform Configuration (analyst-owned, no-code scoring/workflow tuning)
-11. Access Control (role-based permissions enforced at the API, not just the UI)
+11. Access Control (role-based permissions enforced at the API, not just the UI) — delivered: see `docs/governance/access-control-matrix.md` for the role-by-action matrix AC4 asks for
 12. Deployment & Operations (schema deploy, container build/scan, observability)
 13. Non-Functional Requirements (retention, in-tenant model calls)
 14. Mock External Systems & Data Ingestion (mock CRM/Core Banking/Vendor Management as a separate service; Data Ingestion Layer is the only path to it; committee decisions push back to the source system — deterministic, no AI call)
