@@ -1,14 +1,26 @@
+import { getDevUserId } from '../auth/devUserId.js'
+
 // This webapp's own backend (Humaid.RiskGovernance.AdminUI.Web). Empty string (the production
 // default) means same-origin - deliberately using ?? rather than || so an explicit empty string
 // isn't overridden.
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5210'
 
+// Epic 11: while the backend runs its own DevBypassAuthHandler (AUTH0_DOMAIN unset - see
+// Program.cs), this names which seeded user the switcher is "acting as", so the backend's role
+// checks ([Authorize(Roles = ...)]) see a real role instead of none. Set on every request, not
+// just role-gated ones, so a stale/missing selection fails the same way everywhere rather than only
+// on some endpoints. Superseded by a real Authorization: Bearer header once an Auth0 tenant is
+// configured (isAuth0Configured - see authConfig.js) - RequireAuth.jsx never renders this bypass
+// path in that case, so the header stops being sent.
+function devHeaders() {
+  const devUserId = getDevUserId()
+  return devUserId ? { 'X-Dev-User-Id': devUserId } : {}
+}
+
 /**
  * Every controller wraps its response in OperationResult<T> (isSuccessful/data/message). This
  * unwraps that envelope and throws the server's own message on failure, so callers just get
  * either the payload or a thrown Error with a message worth showing the user.
- * No Authorization header in this build - the backend runs its own DevBypassAuthHandler while
- * AUTH0_DOMAIN is unset (see Program.cs), matching this webapp's own RequireAuth.jsx dev bypass.
  */
 export async function apiFetch(url, { method = 'GET', body } = {}) {
   // FormData (file uploads) must NOT be JSON-stringified, and must NOT get an explicit
@@ -16,7 +28,7 @@ export async function apiFetch(url, { method = 'GET', body } = {}) {
   const isFormData = body instanceof FormData
   const response = await fetch(url, {
     method,
-    headers: isFormData ? undefined : { 'Content-Type': 'application/json' },
+    headers: isFormData ? devHeaders() : { 'Content-Type': 'application/json', ...devHeaders() },
     body: isFormData ? body : body !== undefined ? JSON.stringify(body) : undefined,
   })
   const payload = await response.json().catch(() => null)
@@ -137,7 +149,7 @@ export async function authorizedFetch(url, token, options = {}) {
  * already use for every other request.
  */
 export async function downloadFile(url, token, filename) {
-  const headers = token ? { Authorization: `Bearer ${token}` } : undefined
+  const headers = { ...devHeaders(), ...(token ? { Authorization: `Bearer ${token}` } : {}) }
   const response = await fetch(url, { headers })
   if (!response.ok) {
     throw new Error(`Request to ${url} failed with status ${response.status}`)
