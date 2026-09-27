@@ -3,12 +3,15 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.Configuration
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.Configuration;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Configuration;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Core;
+    using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Users;
     using Humaid.RiskGovernance.AdminUI.Web.Controllers.Core;
     using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
 
-    /// <summary>Epic 10 (workflow-rule half) - Platform Configuration, analyst-owned.</summary>
-    [Authorize]
+    /// <summary>Epic 10 (workflow-rule half) - Platform Configuration. Admin-owned (the "FCRM Analyst
+    /// with configuration privileges" of US-10.2 - see AppRoles.Admin), kept separate from the
+    /// Analyst role that scores and finalizes assessments.</summary>
+    [Authorize(Roles = AppRoles.Admin)]
     [Route("api/[controller]")]
     public class WorkflowRuleController : BaseApiController
     {
@@ -34,6 +37,8 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.Configuration
         public Task<IActionResult> Upsert([FromBody] UpsertWorkflowRuleInput input) =>
             ExecuteAsync(async () =>
             {
+                if (RequireSelf<Guid>(input.ActorUserId) is { } forbidden) return forbidden;
+
                 try
                 {
                     var id = await _workflowRuleService.UpsertAsync(input);

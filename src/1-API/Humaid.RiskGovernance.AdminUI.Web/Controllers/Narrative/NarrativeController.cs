@@ -3,12 +3,13 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.Narrative
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.Narrative;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Core;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Narrative;
+    using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Users;
     using Humaid.RiskGovernance.AdminUI.Web.Controllers.Core;
     using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
 
     /// <summary>Epic 5 - AI-Drafted Risk Assessment narrative.</summary>
-    [Authorize]
+    [Authorize(Roles = AppRoles.Analyst)]
     [Route("api/[controller]")]
     public class NarrativeController : BaseApiController
     {
@@ -38,6 +39,8 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.Narrative
         public Task<IActionResult> Review([FromBody] ReviewRequest request) =>
             ExecuteAsync(async () =>
             {
+                if (RequireSelf<Guid>(request.ActorUserId) is { } forbidden) return forbidden;
+
                 var id = await _narrativeService.ReviewAsync(request.AssessmentId, request.RiskCategoryId, request.ActorUserId);
                 return OperationResult<Guid>.Success(id);
             }, "Failed to review narrative section.");
@@ -47,6 +50,8 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.Narrative
         public Task<IActionResult> Edit([FromBody] EditNarrativeSectionInput input) =>
             ExecuteAsync(async () =>
             {
+                if (RequireSelf<Guid>(input.ActorUserId) is { } forbidden) return forbidden;
+
                 try
                 {
                     var id = await _narrativeService.EditAsync(input);

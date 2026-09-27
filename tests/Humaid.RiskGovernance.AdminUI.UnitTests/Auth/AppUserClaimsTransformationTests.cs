@@ -1,0 +1,111 @@
+namespace Humaid.RiskGovernance.AdminUI.UnitTests.Auth
+{
+    using System.Security.Claims;
+    using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.Users;
+    using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Users;
+    using Humaid.RiskGovernance.AdminUI.Web.Auth;
+    using Microsoft.Extensions.Logging.Abstractions;
+    using Moq;
+    using Xunit;
+
+    /// <summary>
+    /// Epic 11: the transformation is what turns "this token is valid" into "this caller is user X
+    /// holding role Y" - the app_user row is the only source of the role, never a token claim, so
+    /// these tests exercise that specifically (see DEF-002/DEF-010 in the QA execution report:
+    /// nothing previously stopped a caller from asserting their own role or acting-as id).
+    /// </summary>
+    public class AppUserClaimsTransformationTests
+    {
+        private readonly Mock<IUserService> _userService = new();
+        private readonly AppUserClaimsTransformation _sut;
+
+        public AppUserClaimsTransformationTests()
+        {
+            _sut = new AppUserClaimsTransformation(_userService.Object, NullLogger<AppUserClaimsTransformation>.Instance);
+        }
+
+        private static ClaimsPrincipal Authenticated(params Claim[] claims) =>
+            new(new ClaimsIdentity(claims, "TestScheme"));
+
+        [Fact]
+        public async Task ResolvesAuth0SubjectToAppUserIdAndRole()
+        {
+            var userId = Guid.NewGuid();
+            _userService.Setup(s => s.GetByAuth0SubjectAsync("auth0|abc123"))
+                .ReturnsAsync(new AppUser { Id = userId, Role = AppRoles.Analyst, DisplayName = "Amara Chen" });
+
+            var principal = Authenticated(new Claim(ClaimTypes.NameIdentifier, "auth0|abc123"));
+            var result = await _sut.TransformAsync(principal);
+
+            Assert.Equal(userId, result.GetAppUserId());
+            Assert.Equal(AppRoles.Analyst, result.GetAppRole());
+            Assert.True(result.IsInRole(AppRoles.Analyst));
+        }
+
+        [Fact]
+        public async Task UnrecognizedAuth0SubjectStaysAuthenticatedWithNoRole()
+        {
+            _userService.Setup(s => s.GetByAuth0SubjectAsync(It.IsAny<string>())).ReturnsAsync((AppUser?)null);
+
+            var principal = Authenticated(new Claim(ClaimTypes.NameIdentifier, "auth0|unknown"));
+            var result = await _sut.TransformAsync(principal);
+
+            Assert.True(result.Identity!.IsAuthenticated);
+            Assert.Null(result.GetAppUserId());
+            Assert.Null(result.GetAppRole());
+            Assert.False(result.IsInRole(AppRoles.Admin));
+        }
+
+        [Fact]
+        public async Task DevUserIdClaimResolvesByIdInsteadOfAuth0Subject()
+        {
+            var userId = Guid.NewGuid();
+            _userService.Setup(s => s.GetByIdAsync(userId))
+                .ReturnsAsync(new AppUser { Id = userId, Role = AppRoles.CommitteeMember, DisplayName = "Jordan Blake" });
+
+            // DevBypassAuthHandler always sets NameIdentifier to "system-dev" - the dev user id claim
+            // must take priority over it, or "acting as" would never resolve a role locally.
+            var principal = Authenticated(
+                new Claim(ClaimTypes.NameIdentifier, "system-dev"),
+                new Claim(AppClaimTypes.DevUserId, userId.ToString()));
+
+            var result = await _sut.TransformAsync(principal);
+
+            Assert.Equal(userId, result.GetAppUserId());
+            Assert.Equal(AppRoles.CommitteeMember, result.GetAppRole());
+            _userService.Verify(s => s.GetByAuth0SubjectAsync(It.IsAny<string>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task DiscardsAnyRoleClaimAlreadyOnTheIncomingIdentity()
+        {
+            // A role claim from anywhere other than app_user (a forged/replayed token, a
+            // misconfigured upstream proxy) must never survive the transformation - the database
+            // row is the only source of truth for the role.
+            _userService.Setup(s => s.GetByAuth0SubjectAsync("auth0|abc123"))
+                .ReturnsAsync(new AppUser { Id = Guid.NewGuid(), Role = AppRoles.Analyst, DisplayName = "Amara Chen" });
+
+            var principal = Authenticated(
+                new Claim(ClaimTypes.NameIdentifier, "auth0|abc123"),
+                new Claim(ClaimTypes.Role, AppRoles.Admin));
+
+            var result = await _sut.TransformAsync(principal);
+
+            Assert.False(result.IsInRole(AppRoles.Admin));
+            Assert.True(result.IsInRole(AppRoles.Analyst));
+            Assert.Single(result.FindAll(ClaimTypes.Role));
+        }
+
+        [Fact]
+        public async Task IsANoOpOnceAlreadyTransformed()
+        {
+            var principal = Authenticated(new Claim(AppClaimTypes.UserId, Guid.NewGuid().ToString()));
+
+            var result = await _sut.TransformAsync(principal);
+
+            Assert.Same(principal, result);
+            _userService.Verify(s => s.GetByAuth0SubjectAsync(It.IsAny<string>()), Times.Never);
+            _userService.Verify(s => s.GetByIdAsync(It.IsAny<Guid>()), Times.Never);
+        }
+    }
+}

@@ -3,6 +3,7 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.DataIngestion
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.DataIngestion;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Core;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.DataIngestion;
+    using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Users;
     using Humaid.RiskGovernance.AdminUI.Web.Controllers.Core;
     using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
@@ -28,7 +29,9 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.DataIngestion
             _dataIngestionService = dataIngestionService;
         }
 
+        /// <summary>US-14.3: the Product Owner's intake lookup, not a general directory search.</summary>
         [HttpGet("MockCustomers")]
+        [Authorize(Roles = AppRoles.ProductOwner)]
         public Task<IActionResult> GetMockCustomers() =>
             ExecuteAsync(async () =>
             {
@@ -37,6 +40,7 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.DataIngestion
             }, "Failed to fetch mock customers.");
 
         [HttpGet("MockProducts")]
+        [Authorize(Roles = AppRoles.ProductOwner)]
         public Task<IActionResult> GetMockProducts() =>
             ExecuteAsync(async () =>
             {
@@ -45,6 +49,7 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.DataIngestion
             }, "Failed to fetch mock products.");
 
         [HttpGet("MockVendors")]
+        [Authorize(Roles = AppRoles.ProductOwner)]
         public Task<IActionResult> GetMockVendors() =>
             ExecuteAsync(async () =>
             {
@@ -52,7 +57,11 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.DataIngestion
                 return OperationResult<IReadOnlyList<MockLookupOption>>.Success(options);
             }, "Failed to fetch mock vendors.");
 
+        /// <summary>US-14.4: the immutable snapshot captured at intake - not yet wired to a webapp
+        /// screen, scoped to Analyst pending a decision on Product Owner visibility (open question
+        /// #1 in CLAUDE.md).</summary>
         [HttpGet("Snapshot/{changeRequestId:guid}")]
+        [Authorize(Roles = AppRoles.Analyst)]
         public Task<IActionResult> GetSnapshot(Guid changeRequestId) =>
             ExecuteAsync(async () =>
             {
