@@ -1360,6 +1360,31 @@ RETURNS TABLE (id UUID, display_name TEXT, email TEXT, role TEXT) AS $$
     ORDER BY role, display_name;
 $$ LANGUAGE sql STABLE;
 
+-- ---- functions/users/func_getUserByAuth0Subject.sql ----
+-- Epic 11: resolves the caller's app_user from the Auth0 'sub' claim of the validated access
+-- token. The app_user row is the single source of truth for the caller's role and identity, so
+-- a role change or deactivation takes effect on the caller's next request - no token refresh.
+-- Inactive users resolve to nothing (treated as not provisioned).
+CREATE OR REPLACE FUNCTION func_getUserByAuth0Subject(p_auth0_subject TEXT)
+RETURNS TABLE (id UUID, display_name TEXT, email TEXT, role TEXT) AS $$
+    SELECT id, display_name, email, role
+    FROM app_user
+    WHERE auth0_subject = p_auth0_subject
+      AND is_active = true;
+$$ LANGUAGE sql STABLE;
+
+-- ---- functions/users/func_getUserById.sql ----
+-- Epic 11: resolves an app_user by its own id. Used only by the local-development "acting as"
+-- identity (DevBypassAuthHandler), where the caller names a seeded user directly instead of
+-- presenting an Auth0 token. Inactive users resolve to nothing.
+CREATE OR REPLACE FUNCTION func_getUserById(p_id UUID)
+RETURNS TABLE (id UUID, display_name TEXT, email TEXT, role TEXT) AS $$
+    SELECT id, display_name, email, role
+    FROM app_user
+    WHERE id = p_id
+      AND is_active = true;
+$$ LANGUAGE sql STABLE;
+
 -- ============================== seed ==================================================
 
 -- ---- seed/seed_dev_users.sql ----

@@ -14,5 +14,9 @@ namespace Humaid.RiskGovernance.AdminUI.Services.Users
         }
 
         public Task<IReadOnlyList<AppUser>> GetAllAsync() => _userRepo.GetAllAsync();
+
+        public Task<AppUser?> GetByAuth0SubjectAsync(string auth0Subject) => _userRepo.GetByAuth0SubjectAsync(auth0Subject);
+
+        public Task<AppUser?> GetByIdAsync(Guid id) => _userRepo.GetByIdAsync(id);
     }
 }
