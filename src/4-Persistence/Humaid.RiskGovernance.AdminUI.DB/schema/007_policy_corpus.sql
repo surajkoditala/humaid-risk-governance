@@ -20,7 +20,11 @@ CREATE TABLE policy_chunk (
     section_ref TEXT NOT NULL,
     chunk_text TEXT NOT NULL,
     search_vector TSVECTOR GENERATED ALWAYS AS (to_tsvector('english', chunk_text)) STORED,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    -- Found duplicated 2-3x over in the deployed dev DB (DEF-032 investigation) - seed_policy_corpus.sql
+    -- had no conflict target, so re-running it (harmless for every other seed file) silently
+    -- cluttered search results with identical passages instead of adding coverage.
+    UNIQUE (policy_document_id, section_ref)
 );
 CREATE INDEX idx_policy_chunk_search_vector ON policy_chunk USING GIN (search_vector);
 

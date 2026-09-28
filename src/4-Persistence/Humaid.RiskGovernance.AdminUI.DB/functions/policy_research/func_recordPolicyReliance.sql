@@ -9,9 +9,12 @@ CREATE OR REPLACE FUNCTION func_recordPolicyReliance(
 DECLARE
     v_id UUID;
 BEGIN
+    -- DEF-011: the same passage relied upon for a second category used to hit the old
+    -- (assessment_id, policy_chunk_id) conflict target and overwrite the first category's
+    -- decision. risk_category_id is now part of the key (schema/007_policy_corpus.sql).
     INSERT INTO assessment_policy_reliance (assessment_id, risk_category_id, policy_chunk_id, decision, decided_by_user_id)
     VALUES (p_assessment_id, p_risk_category_id, p_policy_chunk_id, p_decision, p_decided_by_user_id)
-    ON CONFLICT (assessment_id, policy_chunk_id)
+    ON CONFLICT (assessment_id, risk_category_id, policy_chunk_id)
         DO UPDATE SET decision = EXCLUDED.decision, decided_by_user_id = EXCLUDED.decided_by_user_id, decided_at = now()
     RETURNING id INTO v_id;
 

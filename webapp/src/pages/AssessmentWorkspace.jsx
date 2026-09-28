@@ -26,7 +26,7 @@ function ErrorNote({ error }) {
 }
 
 // ---- Categories tab (Epic 2) ------------------------------------------------------------------
-function CategoriesTab({ assessmentId, changeRequest, bump }) {
+function CategoriesTab({ assessmentId, changeRequest, bump, isFinalized }) {
   const { currentUser } = useDevUser()
   const { data: mapping, error: proposeAiError } = useFetch(
     assessmentId ? Endpoints.categoryMapping.get(assessmentId) : null,
@@ -78,9 +78,10 @@ function CategoriesTab({ assessmentId, changeRequest, bump }) {
           <CardDescription>US-2.1 — grounded against this change type's FFIEC categories.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          <Button onClick={propose} disabled={proposing}>
+          <Button onClick={propose} disabled={proposing || isFinalized}>
             {proposing ? 'Proposing…' : 'Propose with AI'}
           </Button>
+          {isFinalized && <p className="text-xs text-muted-foreground">Finalized — categories are locked.</p>}
           <ErrorNote error={proposeError} />
         </CardContent>
       </Card>
@@ -99,7 +100,7 @@ function CategoriesTab({ assessmentId, changeRequest, bump }) {
                     {m.source === 'AiProposed' ? `AI — ${m.aiCitation || m.citationSection}` : 'Analyst added'}
                   </p>
                 </div>
-                <Button size="sm" variant="outline" onClick={() => override(m.riskCategoryId, false)}>
+                <Button size="sm" variant="outline" disabled={isFinalized} onClick={() => override(m.riskCategoryId, false)}>
                   Remove
                 </Button>
               </div>
@@ -127,7 +128,7 @@ function CategoriesTab({ assessmentId, changeRequest, bump }) {
                 </SelectContent>
               </Select>
               <Input placeholder="Reason" value={reason} onChange={(e) => setReason(e.target.value)} className="sm:flex-1" />
-              <Button variant="outline" disabled={!addCategoryId} onClick={() => override(addCategoryId, true)}>
+              <Button variant="outline" disabled={!addCategoryId || isFinalized} onClick={() => override(addCategoryId, true)}>
                 Add
               </Button>
             </div>
@@ -210,8 +211,22 @@ function PolicyTab({ assessmentId, mapping, bump }) {
           <div className="space-y-2">
             {(results || []).map((r) => (
               <div key={r.id} className="rounded-md border p-3">
-                <p className="text-xs font-medium text-muted-foreground">{r.sectionRef}</p>
+                <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                  <p className="text-xs font-medium text-muted-foreground">
+                    {r.documentTitle ? `${r.documentTitle} — ` : ''}
+                    {r.sectionRef}
+                  </p>
+                  <span className="text-xs text-muted-foreground">Relevance rank: {r.rank?.toFixed?.(3) ?? r.rank}</span>
+                </div>
                 <p className="mt-1 text-sm">{r.chunkText}</p>
+                <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                  {r.sourceUrl && (
+                    <a href={r.sourceUrl} target="_blank" rel="noreferrer" className="underline underline-offset-2">
+                      View source document
+                    </a>
+                  )}
+                  {r.effectiveDate && <span>Effective {new Date(r.effectiveDate).toLocaleDateString()}</span>}
+                </div>
                 <div className="mt-2 flex gap-2">
                   <Button size="sm" variant="outline" onClick={() => decide(r.id, 'ReliedUpon')}>
                     Relied upon
@@ -247,19 +262,24 @@ function PolicyTab({ assessmentId, mapping, bump }) {
 
 // ---- Extraction tab (Epic 4) --------------------------------------------------------------------
 function ExtractionTab({ changeRequest, bump }) {
+  const { currentUser } = useDevUser()
   const { data: attachments } = useFetch(Endpoints.changeRequests.attachments(changeRequest.id), [bump])
   const { data: fields, error: extractError } = useFetch(Endpoints.documentExtraction.fields(changeRequest.id), [bump])
   const [extracting, setExtracting] = useState(null)
   const [localError, setLocalError] = useState(null)
   const [correcting, setCorrecting] = useState({})
+  const [correctReason, setCorrectReason] = useState({})
+  const [correctIsMaterial, setCorrectIsMaterial] = useState({})
 
+  // DEF-020: extraction runs server-side against the attachment's own extracted text (looked up
+  // by attachmentId) - the client no longer sends documentText at all.
   const extract = async (attachment) => {
     setExtracting(attachment.id)
     setLocalError(null)
     try {
       await apiFetch(Endpoints.documentExtraction.extract(), {
         method: 'POST',
-        body: { changeRequestId: changeRequest.id, attachmentId: attachment.id, changeType: changeRequest.changeType, documentText: attachment.fileName },
+        body: { changeRequestId: changeRequest.id, attachmentId: attachment.id, changeType: changeRequest.changeType },
       })
       toast.success('Extraction complete')
     } catch (err) {
@@ -270,15 +290,28 @@ function ExtractionTab({ changeRequest, bump }) {
     }
   }
 
+  // DEF-033/DEF-027: send the real actor (the API rejects Guid.Empty) and let the analyst state
+  // why, required only for a material change - not a hard-coded reason/flag for every correction.
   const correct = async (fieldKey) => {
     const newValue = correcting[fieldKey]
     if (!newValue) return
+    const isMaterialChange = correctIsMaterial[fieldKey] ?? true
+    const reason = correctReason[fieldKey] || ''
+    if (isMaterialChange && !reason.trim()) {
+      toast.error('A reason is required for a material correction.')
+      return
+    }
     try {
       await apiFetch(Endpoints.documentExtraction.correct(), {
         method: 'POST',
-        body: { input: { changeRequestId: changeRequest.id, fieldKey, newValue, reason: 'Analyst correction' }, isMaterialChange: true },
+        body: {
+          input: { changeRequestId: changeRequest.id, fieldKey, newValue, reason: reason || null, actorUserId: currentUser.id },
+          isMaterialChange,
+        },
       })
       toast.success('Field corrected')
+      setCorrecting((c) => ({ ...c, [fieldKey]: '' }))
+      setCorrectReason((c) => ({ ...c, [fieldKey]: '' }))
       bump()
     } catch (err) {
       toast.error(err.message)
@@ -321,16 +354,34 @@ function ExtractionTab({ changeRequest, bump }) {
                 </div>
               </div>
               <p className="mt-1 text-sm text-muted-foreground">{f.fieldValue || '(empty)'}</p>
-              <div className="mt-2 flex gap-2">
-                <Input
-                  placeholder="Corrected value"
-                  className="flex-1"
-                  value={correcting[f.fieldKey] || ''}
-                  onChange={(e) => setCorrecting((c) => ({ ...c, [f.fieldKey]: e.target.value }))}
-                />
-                <Button size="sm" variant="outline" onClick={() => correct(f.fieldKey)}>
-                  Correct
-                </Button>
+              <div className="mt-2 flex flex-col gap-2">
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Corrected value"
+                    className="flex-1"
+                    value={correcting[f.fieldKey] || ''}
+                    onChange={(e) => setCorrecting((c) => ({ ...c, [f.fieldKey]: e.target.value }))}
+                  />
+                  <Button size="sm" variant="outline" onClick={() => correct(f.fieldKey)}>
+                    Correct
+                  </Button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <input
+                      type="checkbox"
+                      checked={correctIsMaterial[f.fieldKey] ?? true}
+                      onChange={(e) => setCorrectIsMaterial((c) => ({ ...c, [f.fieldKey]: e.target.checked }))}
+                    />
+                    Material change (reason required)
+                  </label>
+                  <Input
+                    placeholder="Reason for this correction"
+                    className="h-8 flex-1 text-xs"
+                    value={correctReason[f.fieldKey] || ''}
+                    onChange={(e) => setCorrectReason((c) => ({ ...c, [f.fieldKey]: e.target.value }))}
+                  />
+                </div>
               </div>
             </div>
           ))}
@@ -342,7 +393,7 @@ function ExtractionTab({ changeRequest, bump }) {
 }
 
 // ---- Narrative tab (Epic 5) ---------------------------------------------------------------------
-function NarrativeTab({ assessmentId, mapping, bump }) {
+function NarrativeTab({ assessmentId, mapping, bump, isFinalized }) {
   const { currentUser } = useDevUser()
   const { data: sections, error: draftError } = useFetch(assessmentId ? Endpoints.narrative.sections(assessmentId) : null, [assessmentId, bump])
   const [drafting, setDrafting] = useState(null)
@@ -401,11 +452,11 @@ function NarrativeTab({ assessmentId, mapping, bump }) {
             <CardContent className="space-y-3">
               {section ? <p className="text-sm">{section.narrativeText}</p> : <p className="text-sm text-muted-foreground">Not drafted yet.</p>}
               <div className="flex gap-2">
-                <Button size="sm" onClick={() => draft(m.riskCategoryId)} disabled={drafting === m.riskCategoryId}>
+                <Button size="sm" onClick={() => draft(m.riskCategoryId)} disabled={drafting === m.riskCategoryId || isFinalized}>
                   {section ? 'Regenerate' : 'Draft'} with AI
                 </Button>
                 {section && section.status === 'AiDrafted' && (
-                  <Button size="sm" variant="outline" onClick={() => review(m.riskCategoryId)}>
+                  <Button size="sm" variant="outline" disabled={isFinalized} onClick={() => review(m.riskCategoryId)}>
                     Accept as-is
                   </Button>
                 )}
@@ -417,6 +468,7 @@ function NarrativeTab({ assessmentId, mapping, bump }) {
                     placeholder="Edited narrative text"
                     value={editText[m.riskCategoryId] || ''}
                     onChange={(e) => setEditText((c) => ({ ...c, [m.riskCategoryId]: e.target.value }))}
+                    disabled={isFinalized}
                   />
                   <div className="flex gap-2">
                     <Input
@@ -424,8 +476,9 @@ function NarrativeTab({ assessmentId, mapping, bump }) {
                       className="flex-1"
                       value={editReason[m.riskCategoryId] || ''}
                       onChange={(e) => setEditReason((c) => ({ ...c, [m.riskCategoryId]: e.target.value }))}
+                      disabled={isFinalized}
                     />
-                    <Button size="sm" variant="outline" onClick={() => edit(m.riskCategoryId)}>
+                    <Button size="sm" variant="outline" disabled={isFinalized} onClick={() => edit(m.riskCategoryId)}>
                       Save edit
                     </Button>
                   </div>
@@ -442,12 +495,42 @@ function NarrativeTab({ assessmentId, mapping, bump }) {
   )
 }
 
+// DEF-013: the controls library was empty, so this always had nothing to offer; now that
+// seed_controls.sql exists, let the analyst actually credit which controls applied (US-7.1 AC3).
+function ControlsPicker({ riskCategoryId, selected, onChange, disabled }) {
+  const { data: controls } = useFetch(Endpoints.scoring.controls(riskCategoryId), [riskCategoryId])
+  if (!controls || controls.length === 0) return null
+
+  const toggle = (controlId) => {
+    const next = selected.includes(controlId) ? selected.filter((id) => id !== controlId) : [...selected, controlId]
+    onChange(next)
+  }
+
+  return (
+    <div className="space-y-1">
+      <Label className="text-xs">Controls credited</Label>
+      <div className="flex flex-col gap-1">
+        {controls.map((c) => (
+          <label key={c.id} className="flex items-start gap-1.5 text-xs">
+            <input type="checkbox" className="mt-0.5" checked={selected.includes(c.id)} disabled={disabled} onChange={() => toggle(c.id)} />
+            <span>
+              {c.name}
+              {c.description && <span className="text-muted-foreground"> — {c.description}</span>}
+            </span>
+          </label>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ---- Scoring tab (Epic 7) -----------------------------------------------------------------------
-function ScoringTab({ assessmentId, mapping, bump }) {
+function ScoringTab({ assessmentId, mapping, bump, isFinalized }) {
   const { currentUser } = useDevUser()
   const { data: scores, error: calcError } = useFetch(assessmentId ? Endpoints.scoring.scores(assessmentId) : null, [assessmentId, bump])
   const [form, setForm] = useState({})
   const [overrideForm, setOverrideForm] = useState({})
+  const [controlSelections, setControlSelections] = useState({})
   const [localError, setLocalError] = useState(null)
 
   const calculate = async (riskCategoryId) => {
@@ -460,7 +543,7 @@ function ScoringTab({ assessmentId, mapping, bump }) {
           assessmentId,
           riskCategoryId,
           inherentRating: Number(f.inherentRating || 3),
-          controlIdsCredited: [],
+          controlIdsCredited: controlSelections[riskCategoryId] || [],
           controlEffectiveness: Number(f.controlEffectiveness || 0.5),
         },
       })
@@ -536,10 +619,17 @@ function ScoringTab({ assessmentId, mapping, bump }) {
                     onChange={(e) => setForm((c) => ({ ...c, [m.riskCategoryId]: { ...c[m.riskCategoryId], controlEffectiveness: e.target.value } }))}
                   />
                 </div>
-                <Button size="sm" onClick={() => calculate(m.riskCategoryId)}>
+                <Button size="sm" onClick={() => calculate(m.riskCategoryId)} disabled={isFinalized}>
                   Calculate
                 </Button>
               </div>
+
+              <ControlsPicker
+                riskCategoryId={m.riskCategoryId}
+                selected={controlSelections[m.riskCategoryId] || []}
+                onChange={(next) => setControlSelections((c) => ({ ...c, [m.riskCategoryId]: next }))}
+                disabled={isFinalized}
+              />
 
               <div className="flex flex-wrap items-end gap-2 border-t pt-3">
                 <div className="space-y-1">
@@ -558,7 +648,7 @@ function ScoringTab({ assessmentId, mapping, bump }) {
                   value={overrideForm[m.riskCategoryId]?.reason || ''}
                   onChange={(e) => setOverrideForm((c) => ({ ...c, [m.riskCategoryId]: { ...c[m.riskCategoryId], reason: e.target.value } }))}
                 />
-                <Button size="sm" variant="outline" onClick={() => override(m.riskCategoryId)}>
+                <Button size="sm" variant="outline" disabled={isFinalized} onClick={() => override(m.riskCategoryId)}>
                   Override
                 </Button>
               </div>
@@ -611,11 +701,17 @@ function FinalizeTab({ assessmentId, assessment, bump }) {
         <CardDescription>US-6.3 — everything must be reviewed before this can move on.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {readiness?.noCategoriesMapped && (
+          <p className="text-sm text-amber-700">No risk categories are mapped yet (Categories tab).</p>
+        )}
         {readiness?.outstandingNarrativeSections?.length > 0 && (
           <p className="text-sm text-amber-700">Narrative not reviewed: {readiness.outstandingNarrativeSections.join(', ')}</p>
         )}
         {readiness?.categoriesMissingPolicyReliance?.length > 0 && (
           <p className="text-sm text-amber-700">No policy reviewed: {readiness.categoriesMissingPolicyReliance.join(', ')}</p>
+        )}
+        {readiness?.categoriesMissingScore?.length > 0 && (
+          <p className="text-sm text-amber-700">No score calculated: {readiness.categoriesMissingScore.join(', ')}</p>
         )}
         {readiness?.isReady && <p className="text-sm text-emerald-700">Ready to finalize.</p>}
 
@@ -633,6 +729,21 @@ function FinalizeTab({ assessmentId, assessment, bump }) {
 }
 
 // ---- Audit tab (Epic 9) -------------------------------------------------------------------------
+// DEF-028: mirrors AuditExportService.SummarizeJson's "key=value, key=value" compaction so the
+// on-screen trail and the PDF export show the same shape.
+function summarizeAuditJson(json) {
+  if (!json) return null
+  try {
+    const obj = JSON.parse(json)
+    if (obj === null || typeof obj !== 'object') return String(obj)
+    return Object.entries(obj)
+      .map(([k, v]) => `${k}=${typeof v === 'object' ? JSON.stringify(v) : v}`)
+      .join(', ')
+  } catch {
+    return json
+  }
+}
+
 function AuditTab({ changeRequest, bump }) {
   const { data: trail } = useFetch(Endpoints.audit.trail(changeRequest.id), [bump])
   const { getAccessTokenSilently } = useAuth0()
@@ -668,13 +779,26 @@ function AuditTab({ changeRequest, bump }) {
         </button>
       </CardHeader>
       <CardContent className="space-y-2">
-        {(trail || []).map((e) => (
-          <div key={e.id} className="border-b pb-2 text-sm last:border-0">
-            <span className="text-xs text-muted-foreground">{new Date(e.createdAt).toLocaleString()}</span>{' '}
-            <strong>{e.entityType}.{e.action}</strong> by {e.actorName || e.actorLabel}
-            {e.reason && <span className="text-muted-foreground"> — {e.reason}</span>}
-          </div>
-        ))}
+        {(trail || []).map((e) => {
+          const before = summarizeAuditJson(e.beforeValueJson)
+          const after = summarizeAuditJson(e.afterValueJson)
+          return (
+            <div key={e.id} className="border-b pb-2 text-sm last:border-0">
+              <span className="text-xs text-muted-foreground">{new Date(e.createdAt).toLocaleString()}</span>{' '}
+              <strong>{e.entityType}.{e.action}</strong> by {e.actorName || e.actorLabel}
+              {e.reason && <span className="text-muted-foreground"> — {e.reason}</span>}
+              {(before || after) && (
+                <details className="mt-1">
+                  <summary className="cursor-pointer text-xs text-muted-foreground">What changed</summary>
+                  <div className="mt-1 space-y-0.5 pl-3 text-xs">
+                    {before && <p><span className="text-muted-foreground">Before:</span> {before}</p>}
+                    {after && <p><span className="text-muted-foreground">After:</span> {after}</p>}
+                  </div>
+                </details>
+              )}
+            </div>
+          )
+        })}
         {(!trail || trail.length === 0) && <p className="text-sm text-muted-foreground">No events yet.</p>}
       </CardContent>
     </Card>
@@ -722,7 +846,7 @@ export default function AssessmentWorkspace({ changeRequest, onBack }) {
             </TabsList>
           </div>
           <TabsContent value="categories">
-            <CategoriesTab assessmentId={assessmentId} changeRequest={changeRequest} bump={bumpFn} />
+            <CategoriesTab assessmentId={assessmentId} changeRequest={changeRequest} bump={bumpFn} isFinalized={assessment?.status === 'Finalized'} />
           </TabsContent>
           <TabsContent value="policy">
             <PolicyTab assessmentId={assessmentId} mapping={mapping} bump={bumpFn} />
@@ -731,10 +855,10 @@ export default function AssessmentWorkspace({ changeRequest, onBack }) {
             <ExtractionTab changeRequest={changeRequest} bump={bumpFn} />
           </TabsContent>
           <TabsContent value="narrative">
-            <NarrativeTab assessmentId={assessmentId} mapping={mapping} bump={bumpFn} />
+            <NarrativeTab assessmentId={assessmentId} mapping={mapping} bump={bumpFn} isFinalized={assessment?.status === 'Finalized'} />
           </TabsContent>
           <TabsContent value="scoring">
-            <ScoringTab assessmentId={assessmentId} mapping={mapping} bump={bumpFn} />
+            <ScoringTab assessmentId={assessmentId} mapping={mapping} bump={bumpFn} isFinalized={assessment?.status === 'Finalized'} />
           </TabsContent>
           <TabsContent value="finalize">
             <FinalizeTab assessmentId={assessmentId} assessment={assessment} bump={bumpFn} />

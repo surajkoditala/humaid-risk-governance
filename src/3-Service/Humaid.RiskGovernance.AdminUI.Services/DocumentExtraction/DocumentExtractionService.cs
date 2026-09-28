@@ -1,6 +1,7 @@
 namespace Humaid.RiskGovernance.AdminUI.Services.DocumentExtraction
 {
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Ai;
+    using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.ChangeRequests;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.DocumentExtraction;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.DocumentExtraction;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.DocumentExtraction;
@@ -8,16 +9,26 @@ namespace Humaid.RiskGovernance.AdminUI.Services.DocumentExtraction
     public class DocumentExtractionService : IDocumentExtractionService
     {
         private readonly IExtractedFieldRepo _extractedFieldRepo;
+        private readonly IChangeRequestRepo _changeRequestRepo;
         private readonly IDocumentExtractionAiClient _aiClient;
 
-        public DocumentExtractionService(IExtractedFieldRepo extractedFieldRepo, IDocumentExtractionAiClient aiClient)
+        public DocumentExtractionService(
+            IExtractedFieldRepo extractedFieldRepo, IChangeRequestRepo changeRequestRepo, IDocumentExtractionAiClient aiClient)
         {
             _extractedFieldRepo = extractedFieldRepo;
+            _changeRequestRepo = changeRequestRepo;
             _aiClient = aiClient;
         }
 
-        public async Task<IReadOnlyList<ExtractedField>> ExtractAsync(Guid changeRequestId, Guid attachmentId, string changeType, string documentText)
+        public async Task<IReadOnlyList<ExtractedField>> ExtractAsync(Guid changeRequestId, Guid attachmentId, string changeType)
         {
+            // DEF-020: the webapp had been sending attachment.fileName as "documentText" - the
+            // attachment's actual extracted text was never in the client's hands to send. Load it
+            // here, server-side, by attachmentId instead of trusting whatever the caller supplies.
+            var documentText = await _changeRequestRepo.GetAttachmentTextAsync(attachmentId);
+            if (string.IsNullOrWhiteSpace(documentText))
+                throw new InvalidOperationException("No extracted text is available for this attachment yet.");
+
             var proposals = await _aiClient.ExtractAsync(changeType, documentText);
             foreach (var proposal in proposals)
             {

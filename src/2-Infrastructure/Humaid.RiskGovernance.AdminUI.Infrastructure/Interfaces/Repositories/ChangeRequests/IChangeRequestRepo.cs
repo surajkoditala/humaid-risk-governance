@@ -13,6 +13,7 @@ namespace Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.C
         Task UpdateStatusAsync(Guid changeRequestId, string newStatus, Guid? actorUserId);
         Task<(Guid Id, int VersionNumber)> AttachDocumentAsync(AttachDocumentInput input);
         Task<IReadOnlyList<ChangeRequestAttachment>> GetAttachmentsAsync(Guid changeRequestId);
+        Task<string?> GetAttachmentTextAsync(Guid attachmentId);
         Task<Guid> RequestClarificationAsync(Guid changeRequestId, Guid requestedByUserId, string question);
     }
 }
