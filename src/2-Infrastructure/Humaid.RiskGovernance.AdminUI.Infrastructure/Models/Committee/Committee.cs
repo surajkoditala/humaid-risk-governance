@@ -31,11 +31,13 @@ namespace Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Committee
         public Guid CommitteeMemberUserId { get; set; }
         public string Vote { get; set; } = string.Empty;
 
-        /// <summary>Required when Vote = ApproveWithConditions (US-8.2 AC2) - enforced by the
-        /// committee_vote table's own CHECK constraint, not re-validated here.</summary>
+        /// <summary>Required (non-blank) when Vote = ApproveWithConditions (US-8.2 AC2) - checked
+        /// in CommitteeService.CastVoteAsync and backstopped by the committee_vote table's CHECK
+        /// constraint (DEF-030: the constraint alone only rejected NULL, not "").</summary>
         public string? ConditionsText { get; set; }
 
-        /// <summary>Required when Vote = Reject or Defer (US-8.2 AC3/AC4) - same, DB-enforced.</summary>
+        /// <summary>Required (non-blank) when Vote = Reject or Defer (US-8.2 AC3/AC4) - same,
+        /// validated in the service and backstopped in the DB.</summary>
         public string? Rationale { get; set; }
     }
 

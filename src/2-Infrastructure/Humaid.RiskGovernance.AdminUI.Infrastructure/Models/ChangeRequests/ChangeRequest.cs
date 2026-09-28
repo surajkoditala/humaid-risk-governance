@@ -28,6 +28,11 @@ namespace Humaid.RiskGovernance.AdminUI.Infrastructure.Models.ChangeRequests
         public string Status { get; set; } = string.Empty;
         public DateTimeOffset SubmittedAt { get; set; }
         public int DaysElapsed { get; set; }
+
+        /// <summary>DEF-022: the committee's actual outcome (Approved/Rejected/Deferred/
+        /// ApprovedWithConditions) and any conditions - null until Status is "Decisioned".</summary>
+        public string? DecisionResolution { get; set; }
+        public string? DecisionConditionsText { get; set; }
     }
 
     public class ChangeRequestAttachment

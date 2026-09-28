@@ -10,8 +10,10 @@ CREATE TABLE committee_vote (
     rationale TEXT,
     voted_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE (assessment_id, committee_member_user_id),
-    CHECK (vote <> 'ApproveWithConditions' OR conditions_text IS NOT NULL),
-    CHECK (vote NOT IN ('Reject','Defer') OR rationale IS NOT NULL)
+    -- DEF-030: IS NOT NULL let a blank string / whitespace-only value through - a trimmed
+    -- length check closes that.
+    CHECK (vote <> 'ApproveWithConditions' OR (conditions_text IS NOT NULL AND length(trim(conditions_text)) > 0)),
+    CHECK (vote NOT IN ('Reject','Defer') OR (rationale IS NOT NULL AND length(trim(rationale)) > 0))
 );
 
 CREATE TABLE committee_decision (
