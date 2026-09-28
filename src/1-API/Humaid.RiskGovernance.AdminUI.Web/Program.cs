@@ -73,6 +73,9 @@ QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// DEF-017: don't disclose the server implementation in every response.
+builder.WebHost.ConfigureKestrel(o => o.AddServerHeader = false);
+
 // Key Vault as a config source - added last (after CreateBuilder's own appsettings.json /
 // appsettings.{Environment}.json / env var providers), so it wins for any key it holds: the
 // "Key Vault, then env var, then appsettings" hierarchy DevOps asked for is just config-provider
@@ -315,6 +318,25 @@ if (app.Environment.IsDevelopment())
 // (below) is what makes that separate-origin setup work.
 app.UseDefaultFiles();
 app.UseStaticFiles();
+
+// DEF-017: standard hardening headers - none of these were present on any response, an API-only
+// server in particular has no reason to ever be framed, sniffed, or leak the referring URL.
+app.Use(async (context, next) =>
+{
+    var headers = context.Response.Headers;
+    headers["X-Content-Type-Options"] = "nosniff";
+    headers["X-Frame-Options"] = "DENY";
+    headers["Referrer-Policy"] = "no-referrer";
+    // 'self' (not 'none') - app.UseStaticFiles() above serves the webapp's own production build
+    // from this same origin in the single-container deployment shape, and it needs to load its
+    // own same-origin JS/CSS.
+    headers["Content-Security-Policy"] = "default-src 'self'; frame-ancestors 'none'";
+    if (context.Request.IsHttps)
+    {
+        headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains";
+    }
+    await next();
+});
 
 app.UseCors(WebappCorsPolicy);
 app.UseAuthentication();

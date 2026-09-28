@@ -2,6 +2,7 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.Core
 {
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Core;
     using Microsoft.AspNetCore.Mvc;
+    using Npgsql;
 
     /// <summary>
     /// Abstract base controller providing standardised action-result wrappers for every admin UI
@@ -39,6 +40,23 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.Core
                 };
 
                 return StatusCode(statusCode, result);
+            }
+            // DEF-005/DEF-018: a rejected value that only the database validates (a CHECK
+            // constraint, or a domain RAISE EXCEPTION such as func_editNarrativeSection's "reason
+            // is required") was falling into the generic 500 below, and where a controller did
+            // catch it and echo ex.Message back, that message carried Npgsql's raw "SQLSTATE: "
+            // prefix (e.g. "P0001: A reason is required..."). Map both cases to a clean 400 here,
+            // once, instead of in every controller.
+            catch (PostgresException ex) when (ex.SqlState is PostgresErrorCodes.CheckViolation
+                or PostgresErrorCodes.RaiseException or PostgresErrorCodes.ForeignKeyViolation
+                or PostgresErrorCodes.InvalidTextRepresentation)
+            {
+                Logger.LogWarning(ex, "{ErrorMessage}", errorMessage);
+                return StatusCode(
+                    StatusCodes.Status400BadRequest,
+                    OperationResult<T>.BadRequest(ex.SqlState == PostgresErrorCodes.InvalidTextRepresentation
+                        ? "One or more values are not in the expected format."
+                        : ex.MessageText));
             }
             catch (Exception ex)
             {

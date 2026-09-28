@@ -1,6 +1,8 @@
 namespace Humaid.RiskGovernance.AdminUI.Services.Scoring
 {
+    using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.Assessment;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.Scoring;
+    using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.Users;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.Scoring;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Scoring;
 
@@ -8,25 +10,49 @@ namespace Humaid.RiskGovernance.AdminUI.Services.Scoring
     public class ScoringService : IScoringService
     {
         private readonly IRiskScoreRepo _riskScoreRepo;
+        private readonly IUserRepo _userRepo;
+        private readonly IAssessmentRepo _assessmentRepo;
 
-        public ScoringService(IRiskScoreRepo riskScoreRepo)
+        public ScoringService(IRiskScoreRepo riskScoreRepo, IUserRepo userRepo, IAssessmentRepo assessmentRepo)
         {
             _riskScoreRepo = riskScoreRepo;
+            _userRepo = userRepo;
+            _assessmentRepo = assessmentRepo;
         }
 
-        public Task<Guid> UpsertConfigAsync(UpsertScoringConfigInput input)
+        // DEF-007: a Finalized assessment's score must lock - see NarrativeService's identical guard.
+        private async Task EnsureNotFinalizedAsync(Guid assessmentId)
         {
+            var assessment = await _assessmentRepo.GetByIdAsync(assessmentId)
+                ?? throw new InvalidOperationException($"Assessment {assessmentId} not found.");
+            if (assessment.Status == "Finalized")
+            {
+                throw new InvalidOperationException("This assessment is finalized and locked from further edits.");
+            }
+        }
+
+        public async Task<Guid> UpsertConfigAsync(UpsertScoringConfigInput input)
+        {
+            // DEF-002: a Product Owner id changing scoring configuration returned 200 - US-10.1 is
+            // explicitly "FCRM Analyst (with configuration privileges)", not any authenticated user.
+            var actorRole = await _userRepo.GetRoleAsync(input.ActorUserId);
+            if (actorRole is not ("Analyst" or "Admin"))
+            {
+                throw new InvalidOperationException("Only an FCRM Analyst may change scoring configuration.");
+            }
+
             // US-10.1 AC2: reject in C# too - defense in depth on top of the DB CHECK + RAISE.
             if (input.MaxMitigationFactor < 0 || input.MaxMitigationFactor >= 1.0m)
             {
                 throw new InvalidOperationException(
                     "max_mitigation_factor must be in [0, 1.0) - a value of 1.0 or more would let residual risk reach zero.");
             }
-            return _riskScoreRepo.UpsertConfigAsync(input);
+            return await _riskScoreRepo.UpsertConfigAsync(input);
         }
 
         public async Task<RiskScore> CalculateAsync(CalculateRiskScoreInput input)
         {
+            await EnsureNotFinalizedAsync(input.AssessmentId);
             var (id, residual, _) = await _riskScoreRepo.CalculateAndSaveAsync(input);
 
             // Re-validate the DB's own mathematical guarantee here too (schema/010_scoring.sql).
@@ -40,7 +66,7 @@ namespace Humaid.RiskGovernance.AdminUI.Services.Scoring
             return scores.First(s => s.Id == id);
         }
 
-        public Task<Guid> OverrideAsync(OverrideRiskScoreInput input)
+        public async Task<Guid> OverrideAsync(OverrideRiskScoreInput input)
         {
             if (input.NewResidualRating <= 0)
             {
@@ -51,7 +77,8 @@ namespace Humaid.RiskGovernance.AdminUI.Services.Scoring
             {
                 throw new InvalidOperationException("A reason is required to override a risk score.");
             }
-            return _riskScoreRepo.OverrideAsync(input);
+            await EnsureNotFinalizedAsync(input.AssessmentId);
+            return await _riskScoreRepo.OverrideAsync(input);
         }
 
         public Task<IReadOnlyList<RiskScore>> GetScoresAsync(Guid assessmentId) => _riskScoreRepo.GetScoresAsync(assessmentId);

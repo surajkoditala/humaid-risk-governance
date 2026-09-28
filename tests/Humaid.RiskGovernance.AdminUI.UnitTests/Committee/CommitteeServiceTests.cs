@@ -5,6 +5,7 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Committee
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.ChangeRequests;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.Committee;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.Configuration;
+    using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.Users;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.Audit;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.DataIngestion;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Audit;
@@ -31,6 +32,7 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Committee
         private readonly Mock<IDataIngestionService> _dataIngestionService = new();
         private readonly Mock<IMockSystemsClient> _mockSystemsClient = new();
         private readonly Mock<IAuditService> _auditService = new();
+        private readonly Mock<IUserRepo> _userRepo = new();
         private readonly CommitteeService _sut;
 
         private readonly Guid _assessmentId = Guid.NewGuid();
@@ -40,8 +42,12 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Committee
         {
             _sut = new CommitteeService(
                 _committeeRepo.Object, _workflowRuleRepo.Object, _assessmentRepo.Object, _changeRequestRepo.Object,
-                _dataIngestionService.Object, _mockSystemsClient.Object, _auditService.Object,
+                _dataIngestionService.Object, _mockSystemsClient.Object, _auditService.Object, _userRepo.Object,
                 NullLogger<CommitteeService>.Instance);
+
+            // DEF-002: every test below votes as a valid CommitteeMember by default, so only the
+            // role-guard test itself needs to set up a different role.
+            _userRepo.Setup(u => u.GetRoleAsync(It.IsAny<Guid>())).ReturnsAsync("CommitteeMember");
 
             _assessmentRepo.Setup(r => r.GetByIdAsync(_assessmentId))
                 .ReturnsAsync(new Infrastructure.Models.Assessment.Assessment { Id = _assessmentId, ChangeRequestId = _changeRequestId, Status = "Finalized" });
@@ -68,6 +74,18 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Committee
         }
 
         [Fact]
+        public async Task CastVoteAsync_RejectsVoterWhoIsNotACommitteeMember()
+        {
+            var voterId = Guid.NewGuid();
+            _userRepo.Setup(u => u.GetRoleAsync(voterId)).ReturnsAsync("ProductOwner");
+
+            var input = new CastCommitteeVoteInput { AssessmentId = _assessmentId, CommitteeMemberUserId = voterId, Vote = "Approve" };
+
+            await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.CastVoteAsync(input));
+            _committeeRepo.Verify(r => r.CastVoteAsync(It.IsAny<CastCommitteeVoteInput>()), Times.Never);
+        }
+
+        [Fact]
         public async Task CastVoteAsync_DoesNotResolveBelowQuorum()
         {
             _committeeRepo.Setup(r => r.GetVotesAsync(_assessmentId))
@@ -84,7 +102,7 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Committee
         {
             _committeeRepo.Setup(r => r.GetVotesAsync(_assessmentId)).ReturnsAsync(votes.Select(v => Vote(v)).ToList());
 
-            await _sut.CastVoteAsync(new CastCommitteeVoteInput { AssessmentId = _assessmentId, CommitteeMemberUserId = Guid.NewGuid(), Vote = votes[^1] });
+            await _sut.CastVoteAsync(VoteInput(votes[^1]));
 
             _committeeRepo.Verify(r => r.RecordDecisionAsync(_assessmentId, expectedResolution, It.IsAny<string?>()), Times.Once);
         }
@@ -109,7 +127,7 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Committee
             };
             _committeeRepo.Setup(r => r.GetVotesAsync(_assessmentId)).ReturnsAsync(votes);
 
-            await _sut.CastVoteAsync(new CastCommitteeVoteInput { AssessmentId = _assessmentId, CommitteeMemberUserId = Guid.NewGuid(), Vote = "ApproveWithConditions" });
+            await _sut.CastVoteAsync(VoteInput("ApproveWithConditions"));
 
             _committeeRepo.Verify(r => r.RecordDecisionAsync(
                 _assessmentId, "ApprovedWithConditions",
@@ -122,7 +140,7 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Committee
             _committeeRepo.Setup(r => r.GetDecisionAsync(_assessmentId))
                 .ReturnsAsync(new CommitteeDecision { Id = Guid.NewGuid(), Resolution = "Approved" });
 
-            await _sut.CastVoteAsync(new CastCommitteeVoteInput { AssessmentId = _assessmentId, CommitteeMemberUserId = Guid.NewGuid(), Vote = "Reject" });
+            await _sut.CastVoteAsync(VoteInput("Reject"));
 
             _committeeRepo.Verify(r => r.RecordDecisionAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string?>()), Times.Never);
         }
@@ -151,7 +169,7 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Committee
             _dataIngestionService.Setup(s => s.GetSnapshotAsync(_changeRequestId, default))
                 .ReturnsAsync(new ExternalSnapshot { ChangeRequestId = _changeRequestId, MockProductId = productId });
 
-            await _sut.CastVoteAsync(new CastCommitteeVoteInput { AssessmentId = _assessmentId, CommitteeMemberUserId = Guid.NewGuid(), Vote = "Reject" });
+            await _sut.CastVoteAsync(VoteInput("Reject"));
 
             _mockSystemsClient.Verify(c => c.PushProductRiskFlagAsync(productId, false, It.IsAny<string>(), default), Times.Once);
         }
@@ -195,6 +213,17 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Committee
             CommitteeMemberName = memberName,
             Vote = vote,
             ConditionsText = conditionsText,
+        };
+
+        // DEF-030: CastVoteAsync now rejects a blank conditions/rationale for the vote types that
+        // require it, so every test input needs a real one instead of relying on the type alone.
+        private CastCommitteeVoteInput VoteInput(string vote) => new()
+        {
+            AssessmentId = _assessmentId,
+            CommitteeMemberUserId = Guid.NewGuid(),
+            Vote = vote,
+            ConditionsText = vote == "ApproveWithConditions" ? "Quarterly re-review" : null,
+            Rationale = vote is "Reject" or "Defer" ? "Test rationale" : null,
         };
     }
 }

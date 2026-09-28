@@ -42,20 +42,14 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.Narrative
                 return OperationResult<Guid>.Success(id);
             }, "Failed to review narrative section.");
 
-        /// <summary>US-6.1: reason mandatory - enforced by func_editNarrativeSection.</summary>
+        /// <summary>US-6.1: reason mandatory - enforced by func_editNarrativeSection (a blank
+        /// reason raises P0001, mapped to 400 by BaseApiController's PostgresException handler).</summary>
         [HttpPost("Edit")]
         public Task<IActionResult> Edit([FromBody] EditNarrativeSectionInput input) =>
             ExecuteAsync(async () =>
             {
-                try
-                {
-                    var id = await _narrativeService.EditAsync(input);
-                    return OperationResult<Guid>.Success(id);
-                }
-                catch (Exception ex) when (ex.Message.Contains("reason is required", StringComparison.OrdinalIgnoreCase))
-                {
-                    return OperationResult<Guid>.BadRequest(ex.Message);
-                }
+                var id = await _narrativeService.EditAsync(input);
+                return OperationResult<Guid>.Success(id);
             }, "Failed to edit narrative section.");
 
         [HttpGet("{assessmentId:guid}")]
