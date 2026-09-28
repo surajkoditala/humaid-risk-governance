@@ -147,6 +147,7 @@ Prepared by the team's BA (epics 1–10), plus Epics 11–13 raised by QA on 17 
 16. Dev Environment Infrastructure Set Up (the dev environment provisioned from those modules)
 17. Set Up DevOps CI/CD Pipelines (infrastructure and application pipelines in Azure DevOps) — US-17.4 and US-17.8 are tagged **[AI]**: AI reviews pull requests in the pipeline, not in the product
 18. Observability (application telemetry to Application Insights delivered — US-18.1; an SRE watchdog agent — US-18.2 — is still open)
+20. AI Orchestration State & LangGraph Evaluation (a shared state object across the AI touchpoints, plus a scoped LangGraph demonstrator — see `docs/architecture/langgraph-evaluation.md` for why full adoption isn't recommended for this submission, and its own epic for the risk that this doesn't finish by 30 Sep). Numbered 20, not 19 — Epic 19 (SLA Tracking) exists in Azure Boards only, not yet in `user-stories.md`.
 
 **Open questions logged by the BA — resolve with team before locking design:**
 1. Do Product Owners see analyst scoring rationale, or only status?

@@ -2,7 +2,7 @@
 
 **Prepared for:** Financial Crimes Risk Management (FCRM)
 **Document type:** User Stories & Acceptance Criteria (Agile/BRD input)
-**Actors:** Product Owner (requestor), FCRM Analyst, Risk Committee Member, System (AI), Platform Engineer (mock systems), DevOps Engineer (deployment, infrastructure, pipelines, and operations)
+**Actors:** Product Owner (requestor), FCRM Analyst, Risk Committee Member, System (AI), Platform Engineer (mock systems), DevOps Engineer (deployment, infrastructure, pipelines, and operations), AI/ML Engineer (AI orchestration design and evaluation)
 
 ---
 
@@ -10,7 +10,7 @@
 
 - Stories are grouped into epics. Epics 1–10 map to the functional requirements in the problem statement. Epics 11–13 (Access Control, Deployment and Operations, Non-Functional Requirements) and US-9.3 (examiner-ready audit export) were raised by QA on 17 Sep 2026 after reviewing the built increment, and are cross-cutting rather than feature epics. Epic 14 (mock external systems and data ingestion) was added from the Platform Ecosystem Diagram (`docs/architecture/ecosystem-diagram.md`) and is deterministic integration, not an AI touchpoint.
 - Epics 15–18 (Terraform modules, dev environment infrastructure, CI/CD pipelines, and observability) were added from the infrastructure-as-code and pipeline work in `iac/` and `.azure-pipelines/`. They are engineering-delivery epics written for the DevOps Engineer, and none of them changes what the product does for its users. US-17.4 and US-17.8 are tagged **[AI]** because AI reviews pull requests in the delivery pipeline (not in the product); a human still decides whether a pull request merges. Epic 18's application-telemetry story (US-18.1) is delivered; its SRE-agent story (US-18.2) is still open, with its scope to be refined.
-- Numbering note: Epic 14 follows Epic 13 because 11–13 were already taken in Azure Boards when the mock-systems epic was written up. The IDs here match the Boards work items one-to-one, and Epics 15–18 continue the same numbering.
+- Numbering note: Epic 14 follows Epic 13 because 11–13 were already taken in Azure Boards when the mock-systems epic was written up. The IDs here match the Boards work items one-to-one, and Epics 15–18 continue the same numbering. Epic 19 is reserved for Shanthi's SLA Tracking epic, which exists in Azure Boards (ids 93–98) but is not yet written up here — Epic 20 is numbered to leave that gap rather than collide with it.
 - Each story follows: *As a [actor], I want [capability], so that [outcome].*
 - Acceptance criteria use **Given / When / Then** so they're directly testable.
 - Stories tagged **[AI]** involve an AI-assisted step — these always pair with a human review/override story, since no output is allowed to go live without a human decision.
@@ -888,6 +888,50 @@ Builds on the dev environment (Epic 16) and the pipelines (Epic 17).
 
 ---
 
+## Epic 20 — AI Orchestration State & LangGraph Evaluation
+
+**Goal:** Make the AI harness's orchestration explicit and inspectable — a documented, shared state object carried across the AI-touchpoint epics (2, 3, 4, 5), and a small, clearly-scoped LangGraph demonstrator that implements it — without replacing the Workbench's own deterministic sequence, which stays the product's real orchestration.
+
+> Origin: raised in the 22 Sep 2026 standup when a LangGraph sample was shared as a possible fit for the AI touchpoints, and evaluated in `docs/architecture/langgraph-evaluation.md` (25 Sep 2026), which recommended against full adoption for this submission (Option A: keep and document) but left open whether the team wants visible orchestration code (Option C). The 25 Sep 2026 standup answered that: yes, scoped as a demonstrator, owned by the AI/ML Engineer, targeted for the 30 Sep 2026 submission deadline. This epic is that Option C, made concrete — read the evaluation note first; it stays the record of why full adoption (Option D) was not chosen.
+>
+> **Timeline risk:** with two days to the submission deadline, US-20.2 through US-20.4 are at risk of not finishing. US-20.1 (the state-object design) is the fallback: it is achievable on its own and, together with the existing evaluation note, still evidences the "AI harness and orchestration" judging criterion (30%) even if the demonstrator itself doesn't ship.
+
+### US-20.1 — Design the shared state object across the AI touchpoints
+*As an AI/ML Engineer, I want one documented state object that is passed across category mapping, policy research, document extraction, and narrative drafting, so that each step can see what an earlier step already established instead of re-deriving or ignoring it.*
+
+**Acceptance Criteria**
+- Given the four AI-touchpoint epics (2, 3, 4, 5), when the state object is defined, then it names every field each step reads and every field it writes, keyed by change request / assessment id.
+- Given a request moves from one step to the next, when the design is reviewed, then it is clear which fields the next step receives from the accumulated state versus what it still fetches fresh (e.g., a document's raw text).
+- Given `docs/architecture/langgraph-evaluation.md`'s concept-mapping table (LangGraph state object → Workbench equivalent), when this design is written, then it maps onto that table 1:1, so the demonstrator in US-20.2 can implement it without re-deriving the mapping.
+- Given the design is finished, when it's shared with the team, then it is a standalone document under `docs/architecture/`, not only implied by code.
+
+### US-20.2 — Build an isolated LangGraph demonstrator
+*As an AI/ML Engineer, I want a small, separately deployed service that implements the US-20.1 state object as an explicit LangGraph graph over at least two of the AI touchpoints, so that the team can show a working orchestration graph, not only a design document.*
+
+**Acceptance Criteria**
+- Given the demonstrator, when it runs a request end to end, then it executes at least category mapping and narrative drafting as graph nodes sharing one state object, with the routing between them (edges) explicit in code, not hidden in a service class.
+- Given the demonstrator's place in the system, when it is described anywhere (docs, the presentation, the demo), then it is labeled a demonstrator alongside the real product — the Workbench's own deterministic sequence keeps running the product; nothing about Epics 2–9 changes.
+- Given the time remaining before submission, when the demonstrator is built, then it does not require a new database or a Workbench schema change — it reads/writes through the existing API or takes its inputs directly, whichever is faster to stand up.
+- Given `ai/README.md`'s existing "when NOT to use an LLM" judgement (Epics 3 and 7 stay deterministic), when the demonstrator is built, then it does not route policy research or scoring through the graph — only the three genuinely AI-assisted steps are candidates.
+
+### US-20.3 — Measure token and context usage across the graph
+*As an AI/ML Engineer, I want the demonstrator to record how many tokens each node consumes and how much context it carries into the next node, so that the team can speak concretely to the "token efficiency" judging criterion instead of only asserting it.*
+
+**Acceptance Criteria**
+- Given a run of the demonstrator, when it completes, then a per-node token count (prompt + completion) is recorded against that run.
+- Given the recorded counts, when they are reviewed, then they can be compared against the same steps' token usage in the existing, non-graph Workbench flow (`ai/README.md`'s three AI clients).
+- Given the comparison, when it's written up, then it states plainly whether carrying shared state costs more, fewer, or about the same tokens as each step re-deriving its own context — a real number, not an assumption.
+
+### US-20.4 — Verify output quality against the Claude model once access is available
+*As an AI/ML Engineer, I want to run the same requests through the demonstrator using the Claude model (not only Azure Foundry's GPT-4.1-mini, US-13.2's current default), so that the team can judge whether shared state measurably changes output quality before claiming it does.*
+
+**Acceptance Criteria**
+- Given `ANTHROPIC_API_KEY` is available (see the open item on obtaining console access), when the demonstrator runs, then at least one node uses the Claude model.
+- Given a side-by-side comparison against the Foundry-only, non-graph baseline, when it's written up, then it names concretely what's better, worse, or unchanged — not a general impression.
+- Given the comparison is inconclusive or unfavorable, when it's reported, then it's reported as such — this story is an evaluation, not a commitment to switch providers.
+
+---
+
 ## Summary: Requirements Traceability
 
 | Functional Requirement (from problem statement) | Epic(s) |
@@ -911,6 +955,7 @@ Builds on the dev environment (Epic 16) and the pipelines (Epic 17).
 | The dev environment provisioned from code with remote state, private networking, and the container apps — *from the `iac/environments/dev` code, not the original brief* | Epic 16 (builds on Epic 15) |
 | Automated check, build, and deploy pipelines for infrastructure and both services — *from the `.azure-pipelines/` code, not the original brief* | Epic 17 (deploys to the Epic 16 environment) |
 | Logs, metrics, and telemetry collected from the resources, and an SRE agent that watches them and notifies of critical issues — *telemetry delivered (US-18.1); SRE agent still open (US-18.2)* | Epic 18 |
+| An explicit, inspectable AI orchestration state and graph, evaluated against the deterministic harness already in place — *raised in the 22 Sep 2026 standup; not in the original brief* | Epic 20 |
 
 ## Open Questions Requiring Stakeholder Input (consolidated)
 
@@ -923,7 +968,8 @@ Builds on the dev environment (Epic 16) and the pipelines (Epic 17).
 7. With mock-system data now the primary intake path, should an unreachable mock system still let intake proceed with no external context, or block submission? And should snapshot retrieval be its own Epic 9 audit event (Epic 14, US-14.4)?
 8. Should a failed decision push-back be audited and retried or flagged for manual reconciliation, rather than only logged (Epic 14, US-14.5)?
 9. Which conditions count as critical for the SRE agent, and which channel should it notify (Epic 18, US-18.2)?
+10. Is the US-20.2 demonstrator (Option C in `docs/architecture/langgraph-evaluation.md`) enough to evidence "AI harness and orchestration" for this submission, or does the team still want Option B (Microsoft Agent Framework) recorded as the post-hackathon direction (Epic 20)?
 
 ---
 
-*Next suggested steps: performance and availability targets (the remaining Epic 13 gaps), a data model / entity relationship diagram, and the role-based permission matrix that US-11.1 calls for.*
+*Next suggested steps: performance and availability targets (the remaining Epic 13 gaps), a data model / entity relationship diagram, and folding Epic 19 (SLA Tracking, currently Boards-only) into this document. The role-based permission matrix US-11.1 called for is done — see `docs/governance/access-control-matrix.md`.*
