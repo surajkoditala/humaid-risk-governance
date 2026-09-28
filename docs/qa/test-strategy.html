@@ -1,0 +1,550 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root { color-scheme: light dark; }
+  body { margin: 0; }
+  img { max-width: 100%; }
+  [hidden] { display: none !important; }
+</style>
+<title>Workbench Test Strategy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@500;600;700&display=swap">
+<style>
+  :root {
+    --ground:#F6F7F9; --surface:#FFFFFF; --surface-2:#EFF2F5;
+    --ink:#131C26; --ink-2:#3B4956; --muted:#66757F;
+    --line:#DBE1E7; --line-2:#C7D0D8;
+    --accent:#0F4C5C; --accent-ink:#0F4C5C; --accent-soft:#E2EDF0;
+    --critical:#A02B21; --critical-soft:#F7E7E5;
+    --warn:#8A5A06; --warn-soft:#FBF0DC;
+    --pass:#1B6B4C; --pass-soft:#E2F0E9;
+    --neutral:#5D6B78; --neutral-soft:#E9EDF1;
+    --f-display:"IBM Plex Serif",Georgia,serif;
+    --f-body:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+    --measure:70ch; --radius:3px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:#0D141B; --surface:#131C25; --surface-2:#18232E;
+      --ink:#E5EBF1; --ink-2:#BDC9D4; --muted:#8B9BA8;
+      --line:#24313D; --line-2:#314250;
+      --accent:#5FB4C8; --accent-ink:#7CC5D6; --accent-soft:#10303A;
+      --critical:#E4837A; --critical-soft:#351917;
+      --warn:#D9A44E; --warn-soft:#33260F;
+      --pass:#6BC49C; --pass-soft:#122C22;
+      --neutral:#92A2AF; --neutral-soft:#1C2731;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:#0D141B; --surface:#131C25; --surface-2:#18232E;
+    --ink:#E5EBF1; --ink-2:#BDC9D4; --muted:#8B9BA8;
+    --line:#24313D; --line-2:#314250;
+    --accent:#5FB4C8; --accent-ink:#7CC5D6; --accent-soft:#10303A;
+    --critical:#E4837A; --critical-soft:#351917;
+    --warn:#D9A44E; --warn-soft:#33260F;
+    --pass:#6BC49C; --pass-soft:#122C22;
+    --neutral:#92A2AF; --neutral-soft:#1C2731;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--ground); color:var(--ink); font-family:var(--f-body); font-size:15.5px; line-height:1.65; -webkit-font-smoothing:antialiased; }
+  .shell { display:grid; grid-template-columns:206px minmax(0,1fr); gap:54px; max-width:1150px; margin:0 auto; padding:0 32px 90px; }
+  .rail { position:sticky; top:0; align-self:start; padding-top:46px; height:100vh; overflow-y:auto; }
+  .rail-mark { font-family:var(--f-mono); font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent-ink); margin-bottom:22px; }
+  .rail nav { display:flex; flex-direction:column; gap:1px; border-left:1px solid var(--line); }
+  .rail a { display:grid; grid-template-columns:20px 1fr; gap:8px; padding:7px 0 7px 14px; text-decoration:none; color:var(--muted); font-size:12.5px; line-height:1.35; border-left:2px solid transparent; margin-left:-1px; transition:color .12s,border-color .12s; }
+  .rail a:hover { color:var(--ink); border-left-color:var(--line-2); }
+  .rail a .n { font-family:var(--f-mono); font-size:11px; color:var(--accent-ink); }
+  .rail a:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+
+  .masthead { padding:54px 0 0; }
+  .eyebrow { font-family:var(--f-mono); font-size:11px; letter-spacing:.15em; text-transform:uppercase; color:var(--muted); }
+  h1 { font-family:var(--f-display); font-weight:700; font-size:clamp(32px,4.6vw,46px); line-height:1.1; letter-spacing:-.015em; margin:14px 0 16px; text-wrap:balance; }
+  .standfirst { font-size:17.5px; line-height:1.6; color:var(--ink-2); max-width:var(--measure); margin:0 0 30px; }
+  .meta { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); border-top:1px solid var(--line-2); border-bottom:1px solid var(--line-2); }
+  .meta div { padding:13px 16px 13px 0; border-right:1px solid var(--line); }
+  .meta div:last-child { border-right:0; }
+  .meta dt { font-family:var(--f-mono); font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); margin-bottom:5px; }
+  .meta dd { margin:0; font-size:13.5px; font-weight:500; }
+
+  section { padding-top:60px; scroll-margin-top:20px; }
+  .sec-head { display:grid; grid-template-columns:40px 1fr; gap:14px; align-items:start; border-top:2px solid var(--ink); padding-top:13px; margin-bottom:22px; }
+  .sec-n { font-family:var(--f-mono); font-size:12px; font-weight:600; color:var(--accent-ink); padding-top:7px; }
+  h2 { font-family:var(--f-display); font-weight:600; font-size:clamp(22px,2.7vw,28px); line-height:1.22; margin:0; letter-spacing:-.01em; }
+  .sec-sub { grid-column:2; color:var(--muted); font-size:14.5px; margin-top:6px; max-width:var(--measure); }
+  h3 { font-family:var(--f-display); font-weight:600; font-size:17px; margin:30px 0 10px; }
+  h4 { font-weight:600; font-size:14px; margin:20px 0 7px; }
+  p { max-width:var(--measure); margin:0 0 13px; }
+  ul,ol { max-width:var(--measure); padding-left:21px; margin:0 0 13px; }
+  li { margin-bottom:6px; }
+  code { font-family:var(--f-mono); font-size:.875em; background:var(--surface-2); padding:1px 5px; border-radius:var(--radius); border:1px solid var(--line); }
+  a { color:var(--accent-ink); }
+
+  .pill { display:inline-block; font-family:var(--f-mono); font-size:10px; font-weight:500; letter-spacing:.05em; text-transform:uppercase; padding:2px 7px; border-radius:2px; white-space:nowrap; }
+  .p-pass { background:var(--pass-soft); color:var(--pass); }
+  .p-crit { background:var(--critical-soft); color:var(--critical); }
+  .p-warn { background:var(--warn-soft); color:var(--warn); }
+  .p-neut { background:var(--neutral-soft); color:var(--neutral); }
+  .p-acc  { background:var(--accent-soft); color:var(--accent-ink); }
+
+  .tw { overflow-x:auto; margin:16px 0 22px; border:1px solid var(--line); border-radius:var(--radius); background:var(--surface); }
+  table { width:100%; border-collapse:collapse; font-size:13.2px; }
+  th,td { text-align:left; padding:9px 13px; border-bottom:1px solid var(--line); vertical-align:top; }
+  thead th { font-family:var(--f-mono); font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); font-weight:500; background:var(--surface-2); white-space:nowrap; }
+  tbody tr:last-child td { border-bottom:0; }
+  td.mono,th.mono { font-family:var(--f-mono); font-size:11.5px; }
+  td.num { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+
+  pre { font-family:var(--f-mono); font-size:11.8px; line-height:1.58; background:var(--surface-2); border:1px solid var(--line); border-radius:var(--radius); padding:12px 14px; overflow-x:auto; margin:11px 0; }
+  pre code { background:none; border:0; padding:0; font-size:inherit; }
+
+  .note { border-left:2px solid var(--accent); background:var(--accent-soft); padding:14px 18px; margin:18px 0; max-width:var(--measure); }
+  .note p:last-child { margin-bottom:0; }
+  .note .lbl { font-family:var(--f-mono); font-size:9.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--accent-ink); display:block; margin-bottom:6px; }
+  .note.warn { border-left-color:var(--warn); background:var(--warn-soft); }
+  .note.warn .lbl { color:var(--warn); }
+  .note.pass { border-left-color:var(--pass); background:var(--pass-soft); }
+  .note.pass .lbl { color:var(--pass); }
+
+  .lede-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(118px,1fr)); border:1px solid var(--line); border-radius:var(--radius); background:var(--surface); margin:22px 0 26px; }
+  .lede-stats div { padding:15px 18px; border-right:1px solid var(--line); }
+  .lede-stats div:last-child { border-right:0; }
+  .lede-stats .v { font-family:var(--f-display); font-size:27px; font-weight:700; line-height:1; font-variant-numeric:tabular-nums; }
+  .lede-stats .k { font-family:var(--f-mono); font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin-top:7px; }
+
+  /* confidence bar */
+  .conf { display:inline-flex; gap:2px; vertical-align:middle; }
+  .conf i { width:13px; height:8px; border-radius:1px; background:var(--line-2); display:inline-block; }
+  .conf.c3 i:nth-child(-n+3) { background:var(--pass); }
+  .conf.c2 i:nth-child(-n+2) { background:var(--warn); }
+  .conf.c1 i:nth-child(-n+1) { background:var(--critical); }
+
+  figure { margin:26px 0 28px; }
+  figure svg { display:block; width:100%; max-width:100%; height:auto; color:var(--ink-2); }
+  figcaption { font-size:12.5px; color:var(--muted); margin-top:10px; max-width:var(--measure); }
+  .svg-box { background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:20px 18px; overflow-x:auto; }
+  .nd { fill:var(--surface-2); stroke:var(--line-2); stroke-width:1.2; }
+  .nd-a { fill:var(--accent-soft); stroke:var(--accent); stroke-width:1.5; }
+  .nd-t { fill:var(--pass-soft); stroke:var(--pass); stroke-width:1.4; }
+  .nd-x { fill:none; stroke:var(--line-2); stroke-width:1; stroke-dasharray:4 3; }
+  .lb { font-family:var(--f-body); font-size:11.5px; font-weight:600; fill:var(--ink); }
+  .sb { font-family:var(--f-mono); font-size:9.5px; fill:var(--muted); }
+  .ed { stroke:var(--line-2); stroke-width:1.4; fill:none; }
+
+  .foot { margin-top:64px; padding-top:18px; border-top:1px solid var(--line-2); font-size:12.5px; color:var(--muted); max-width:var(--measure); }
+
+  @media (max-width:900px) {
+    .shell { grid-template-columns:1fr; gap:0; padding:0 18px 56px; }
+    .rail { position:static; height:auto; padding-top:24px; }
+    .rail nav { flex-direction:row; flex-wrap:wrap; gap:4px; border-left:0; }
+    .rail a { border:1px solid var(--line); border-radius:2px; padding:5px 9px; margin-left:0; grid-template-columns:auto auto; }
+    .masthead { padding-top:28px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition:none !important; } }
+
+  @page { size:A4; margin:16mm 15mm 18mm; }
+  @media print {
+    :root, :root[data-theme="dark"], :root:not([data-theme="light"]) {
+      --ground:#FFF; --surface:#FFF; --surface-2:#F2F5F7; --ink:#101820; --ink-2:#33414E;
+      --muted:#5A6874; --line:#D3DAE1; --line-2:#B8C2CC; --accent:#0F4C5C; --accent-ink:#0F4C5C;
+      --accent-soft:#E6EFF2; --critical:#8E2219; --critical-soft:#F8E9E7; --warn:#7A4F05;
+      --warn-soft:#FBF1DE; --pass:#17593F; --pass-soft:#E5F1EB; --neutral:#4F5D69; --neutral-soft:#EDF0F3;
+    }
+    * { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
+    body { font-size:10pt; line-height:1.48; background:#fff; }
+    .shell { display:block; max-width:none; padding:0; }
+    .rail { display:none; }
+    .masthead { padding-top:0; }
+    h1 { font-size:25pt; } h2 { font-size:15pt; } h3 { font-size:11.5pt; }
+    p,ul,ol,.standfirst,.sec-sub,.note { max-width:none; }
+    section { break-before:page; padding-top:0; }
+    #s1 { break-before:auto; }
+    .sec-head,h3,h4 { break-after:avoid; }
+    .tw,.note,pre,figure,.lede-stats { break-inside:avoid; }
+    tr,li { break-inside:avoid; }
+    thead { display:table-header-group; }
+    a { color:var(--ink); text-decoration:none; }
+  }
+</style>
+
+<div class="shell">
+  <aside class="rail">
+    <div class="rail-mark">HumAId&nbsp;·&nbsp;QA</div>
+    <nav>
+      <a href="#s1"><span class="n">01</span><span>Scope &amp; ownership</span></a>
+      <a href="#s2"><span class="n">02</span><span>Architecture &amp; test points</span></a>
+      <a href="#s3"><span class="n">03</span><span>The four test layers</span></a>
+      <a href="#s4"><span class="n">04</span><span>Coverage by component</span></a>
+      <a href="#s5"><span class="n">05</span><span>Why a green board means something</span></a>
+      <a href="#s6"><span class="n">06</span><span>Manual testing</span></a>
+      <a href="#s7"><span class="n">07</span><span>When tests run</span></a>
+      <a href="#s8"><span class="n">08</span><span>Where we are</span></a>
+    </nav>
+  </aside>
+
+  <main>
+    <header class="masthead">
+      <div class="eyebrow">Genius Hacks Q3 2026 · Risk Assessment Workbench</div>
+      <h1>Test Strategy</h1>
+      <p class="standfirst">How QA tests the Workbench, mapped onto the architecture the team already knows. What each layer proves, how much confidence it gives, and how we know a passing test actually means something.</p>
+      <dl class="meta">
+        <div><dt>Owner</dt><dd>Shanthi Subramanian · BA&nbsp;/&nbsp;QA</dd></div>
+        <div><dt>Version</dt><dd>1.0 · 21 September 2026</dd></div>
+        <div><dt>Audience</dt><dd>Whole project team</dd></div>
+        <div><dt>Out of scope</dt><dd>Unit testing — Dev owned</dd></div>
+      </dl>
+    </header>
+
+    <!-- ══ 01 ══ -->
+    <section id="s1">
+      <div class="sec-head">
+        <div class="sec-n">01</div>
+        <h2>Scope &amp; ownership</h2>
+        <p class="sec-sub">Who tests what, so nothing falls between us and nothing is done twice.</p>
+      </div>
+
+      <div class="tw"><table>
+        <thead><tr><th>Layer</th><th>Owner</th><th>Answers</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Unit</strong></td><td><span class="pill p-neut">Dev</span></td><td>Is this class's logic correct in isolation?</td></tr>
+          <tr><td><strong>API</strong></td><td><span class="pill p-acc">QA</span></td><td>Does the service behave correctly over HTTP, for the right people, in the right order?</td></tr>
+          <tr><td><strong>Data</strong></td><td><span class="pill p-acc">QA</span></td><td>Does the database itself refuse to store something invalid?</td></tr>
+          <tr><td><strong>UI</strong></td><td><span class="pill p-acc">QA</span></td><td>Can a real person complete their job end to end?</td></tr>
+          <tr><td><strong>AI evaluation</strong></td><td><span class="pill p-acc">QA</span></td><td>Is the model's output good enough to put in front of an analyst?</td></tr>
+        </tbody>
+      </table></div>
+
+      <p><strong>Unit testing is out of QA's scope.</strong> It belongs with the people who wrote the code and refactor it — it is their safety net, and splitting ownership of it would slow everyone down. Dev currently has 62 unit test cases, all passing, and QA treats them as a given rather than re-proving the same ground.</p>
+
+      <div class="note">
+        <span class="lbl">The rule that prevents duplicated effort</span>
+        <p><strong>Every check happens at the cheapest layer that can actually see it.</strong> API tests never re-assert scoring arithmetic — unit tests do that in milliseconds. UI tests never check a status code — a browser is the most expensive possible way to read one. Each layer only covers what the layers beneath it structurally cannot reach.</p>
+      </div>
+    </section>
+
+    <!-- ══ 02 ══ -->
+    <section id="s2">
+      <div class="sec-head">
+        <div class="sec-n">02</div>
+        <h2>Architecture &amp; test points</h2>
+        <p class="sec-sub">Where each kind of test plugs into the system we actually built.</p>
+      </div>
+
+      <figure>
+        <div class="svg-box">
+          <svg viewBox="0 0 700 330" role="img" aria-label="The webapp calls the Workbench API, which calls PostgreSQL, Mock Systems, Azure AI Foundry and blob storage. UI tests drive the browser, API tests call the HTTP boundary, data tests connect straight to PostgreSQL, and AI evaluations exercise the three AI clients directly.">
+            <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/></marker></defs>
+
+            <text class="sb" x="14" y="14">TESTS</text>
+            <text class="sb" x="250" y="14">SYSTEM</text>
+
+            <!-- system column -->
+            <rect class="nd" x="250" y="26" width="180" height="42" rx="2"/>
+            <text class="lb" x="340" y="45" text-anchor="middle">webapp</text><text class="sb" x="340" y="59" text-anchor="middle">React + Vite · :3000</text>
+
+            <rect class="nd-a" x="250" y="100" width="180" height="58" rx="2"/>
+            <text class="lb" x="340" y="122" text-anchor="middle">Workbench API</text>
+            <text class="sb" x="340" y="136" text-anchor="middle">:5210 · controllers</text>
+            <text class="sb" x="340" y="149" text-anchor="middle">services · Dapper repos</text>
+
+            <rect class="nd-a" x="250" y="190" width="180" height="46" rx="2"/>
+            <text class="lb" x="340" y="210" text-anchor="middle">PostgreSQL</text>
+            <text class="sb" x="340" y="224" text-anchor="middle">triggers · CHECK constraints</text>
+
+            <line class="ed" x1="340" y1="68" x2="340" y2="96" marker-end="url(#a)"/>
+            <line class="ed" x1="340" y1="158" x2="340" y2="186" marker-end="url(#a)"/>
+
+            <!-- externals -->
+            <rect class="nd-x" x="490" y="94" width="196" height="40" rx="2"/>
+            <text class="lb" x="588" y="112" text-anchor="middle">Azure AI Foundry</text><text class="sb" x="588" y="126" text-anchor="middle">gpt-4.1-mini</text>
+            <line class="ed" x1="430" y1="114" x2="486" y2="114" marker-end="url(#a)"/>
+
+            <rect class="nd-x" x="490" y="146" width="196" height="40" rx="2"/>
+            <text class="lb" x="588" y="164" text-anchor="middle">Mock Systems</text><text class="sb" x="588" y="178" text-anchor="middle">:5220 · CRM / Core / Vendor</text>
+            <line class="ed" x1="430" y1="166" x2="486" y2="166" marker-end="url(#a)"/>
+
+            <rect class="nd-x" x="490" y="198" width="196" height="40" rx="2"/>
+            <text class="lb" x="588" y="216" text-anchor="middle">Blob storage</text><text class="sb" x="588" y="230" text-anchor="middle">documents</text>
+            <line class="ed" x1="430" y1="214" x2="486" y2="214" marker-end="url(#a)"/>
+
+            <!-- test column -->
+            <rect class="nd-t" x="14" y="26" width="150" height="42" rx="2"/>
+            <text class="lb" x="89" y="45" text-anchor="middle">UI journeys</text><text class="sb" x="89" y="59" text-anchor="middle">6 · Playwright</text>
+            <line class="ed" x1="164" y1="47" x2="246" y2="47" marker-end="url(#a)"/>
+
+            <rect class="nd-t" x="14" y="108" width="150" height="42" rx="2"/>
+            <text class="lb" x="89" y="127" text-anchor="middle">API tests</text><text class="sb" x="89" y="141" text-anchor="middle">12 · Playwright</text>
+            <line class="ed" x1="164" y1="129" x2="246" y2="129" marker-end="url(#a)"/>
+
+            <rect class="nd-t" x="14" y="192" width="150" height="42" rx="2"/>
+            <text class="lb" x="89" y="211" text-anchor="middle">Data tests</text><text class="sb" x="89" y="225" text-anchor="middle">24 · Testcontainers</text>
+            <line class="ed" x1="164" y1="213" x2="246" y2="213" marker-end="url(#a)"/>
+
+            <rect class="nd-t" x="14" y="268" width="150" height="42" rx="2"/>
+            <text class="lb" x="89" y="287" text-anchor="middle">AI evaluation</text><text class="sb" x="89" y="301" text-anchor="middle">12 cases</text>
+            <path class="ed" d="M 164 289 L 210 289 L 210 118 L 486 118" marker-end="url(#a)"/>
+
+            <text class="sb" x="250" y="262">Unit tests (Dev, 62) sit inside the API box —</text>
+            <text class="sb" x="250" y="276">they exercise services with every dependency mocked.</text>
+            <text class="sb" x="250" y="300">Only a direct connection reaches the database rules;</text>
+            <text class="sb" x="250" y="314">no HTTP endpoint ever attempts to alter an audit record.</text>
+          </svg>
+        </div>
+        <figcaption><strong>Figure 1.</strong> Four QA test layers, each entering the system at a different point. The layer that matters most for governance is the lowest one: the append-only audit trigger and the risk-score constraints live in PostgreSQL and cannot be reached through the API at all.</figcaption>
+      </figure>
+    </section>
+
+    <!-- ══ 03 ══ -->
+    <section id="s3">
+      <div class="sec-head">
+        <div class="sec-n">03</div>
+        <h2>The four test layers</h2>
+        <p class="sec-sub">What each one proves, and why it exists separately.</p>
+      </div>
+
+      <h3>API tests <span class="pill p-acc">Playwright · 12 today</span></h3>
+      <p>The workhorse. No browser, runs in seconds, and it is where authorization actually lives. Four questions per write endpoint:</p>
+      <ol>
+        <li><strong>Happy path</strong> — correct input produces the correct result</li>
+        <li><strong>Bad input</strong> — a blank override reason, an out-of-range value, an unsupported file type is refused</li>
+        <li><strong>Wrong person</strong> — a Product Owner cannot cast a committee vote</li>
+        <li><strong>Wrong time</strong> — a vote before routing, a finalize before review, is refused</li>
+      </ol>
+
+      <h3>Data tests <span class="pill p-warn">Testcontainers · 24 planned</span></h3>
+      <p>Connects directly to a throwaway PostgreSQL container with the real schema. This is the <strong>only</strong> layer that can prove the governance rules the product is judged on, because they are enforced by the database rather than by application code:</p>
+      <ul>
+        <li>The audit trail is genuinely append-only — <code>UPDATE</code> and <code>DELETE</code> are rejected by a trigger</li>
+        <li>Residual risk can never be stored as zero</li>
+        <li>A mitigation factor of 1.0 is rejected</li>
+        <li>An override without a reason is rejected</li>
+        <li>Every state change writes its audit entry <em>in the same transaction</em> — no silent gaps</li>
+      </ul>
+
+      <h3>UI journeys <span class="pill p-acc">Playwright · 6 today</span></h3>
+      <p>Three role journeys — Product Owner raises, Analyst assesses and finalizes, Committee votes — run <strong>serially as one story</strong>: the same request moving through the workflow. This single path is the product demo and exercises the whole governance chain.</p>
+      <p>Deliberately small. UI tests need four processes running and are the slowest thing we own, so they answer only the question no cheaper layer can: <em>can a real person complete their job?</em> Twelve is a ceiling, not a target.</p>
+
+      <h3>AI evaluation <span class="pill p-warn">12 cases · 2 executing</span></h3>
+      <p>Scores the three AI touchpoints — category mapping, document extraction, narrative drafting — against fixed datasets. Deterministic wherever the domain allows: category mapping is scored by exact set-overlap against the FFIEC codes, because the category list is small and fixed.</p>
+      <p>Narrative quality is scored by a <strong>labelled heuristic</strong> — citation presence and well-formedness — and the eval documentation says so plainly. A narrative eval that quietly claimed more than it checks would be worse than none.</p>
+    </section>
+
+    <!-- ══ 04 ══ -->
+    <section id="s4">
+      <div class="sec-head">
+        <div class="sec-n">04</div>
+        <h2>Coverage by component</h2>
+        <p class="sec-sub">Honest confidence ratings, component by component. This is the table to scan.</p>
+      </div>
+
+      <div class="tw"><table>
+        <thead><tr><th>Component</th><th>What could go wrong</th><th>Covered by</th><th>Confidence</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>Risk scoring</strong><br><span class="sb">Epic 7</span></td>
+            <td>The number is wrong; controls zero out risk</td>
+            <td>Unit (Dev) + API + Data</td>
+            <td><span class="conf c3"><i></i><i></i><i></i></span> <span class="pill p-pass">High</span></td>
+          </tr>
+          <tr>
+            <td><strong>Committee workflow</strong><br><span class="sb">Epic 8</span></td>
+            <td>Wrong resolution; a vote lost or anonymised</td>
+            <td>Unit (Dev) + API + UI</td>
+            <td><span class="conf c3"><i></i><i></i><i></i></span> <span class="pill p-pass">High</span></td>
+          </tr>
+          <tr>
+            <td><strong>Intake</strong><br><span class="sb">Epic 1</span></td>
+            <td>Bad data accepted; request lost</td>
+            <td>Unit (Dev) + API + UI</td>
+            <td><span class="conf c3"><i></i><i></i><i></i></span> <span class="pill p-pass">High</span></td>
+          </tr>
+          <tr>
+            <td><strong>Finalization gate</strong><br><span class="sb">Epic 6</span></td>
+            <td>An unreviewed assessment reaches committee</td>
+            <td>Unit (Dev) + UI</td>
+            <td><span class="conf c2"><i></i><i></i><i></i></span> <span class="pill p-warn">Medium</span></td>
+          </tr>
+          <tr>
+            <td><strong>AI touchpoints</strong><br><span class="sb">Epics 2, 4, 5</span></td>
+            <td>Fabricated citation; silent bad output</td>
+            <td>Unit (Dev) + evals</td>
+            <td><span class="conf c2"><i></i><i></i><i></i></span> <span class="pill p-warn">Medium</span></td>
+          </tr>
+          <tr>
+            <td><strong>Data ingestion</strong><br><span class="sb">Mock Systems</span></td>
+            <td>Intake fails when a downstream system is down</td>
+            <td>Unit (Dev)</td>
+            <td><span class="conf c2"><i></i><i></i><i></i></span> <span class="pill p-warn">Medium</span></td>
+          </tr>
+          <tr>
+            <td><strong>Access control</strong><br><span class="sb">cross-cutting</span></td>
+            <td>Anyone can act as anyone</td>
+            <td>API</td>
+            <td><span class="conf c1"><i></i><i></i><i></i></span> <span class="pill p-crit">Low</span></td>
+          </tr>
+          <tr>
+            <td><strong>Audit trail</strong><br><span class="sb">Epic 9</span></td>
+            <td>A record is altered after the fact</td>
+            <td>Data tests — <em>not yet built</em></td>
+            <td><span class="conf c1"><i></i><i></i><i></i></span> <span class="pill p-crit">Low</span></td>
+          </tr>
+          <tr>
+            <td><strong>Policy research</strong><br><span class="sb">Epic 3</span></td>
+            <td>Wrong or no policy surfaced</td>
+            <td>— nothing yet</td>
+            <td><span class="conf c1"><i></i><i></i><i></i></span> <span class="pill p-crit">Low</span></td>
+          </tr>
+          <tr>
+            <td><strong>Configuration</strong><br><span class="sb">Epic 10</span></td>
+            <td>A config change breaks in-flight assessments</td>
+            <td>Unit (Dev) + API</td>
+            <td><span class="conf c2"><i></i><i></i><i></i></span> <span class="pill p-warn">Medium</span></td>
+          </tr>
+        </tbody>
+      </table></div>
+
+      <p><span class="conf c3"><i></i><i></i><i></i></span> <strong>High</strong> — covered at more than one layer, including one that cannot be bypassed. &nbsp;·&nbsp; <span class="conf c2"><i></i><i></i><i></i></span> <strong>Medium</strong> — covered, but at one layer only, or with a known gap. &nbsp;·&nbsp; <span class="conf c1"><i></i><i></i><i></i></span> <strong>Low</strong> — little or no automated coverage today.</p>
+
+      <div class="note pass">
+        <span class="lbl">Where the team can be confident right now</span>
+        <p><strong>Risk scoring, the committee workflow and intake are solid.</strong> Each is covered at two or three independent layers, and the scoring rule that matters most — residual risk can never reach zero — is guaranteed by arithmetic and enforced in three separate places: the formula's own bounds, a C# guard, and a database constraint. That one is not a matter of remembering to check.</p>
+      </div>
+
+      <div class="note warn">
+        <span class="lbl">Where we are not yet confident, and why</span>
+        <p><strong>The audit trail and access control are the two real gaps.</strong> Both are fixable and both are scheduled. Audit immutability needs the Data layer, which is specified but not yet built — it is the highest-value work remaining. Access control has tests written; they currently record a known gap rather than passing, which is deliberate and explained in section 5.</p>
+        <p>Policy research has no coverage because it is deterministic full-text search rather than AI, and has been the lowest risk of the ten epics. That is a conscious ordering decision, not an oversight.</p>
+      </div>
+    </section>
+
+    <!-- ══ 05 ══ -->
+    <section id="s5">
+      <div class="sec-head">
+        <div class="sec-n">05</div>
+        <h2>Why a green board means something</h2>
+        <p class="sec-sub">The most reasonable question to ask QA. Three practices answer it.</p>
+      </div>
+
+      <h3>1 · We break the code on purpose to check the tests notice</h3>
+      <p>A passing test proves nothing until you have seen it fail for the right reason. Before trusting any governance test, we invert the rule it guards and confirm precisely that test goes red — then revert.</p>
+      <p>Done for the finalization gate: disabling it failed <strong>exactly five tests</strong> and left the other seven green, because those exercise a different path. That selectivity is the signal. A suite that failed more, or fewer, would be telling us something we did not intend.</p>
+
+      <h3>2 · Known gaps are recorded as tests, never deleted</h3>
+      <p>Where the product does not yet do the right thing, the test asserts the <strong>correct</strong> behaviour and is marked expected-to-fail. Three things follow:</p>
+      <ul>
+        <li>The board stays green while the gap is open, so it stays readable</li>
+        <li>The moment someone fixes it, the runner reports <em>"expected to fail, but passed"</em> — <strong>the fix announces itself</strong></li>
+        <li>The requirement is never lost, which is what happens if you delete the test or soften it to match the bug</li>
+      </ul>
+      <p>This is why some suites show expected failures. They are not broken tests; they are open items with a tripwire attached.</p>
+
+      <h3>3 · A dead environment can never look like a pass</h3>
+      <p>An expected-to-fail test passes when it fails for <em>any</em> reason — including the server being down. So every suite first confirms its dependency is reachable and stops loudly if not. Without that, a suite run against nothing would produce a fully green board proving absolutely nothing.</p>
+
+      <div class="note">
+        <span class="lbl">And every test names the story it proves</span>
+        <pre style="margin:8px 0 0"><code>test('US-8.2 AC5 — a vote is recorded against the member by name', ...)</code></pre>
+        <p style="margin-top:9px">Both test runners write these names into their results, so traceability back to the Azure DevOps board is produced from a build rather than maintained by hand. A story with no matching test shows up as an empty row on its own.</p>
+      </div>
+    </section>
+
+    <!-- ══ 06 ══ -->
+    <section id="s6">
+      <div class="sec-head">
+        <div class="sec-n">06</div>
+        <h2>Manual testing</h2>
+        <p class="sec-sub">Six scenarios stay manual — not because automation is hard, but because it would answer the wrong question.</p>
+      </div>
+
+      <div class="tw"><table>
+        <thead><tr><th>Scenario</th><th>Why a human</th></tr></thead>
+        <tbody>
+          <tr><td><strong>AI narrative quality</strong></td><td>The eval checks a narrative is well-formed and cites something. It cannot judge whether the citation is <em>apposite</em> or the reasoning sound. That is domain judgement</td></tr>
+          <tr><td><strong>Examiner-readiness of the audit export</strong></td><td>The requirement is a format "suitable for handing to an examiner". No assertion evaluates that; only reading it does</td></tr>
+          <tr><td><strong>Exploratory testing of overrides</strong></td><td>Override reasons are free text. Scripted tests only find what they were told to look for</td></tr>
+          <tr><td><strong>First deployment walkthrough</strong></td><td>Smoke checks confirm services answer. Only a person catches a wrong-but-present environment variable</td></tr>
+          <tr><td><strong>Accessibility spot-check</strong></td><td>Scanners catch roughly a third of real problems. The Assessment Workspace is where an analyst lives all day</td></tr>
+          <tr><td><strong>Committee decision semantics</strong></td><td>The quorum rule is proven. Whether the workflow makes sense to people <em>deliberating</em> is a human question</td></tr>
+        </tbody>
+      </table></div>
+
+      <p>Each gets a short written outcome recorded — date, who ran it, what they found. A manual pass with no note is indistinguishable from a manual test that never ran.</p>
+    </section>
+
+    <!-- ══ 07 ══ -->
+    <section id="s7">
+      <div class="sec-head">
+        <div class="sec-n">07</div>
+        <h2>When tests run</h2>
+        <p class="sec-sub">Fast feedback on every change; the expensive things later.</p>
+      </div>
+
+      <div class="tw"><table>
+        <thead><tr><th>Stage</th><th>Runs</th><th>Blocks the merge?</th><th>Time</th></tr></thead>
+        <tbody>
+          <tr><td>Build</td><td>Every PR</td><td><span class="pill p-crit">Yes</span></td><td class="mono">~2 min</td></tr>
+          <tr><td>Unit tests <span class="sb">(Dev)</span></td><td>Every PR</td><td><span class="pill p-crit">Yes</span></td><td class="mono">~1 min</td></tr>
+          <tr><td>Data tests</td><td>Every PR</td><td><span class="pill p-crit">Yes</span></td><td class="mono">~3 min</td></tr>
+          <tr><td>API tests</td><td>Every PR</td><td><span class="pill p-crit">Yes</span></td><td class="mono">~3 min</td></tr>
+          <tr><td>UI journeys</td><td>On merge</td><td><span class="pill p-warn">Soft at first</span></td><td class="mono">~5 min</td></tr>
+          <tr><td>AI evaluation</td><td>Nightly</td><td><span class="pill p-neut">Report only</span></td><td class="mono">~3 min</td></tr>
+        </tbody>
+      </table></div>
+
+      <p><strong>PR feedback stays under ten minutes.</strong> That is a design constraint, not an aspiration — a gate slower than that gets bypassed, and a bypassed gate is worse than no gate because it creates false confidence.</p>
+      <p>UI journeys run on merge rather than per-PR because they need four processes and a browser. Once they have been stable for a week they move to a hard gate.</p>
+
+      <div class="note warn">
+        <span class="lbl">Current state, stated plainly</span>
+        <p>The application PR pipeline exists and gates <strong>build and unit tests</strong> today. The API, Data and UI stages are <strong>not yet wired in</strong> — the tests exist and pass locally, but they do not run automatically. Closing that is additive: a Postgres service container and three steps. It is the top item on the plan in section 8.</p>
+      </div>
+    </section>
+
+    <!-- ══ 08 ══ -->
+    <section id="s8">
+      <div class="sec-head">
+        <div class="sec-n">08</div>
+        <h2>Where we are</h2>
+        <p class="sec-sub">Current position and the next five things, in order.</p>
+      </div>
+
+      <div class="lede-stats">
+        <div><div class="v">18</div><div class="k">QA tests automated</div></div>
+        <div><div class="v">62</div><div class="k">Dev unit tests</div></div>
+        <div><div class="v">24</div><div class="k">Data tests to build</div></div>
+        <div><div class="v">6</div><div class="k">Manual scenarios</div></div>
+      </div>
+
+      <div class="tw"><table>
+        <thead><tr><th class="num">#</th><th>Next</th><th>Gives us</th><th>Owner</th></tr></thead>
+        <tbody>
+          <tr><td class="num">1</td><td>Wire API tests into the PR pipeline</td><td>12 existing tests start protecting every change</td><td>DevOps + QA</td></tr>
+          <tr><td class="num">2</td><td>Build the Data test suite</td><td>Audit immutability and the scoring constraints move from <em>Low</em> to <em>High</em> confidence</td><td>QA</td></tr>
+          <tr><td class="num">3</td><td>Run the AI evaluations against the live model</td><td>10 blocked cases start producing real results</td><td>QA + Dev</td></tr>
+          <tr><td class="num">4</td><td>Add UI journeys to the merge pipeline</td><td>The golden path is protected before any demo</td><td>DevOps + QA</td></tr>
+          <tr><td class="num">5</td><td>Execute the six manual scenarios</td><td>The judgement-based checks are done and recorded</td><td>QA</td></tr>
+        </tbody>
+      </table></div>
+
+      <p>Items 1 and 3 need something from outside QA — a pipeline change and a configured model endpoint. Both are small, and both are on the critical path for the coverage ratings in section 4 to improve.</p>
+
+      <div class="note">
+        <span class="lbl">How to read this strategy in one sentence</span>
+        <p>We test each thing once, at the cheapest layer that can see it; we prove the tests work by breaking the code on purpose; and where we are not yet confident, this document says so rather than rounding up.</p>
+      </div>
+
+      <h3>Defects</h3>
+      <p>Open findings are tracked separately in the QA defect register and on the Azure DevOps board, each with a reproduction and an owner. They are deliberately not listed here — this document is about how we test, not what is currently broken.</p>
+    </section>
+
+    <p class="foot">Allowed values, numeric bounds and component boundaries in this document were read from the codebase and the database schema rather than from documentation, so they reflect what the system actually enforces. Test counts are as of 21 September 2026. Companion documents: <em>Test Starter Guide</em> (how to begin), <em>QA Test Case Register</em> (every case), <em>Test Strategy Alignment Review</em> (pipeline status).</p>
+  </main>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,506 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root { color-scheme: light dark; }
+  body { margin: 0; }
+  img { max-width: 100%; }
+  [hidden] { display: none !important; }
+</style>
+<title>Risk Workbench Test Starter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@500;600;700&display=swap">
+<style>
+  :root {
+    --ground:#F6F7F9; --surface:#FFFFFF; --surface-2:#EFF2F5;
+    --ink:#131C26; --ink-2:#3B4956; --muted:#66757F;
+    --line:#DBE1E7; --line-2:#C7D0D8;
+    --accent:#0F4C5C; --accent-ink:#0F4C5C; --accent-soft:#E2EDF0;
+    --critical:#A02B21; --critical-soft:#F7E7E5;
+    --warn:#8A5A06; --warn-soft:#FBF0DC;
+    --pass:#1B6B4C; --pass-soft:#E2F0E9;
+    --neutral:#5D6B78; --neutral-soft:#E9EDF1;
+    --f-display:"IBM Plex Serif",Georgia,serif;
+    --f-body:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+    --measure:70ch; --radius:3px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:#0D141B; --surface:#131C25; --surface-2:#18232E;
+      --ink:#E5EBF1; --ink-2:#BDC9D4; --muted:#8B9BA8;
+      --line:#24313D; --line-2:#314250;
+      --accent:#5FB4C8; --accent-ink:#7CC5D6; --accent-soft:#10303A;
+      --critical:#E4837A; --critical-soft:#351917;
+      --warn:#D9A44E; --warn-soft:#33260F;
+      --pass:#6BC49C; --pass-soft:#122C22;
+      --neutral:#92A2AF; --neutral-soft:#1C2731;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:#0D141B; --surface:#131C25; --surface-2:#18232E;
+    --ink:#E5EBF1; --ink-2:#BDC9D4; --muted:#8B9BA8;
+    --line:#24313D; --line-2:#314250;
+    --accent:#5FB4C8; --accent-ink:#7CC5D6; --accent-soft:#10303A;
+    --critical:#E4837A; --critical-soft:#351917;
+    --warn:#D9A44E; --warn-soft:#33260F;
+    --pass:#6BC49C; --pass-soft:#122C22;
+    --neutral:#92A2AF; --neutral-soft:#1C2731;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--ground); color:var(--ink); font-family:var(--f-body); font-size:15.5px; line-height:1.65; -webkit-font-smoothing:antialiased; }
+  .shell { display:grid; grid-template-columns:210px minmax(0,1fr); gap:54px; max-width:1140px; margin:0 auto; padding:0 32px 90px; }
+  .rail { position:sticky; top:0; align-self:start; padding-top:46px; height:100vh; overflow-y:auto; }
+  .rail-mark { font-family:var(--f-mono); font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent-ink); margin-bottom:22px; }
+  .rail nav { display:flex; flex-direction:column; gap:1px; border-left:1px solid var(--line); }
+  .rail a { padding:7px 0 7px 14px; text-decoration:none; color:var(--muted); font-size:12.5px; line-height:1.35; border-left:2px solid transparent; margin-left:-1px; transition:color .12s,border-color .12s; }
+  .rail a:hover { color:var(--ink); border-left-color:var(--line-2); }
+  .rail a:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+
+  .masthead { padding:54px 0 0; }
+  .eyebrow { font-family:var(--f-mono); font-size:11px; letter-spacing:.15em; text-transform:uppercase; color:var(--muted); }
+  h1 { font-family:var(--f-display); font-weight:700; font-size:clamp(32px,4.6vw,46px); line-height:1.1; letter-spacing:-.015em; margin:14px 0 16px; text-wrap:balance; }
+  .standfirst { font-size:17.5px; line-height:1.6; color:var(--ink-2); max-width:var(--measure); margin:0 0 30px; }
+
+  section { padding-top:60px; scroll-margin-top:20px; }
+  .sec-head { border-top:2px solid var(--ink); padding-top:13px; margin-bottom:22px; }
+  h2 { font-family:var(--f-display); font-weight:600; font-size:clamp(22px,2.7vw,28px); line-height:1.22; margin:0; letter-spacing:-.01em; }
+  .sec-sub { color:var(--muted); font-size:14.5px; margin-top:6px; max-width:var(--measure); }
+  h3 { font-family:var(--f-display); font-weight:600; font-size:17px; margin:30px 0 10px; }
+  h4 { font-weight:600; font-size:14px; margin:20px 0 7px; }
+  p { max-width:var(--measure); margin:0 0 13px; }
+  ul,ol { max-width:var(--measure); padding-left:21px; margin:0 0 13px; }
+  li { margin-bottom:6px; }
+  code { font-family:var(--f-mono); font-size:.875em; background:var(--surface-2); padding:1px 5px; border-radius:var(--radius); border:1px solid var(--line); }
+  a { color:var(--accent-ink); }
+
+  .pill { display:inline-block; font-family:var(--f-mono); font-size:10px; font-weight:500; letter-spacing:.05em; text-transform:uppercase; padding:2px 7px; border-radius:2px; white-space:nowrap; }
+  .p-pass { background:var(--pass-soft); color:var(--pass); }
+  .p-crit { background:var(--critical-soft); color:var(--critical); }
+  .p-warn { background:var(--warn-soft); color:var(--warn); }
+  .p-neut { background:var(--neutral-soft); color:var(--neutral); }
+  .p-acc  { background:var(--accent-soft); color:var(--accent-ink); }
+
+  .tw { overflow-x:auto; margin:16px 0 22px; border:1px solid var(--line); border-radius:var(--radius); background:var(--surface); }
+  table { width:100%; border-collapse:collapse; font-size:13.2px; }
+  th,td { text-align:left; padding:8px 13px; border-bottom:1px solid var(--line); vertical-align:top; }
+  thead th { font-family:var(--f-mono); font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); font-weight:500; background:var(--surface-2); white-space:nowrap; }
+  tbody tr:last-child td { border-bottom:0; }
+  td.mono,th.mono { font-family:var(--f-mono); font-size:11.5px; }
+  td.num { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  tr.bad td { background:var(--critical-soft); }
+  tr.good td { background:var(--pass-soft); }
+
+  pre { font-family:var(--f-mono); font-size:11.8px; line-height:1.58; background:var(--surface-2); border:1px solid var(--line); border-radius:var(--radius); padding:12px 14px; overflow-x:auto; margin:11px 0; }
+  pre code { background:none; border:0; padding:0; font-size:inherit; }
+
+  .note { border-left:2px solid var(--accent); background:var(--accent-soft); padding:14px 18px; margin:18px 0; max-width:var(--measure); }
+  .note p:last-child { margin-bottom:0; }
+  .note .lbl { font-family:var(--f-mono); font-size:9.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--accent-ink); display:block; margin-bottom:6px; }
+  .note.warn { border-left-color:var(--warn); background:var(--warn-soft); }
+  .note.warn .lbl { color:var(--warn); }
+  .note.crit { border-left-color:var(--critical); background:var(--critical-soft); }
+  .note.crit .lbl { color:var(--critical); }
+
+  .step { display:grid; grid-template-columns:34px 1fr; gap:16px; margin:0 0 22px; max-width:var(--measure); }
+  .step-n { font-family:var(--f-display); font-size:23px; font-weight:700; color:var(--accent-ink); line-height:1.1; }
+  .step h4 { margin:0 0 5px; font-size:15px; }
+  .step p { margin:0 0 8px; }
+
+  figure { margin:24px 0 26px; }
+  figure svg { display:block; width:100%; max-width:100%; height:auto; color:var(--ink-2); }
+  figcaption { font-size:12.5px; color:var(--muted); margin-top:9px; max-width:var(--measure); }
+  .svg-box { background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:18px 16px; overflow-x:auto; }
+  .nd { fill:var(--surface-2); stroke:var(--line-2); stroke-width:1.2; }
+  .nd-end { fill:var(--accent-soft); stroke:var(--accent); stroke-width:1.5; }
+  .lb { font-family:var(--f-body); font-size:11.5px; font-weight:600; fill:var(--ink); }
+  .sb { font-family:var(--f-mono); font-size:9.5px; fill:var(--muted); }
+  .ed { stroke:var(--line-2); stroke-width:1.4; fill:none; }
+
+  .foot { margin-top:64px; padding-top:18px; border-top:1px solid var(--line-2); font-size:12.5px; color:var(--muted); max-width:var(--measure); }
+
+  @media (max-width:900px) {
+    .shell { grid-template-columns:1fr; gap:0; padding:0 18px 56px; }
+    .rail { position:static; height:auto; padding-top:24px; }
+    .rail nav { flex-direction:row; flex-wrap:wrap; gap:4px; border-left:0; }
+    .rail a { border:1px solid var(--line); border-radius:2px; padding:5px 9px; margin-left:0; }
+    .masthead { padding-top:28px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition:none !important; } }
+
+  @page { size:A4; margin:16mm 15mm 18mm; }
+  @media print {
+    :root, :root[data-theme="dark"], :root:not([data-theme="light"]) {
+      --ground:#FFF; --surface:#FFF; --surface-2:#F2F5F7; --ink:#101820; --ink-2:#33414E;
+      --muted:#5A6874; --line:#D3DAE1; --line-2:#B8C2CC; --accent:#0F4C5C; --accent-ink:#0F4C5C;
+      --accent-soft:#E6EFF2; --critical:#8E2219; --critical-soft:#F8E9E7; --warn:#7A4F05;
+      --warn-soft:#FBF1DE; --pass:#17593F; --pass-soft:#E5F1EB; --neutral:#4F5D69; --neutral-soft:#EDF0F3;
+    }
+    * { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
+    body { font-size:10pt; line-height:1.48; background:#fff; }
+    .shell { display:block; max-width:none; padding:0; }
+    .rail { display:none; }
+    .masthead { padding-top:0; }
+    h1 { font-size:25pt; } h2 { font-size:15pt; } h3 { font-size:11.5pt; }
+    p,ul,ol,.standfirst,.sec-sub,.note,.step { max-width:none; }
+    section { break-before:page; padding-top:0; }
+    #s1 { break-before:auto; }
+    .sec-head,h3,h4 { break-after:avoid; }
+    .tw,.note,pre,figure,.step { break-inside:avoid; }
+    tr,li { break-inside:avoid; }
+    thead { display:table-header-group; }
+    a { color:var(--ink); text-decoration:none; }
+  }
+</style>
+
+<div class="shell">
+  <aside class="rail">
+    <div class="rail-mark">HumAId&nbsp;·&nbsp;QA</div>
+    <nav>
+      <a href="#s1">How to start</a>
+      <a href="#s2">1 · API tests</a>
+      <a href="#s3">2 · Risk calculation</a>
+      <a href="#s4">3 · Workflow &amp; allowed values</a>
+      <a href="#s5">4 · UI tests</a>
+      <a href="#s6">The 5-day plan</a>
+    </nav>
+  </aside>
+
+  <main>
+    <header class="masthead">
+      <div class="eyebrow">Genius Hacks Q3 2026 · Risk Assessment Workbench</div>
+      <h1>Test Starter Guide</h1>
+      <p class="standfirst">A practical way to start testing the Workbench: what to write first, how to cover the API and the UI, how to prove the risk score is right, and how to prove the workflow only ever closes on a value it is allowed to close on.</p>
+    </header>
+
+    <!-- ══ start ══ -->
+    <section id="s1">
+      <div class="sec-head">
+        <h2>How to start</h2>
+        <p class="sec-sub">Three steps, roughly an hour, and you have a first test running.</p>
+      </div>
+
+      <div class="step">
+        <div class="step-n">1</div>
+        <div>
+          <h4>Get the stack up</h4>
+          <p>Everything below needs a database. Two terminals:</p>
+          <pre><code>bash ops/setup-local-db.sh        # Postgres + Azurite in Docker
+dotnet run --project src/1-API/Humaid.RiskGovernance.AdminUI.Web</code></pre>
+          <p>Check it worked: <code>curl http://localhost:5210/api/Ping</code> should return <code>"pong"</code>.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-n">2</div>
+        <div>
+          <h4>Run what already exists</h4>
+          <pre><code>cd tests/e2e &amp;&amp; npm install &amp;&amp; npm run test:api</code></pre>
+          <p>12 tests, about 3 seconds. This proves your environment is good before you write anything.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-n">3</div>
+        <div>
+          <h4>Pick one user story and cover it end to end</h4>
+          <p>Not one layer across all stories — <em>one story through all its layers</em>. You learn the whole shape once, then repeat. Start with <strong>US-7.1 (risk score)</strong>: it is pure logic, needs no AI key, and it is the thing most likely to be asked about in a demo.</p>
+        </div>
+      </div>
+
+      <h3>Which layer covers what</h3>
+      <div class="tw"><table>
+        <thead><tr><th>Question</th><th>Layer</th><th>Why there</th></tr></thead>
+        <tbody>
+          <tr><td>Is the score arithmetic right?</td><td><strong>API</strong> + DB</td><td>Deterministic — feed inputs, check the number</td></tr>
+          <tr><td>Can a bad value get in?</td><td><strong>DB</strong></td><td>The database is what rejects it; only a direct connection sees that</td></tr>
+          <tr><td>Does the workflow move correctly?</td><td><strong>API</strong></td><td>State changes happen over HTTP</td></tr>
+          <tr><td>Can the wrong person do it?</td><td><strong>API</strong></td><td>Authorization lives at the HTTP boundary</td></tr>
+          <tr><td>Can a real user complete the job?</td><td><strong>UI</strong></td><td>Only a browser proves the screens join up</td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="note">
+        <span class="lbl">The one rule that keeps this simple</span>
+        <p><strong>Test each thing at the cheapest layer that can actually see it.</strong> A browser test that checks a number is the most expensive possible way to check a number. A UI test should only ever ask "can a person get through this?"</p>
+      </div>
+    </section>
+
+    <!-- ══ API ══ -->
+    <section id="s2">
+      <div class="sec-head">
+        <h2>1 · API tests — start here</h2>
+        <p class="sec-sub">Cheapest, fastest, and where most of the real defects have been.</p>
+      </div>
+
+      <p>You already have the harness: <code>tests/e2e/api/</code>, Playwright's <code>request</code> fixture, no browser involved. A test is just "call an endpoint, check the answer".</p>
+
+      <h3>The pattern</h3>
+      <pre><code>test('US-10.1 — a mitigation factor of 1.0 is rejected', async ({ request }) =&gt; {
+  const res = await request.post('/api/Scoring/Config', {
+    data: { riskCategoryId: PRODUCTS, maxMitigationFactor: 1.0,
+            reason: 'probe', actorUserId: analyst.id }
+  });
+  expect(res.status()).not.toBe(200);
+});</code></pre>
+      <p>Name the test after the story it proves. That is what makes traceability free later — the runner writes test names into the results file, so a story with no test shows up as an empty row by itself.</p>
+
+      <h3>What to cover per endpoint — four questions</h3>
+      <div class="tw"><table>
+        <thead><tr><th class="num">#</th><th>Ask</th><th>Example</th></tr></thead>
+        <tbody>
+          <tr><td class="num">1</td><td><strong>Happy path</strong> — does it work with good input?</td><td>Submit a valid change request → 200 + a <code>CR-2026-xxxxx</code> number</td></tr>
+          <tr><td class="num">2</td><td><strong>Bad input</strong> — is it refused clearly?</td><td>Blank override reason → refused, not saved</td></tr>
+          <tr><td class="num">3</td><td><strong>Wrong person</strong> — is the role checked?</td><td>Product Owner casts a committee vote → should be 403</td></tr>
+          <tr><td class="num">4</td><td><strong>Wrong time</strong> — is the sequence enforced?</td><td>Vote before routing → refused</td></tr>
+        </tbody>
+      </table></div>
+      <p>Four tests per endpoint, roughly 45 endpoints. You will not do all of them in nine days — and you should not. Do all four for the <strong>write</strong> endpoints that change state (vote, finalize, override, config), and happy-path only for the reads.</p>
+
+      <div class="note warn">
+        <span class="lbl">Expect question 3 to fail today</span>
+        <p>No endpoint currently returns 403 for a role violation — the acting user is read from the request body and never checked. When a test fails for this reason, that is <strong>DEF-002</strong>. Mark it expected-to-fail rather than deleting it, so the suite stays green and the test starts shouting the moment somebody fixes it.</p>
+      </div>
+    </section>
+
+    <!-- ══ SCORING ══ -->
+    <section id="s3">
+      <div class="sec-head">
+        <h2>2 · Is the risk score appropriate?</h2>
+        <p class="sec-sub">The good news: scoring is pure arithmetic with no AI in it, so this is fully provable — not a judgement call.</p>
+      </div>
+
+      <h3>The formula, and the only four inputs</h3>
+      <pre><code>residual = inherent_rating − (control_effectiveness × max_mitigation_factor)</code></pre>
+      <div class="tw"><table>
+        <thead><tr><th>Input</th><th>Allowed range</th><th>Where it comes from</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">inherent_rating</td><td>1 – 5</td><td>The analyst</td></tr>
+          <tr><td class="mono">control_effectiveness</td><td>0 – 1</td><td>The analyst</td></tr>
+          <tr><td class="mono">max_mitigation_factor</td><td>0 – 0.999…<br><strong>strictly below 1</strong></td><td>Configuration · currently seeded at <strong>0.85</strong></td></tr>
+          <tr><td class="mono">residual_rating</td><td><strong>&gt; 0 always</strong></td><td>Calculated output</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Why residual can never be zero — and how to prove it</h3>
+      <p>This is the product's central risk rule: <em>controls mitigate risk, they never eliminate it.</em> It holds because of the bounds, not because anyone remembers to check:</p>
+      <pre><code>worst case = lowest inherent − (highest effectiveness × highest factor)
+           = 1 − (1 × 0.85)
+           = 0.15        ← still above zero</code></pre>
+      <p>Since <code>max_mitigation_factor</code> is capped <em>strictly</em> below 1, and inherent is at least 1, the subtraction can never reach the full inherent value. That is arithmetic, not policy.</p>
+
+      <h3>Test it as a truth table</h3>
+      <p>A deterministic formula with three inputs is best tested at its <strong>corners</strong> — the boundary values — plus one ordinary case. Nine tests cover it completely.</p>
+      <div class="tw"><table>
+        <thead><tr><th class="mono">#</th><th class="num">Inherent</th><th class="num">Effect.</th><th class="num">Factor</th><th class="num">Expected residual</th><th>Proves</th></tr></thead>
+        <tbody>
+          <tr class="good"><td class="mono">S-01</td><td class="num">1</td><td class="num">1</td><td class="num">0.85</td><td class="num">0.15</td><td>The floor — worst case still above zero</td></tr>
+          <tr><td class="mono">S-02</td><td class="num">5</td><td class="num">0</td><td class="num">0.85</td><td class="num">5.00</td><td>The ceiling — no controls, no reduction</td></tr>
+          <tr><td class="mono">S-03</td><td class="num">3</td><td class="num">0.5</td><td class="num">0.85</td><td class="num">2.575</td><td>An ordinary case</td></tr>
+          <tr><td class="mono">S-04</td><td class="num">5</td><td class="num">1</td><td class="num">0.85</td><td class="num">4.15</td><td>Maximum possible mitigation</td></tr>
+          <tr class="bad"><td class="mono">S-05</td><td class="num">0</td><td class="num">—</td><td class="num">—</td><td colspan="2">Rejected — inherent below 1</td></tr>
+          <tr class="bad"><td class="mono">S-06</td><td class="num">6</td><td class="num">—</td><td class="num">—</td><td colspan="2">Rejected — inherent above 5</td></tr>
+          <tr class="bad"><td class="mono">S-07</td><td class="num">3</td><td class="num">1.5</td><td class="num">—</td><td colspan="2">Rejected — effectiveness above 1</td></tr>
+          <tr class="bad"><td class="mono">S-08</td><td class="num">3</td><td class="num">0.5</td><td class="num">1.0</td><td colspan="2">Rejected — factor must be &lt; 1 (US-10.1)</td></tr>
+          <tr class="bad"><td class="mono">S-09</td><td colspan="3" class="num">override residual to 0</td><td colspan="2">Rejected — an analyst cannot zero it either</td></tr>
+        </tbody>
+      </table></div>
+
+      <p>Rows S-01 to S-04 go through the API: post a calculation, check the returned number. Rows S-05 to S-09 are <strong>rejections</strong> — the value should never be stored at all — so assert both that the call is refused <em>and</em> that nothing landed in the table.</p>
+
+      <div class="note">
+        <span class="lbl">Check the guard exists at both ends</span>
+        <p>The rule is enforced in two places: a C# check in <code>ScoringService</code>, and a <code>CHECK</code> constraint in PostgreSQL. Test both. Run S-08 through the API (proves the C# guard) and again as a direct <code>INSERT</code> against the database (proves the constraint). If only the C# guard exists, any future code path that skips the service bypasses the rule entirely.</p>
+      </div>
+
+      <h3>What this does <em>not</em> prove</h3>
+      <p>These tests prove the arithmetic is right. They do <strong>not</strong> prove the <em>inputs</em> were sensible — whether "inherent risk 4" was the correct judgement for this change is an analyst's decision, not a testable fact. That is the boundary between testing and professional judgement, and it is worth saying out loud in a demo.</p>
+
+      <div class="note warn">
+        <span class="lbl">One real gap to know about</span>
+        <p>US-7.1 also requires that you can <em>trace which controls were credited</em>. The <code>control</code> table is created but never seeded, so the controls list is empty for every category and <code>control_effectiveness</code> is just a number someone types in. The arithmetic works; the explainability does not. That is <strong>DEF-005</strong>.</p>
+      </div>
+    </section>
+
+    <!-- ══ WORKFLOW ══ -->
+    <section id="s4">
+      <div class="sec-head">
+        <h2>3 · Does the workflow close on an allowed value?</h2>
+        <p class="sec-sub">The workflow is a state machine with a fixed, published list of values. That makes it exhaustively testable.</p>
+      </div>
+
+      <h3>Every allowed value in the system</h3>
+      <p>These are enforced by database <code>CHECK</code> constraints, so they are the real contract — not documentation that might be stale:</p>
+      <div class="tw"><table>
+        <thead><tr><th>Field</th><th>Allowed values</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">change_request.status</td><td>Submitted · InAssessment · PendingCommittee · <strong>Decisioned</strong></td></tr>
+          <tr><td class="mono">assessment.status</td><td>Draft · <strong>Finalized</strong></td></tr>
+          <tr><td class="mono">narrative_section.status</td><td>AiDrafted · AnalystReviewed · AnalystEdited</td></tr>
+          <tr><td class="mono">committee_vote.vote</td><td>Approve · Reject · Defer · ApproveWithConditions</td></tr>
+          <tr><td class="mono">committee_decision.resolution</td><td>Approved · Rejected · Deferred · ApprovedWithConditions</td></tr>
+          <tr><td class="mono">change_type</td><td>Product · Feature · Process · Vendor · Geography · CustomerSegment</td></tr>
+          <tr><td class="mono">app_user.role</td><td>ProductOwner · Analyst · CommitteeMember · Admin</td></tr>
+          <tr><td class="mono">policy_reliance.decision</td><td>ReliedUpon · NotRelevant</td></tr>
+          <tr><td class="mono">category_mapping.source</td><td>AiProposed · AnalystAdded</td></tr>
+          <tr><td class="mono">extracted_field.source</td><td>AiExtracted · AnalystCorrected</td></tr>
+          <tr><td class="mono">risk_score.scored_by</td><td>System · Analyst</td></tr>
+        </tbody>
+      </table></div>
+
+      <figure>
+        <div class="svg-box">
+          <svg viewBox="0 0 700 150" role="img" aria-label="The change request moves through four states: Submitted, InAssessment, PendingCommittee, then Decisioned. Finalization gates the move to PendingCommittee, and quorum gates the move to Decisioned, which resolves to one of four allowed outcomes.">
+            <defs><marker id="ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/></marker></defs>
+            <rect class="nd" x="10" y="34" width="118" height="40" rx="2"/><text class="lb" x="69" y="59" text-anchor="middle">Submitted</text>
+            <rect class="nd" x="180" y="34" width="124" height="40" rx="2"/><text class="lb" x="242" y="59" text-anchor="middle">InAssessment</text>
+            <rect class="nd" x="356" y="34" width="140" height="40" rx="2"/><text class="lb" x="426" y="59" text-anchor="middle">PendingCommittee</text>
+            <rect class="nd-end" x="548" y="34" width="142" height="40" rx="2"/><text class="lb" x="619" y="59" text-anchor="middle">Decisioned</text>
+            <line class="ed" x1="128" y1="54" x2="176" y2="54" marker-end="url(#ar3)"/>
+            <text class="sb" x="152" y="46" text-anchor="middle">open</text>
+            <line class="ed" x1="304" y1="54" x2="352" y2="54" marker-end="url(#ar3)"/>
+            <text class="sb" x="328" y="46" text-anchor="middle">finalize</text>
+            <line class="ed" x1="496" y1="54" x2="544" y2="54" marker-end="url(#ar3)"/>
+            <text class="sb" x="520" y="46" text-anchor="middle">quorum</text>
+            <text class="sb" x="619" y="96" text-anchor="middle">resolution is exactly one of:</text>
+            <text class="sb" x="619" y="110" text-anchor="middle">Approved · Rejected</text>
+            <text class="sb" x="619" y="124" text-anchor="middle">Deferred · ApprovedWithConditions</text>
+            <text class="sb" x="328" y="110" text-anchor="middle">blocked unless every mapped category has</text>
+            <text class="sb" x="328" y="124" text-anchor="middle">a reviewed narrative + a policy decision</text>
+          </svg>
+        </div>
+        <figcaption><strong>Figure 1.</strong> Two gates matter: finalization controls entry to the committee, and quorum controls the close. Everything else is a value check.</figcaption>
+      </figure>
+
+      <h3>Four things to test — in this order</h3>
+
+      <h4>A · Only allowed values are accepted</h4>
+      <p>For each field above, send a value that is not on the list and confirm it is refused. <code>vote: "Maybe"</code>, <code>changeType: "Partnership"</code>, <code>decision: "Unsure"</code>. This is quick to write and catches a whole class of problem in one pass.</p>
+
+      <h4>B · The order is enforced</h4>
+      <div class="tw"><table>
+        <thead><tr><th>Try this out of order</th><th>Expected</th></tr></thead>
+        <tbody>
+          <tr><td>Vote before the assessment is routed</td><td>Refused — <span class="pill p-pass">already works</span></td></tr>
+          <tr><td>Finalize while a narrative is still <code>AiDrafted</code></td><td>Refused, and it names what is outstanding</td></tr>
+          <tr><td>Finalize with no policy decision on a mapped category</td><td>Refused</td></tr>
+          <tr><td>Finalize with <strong>no categories mapped at all</strong></td><td>Should be refused — <span class="pill p-crit">currently allowed, DEF-004</span></td></tr>
+        </tbody>
+      </table></div>
+
+      <h4>C · The close resolves to the right value</h4>
+      <p>This is the one to get right, because the rule is deliberately conservative rather than a simple majority. At quorum (currently 2 votes), the resolution is decided in strict priority order:</p>
+      <pre><code>any Reject                → Rejected
+else any Defer            → Deferred
+else any ApproveWithConditions → ApprovedWithConditions
+else (all Approve)        → Approved</code></pre>
+      <div class="tw"><table>
+        <thead><tr><th class="mono">#</th><th>Votes cast</th><th>Resolution must be</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">W-01</td><td>Approve + Approve</td><td>Approved</td></tr>
+          <tr><td class="mono">W-02</td><td>Approve + Reject</td><td><strong>Rejected</strong> — one reject wins, it is never outvoted</td></tr>
+          <tr><td class="mono">W-03</td><td>Approve + Defer</td><td>Deferred</td></tr>
+          <tr><td class="mono">W-04</td><td>Approve + ApproveWithConditions</td><td>ApprovedWithConditions</td></tr>
+          <tr><td class="mono">W-05</td><td>Reject + Defer</td><td><strong>Rejected</strong> — reject outranks defer</td></tr>
+          <tr><td class="mono">W-06</td><td>ApproveWithConditions + Defer</td><td>Deferred</td></tr>
+          <tr><td class="mono">W-07</td><td>One vote only</td><td>No resolution yet — below quorum</td></tr>
+          <tr><td class="mono">W-08</td><td>Two ApproveWithConditions</td><td>Both members' conditions text preserved, neither dropped</td></tr>
+        </tbody>
+      </table></div>
+      <p>These eight are already covered by the developers' unit tests and pass. Worth re-running at API level once, because unit tests mock the database — they prove the <em>rule</em>, not that the resolution is actually written to the record the Product Owner sees.</p>
+
+      <h4>D · The record is complete when it closes</h4>
+      <p>When status reaches <code>Decisioned</code>, check: every voter is named individually, each rationale is stored, conditions text survives, and the audit trail contains the whole chain. <em>"Decisioned"</em> with an incomplete record is worse than not closing at all.</p>
+    </section>
+
+    <!-- ══ UI ══ -->
+    <section id="s5">
+      <div class="sec-head">
+        <h2>4 · UI tests — last, and fewest</h2>
+        <p class="sec-sub">Three journeys, not thirty. Here is why, and what they should check.</p>
+      </div>
+
+      <p>UI tests need the Vite dev server plus both .NET services plus Postgres. They are the slowest and most fragile tests you will own, so they should answer only the question no other layer can: <strong>can a real person actually complete their job?</strong></p>
+
+      <h3>The three journeys — one per role</h3>
+      <div class="tw"><table>
+        <thead><tr><th>Journey</th><th>Steps</th><th>Check</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Product Owner</strong></td><td>Pick change type → fill the form → submit → open My Requests</td><td>A <code>CR-</code> number appears; the request is listed with its status</td></tr>
+          <tr><td><strong>Analyst</strong></td><td>Open the inbox → open the workspace → walk the seven tabs → finalize → route</td><td>All stages reachable; the audit tab already names the submitter</td></tr>
+          <tr><td><strong>Committee</strong></td><td>Open the queue → review → vote Approve</td><td>The vote is recorded <em>against that member by name</em></td></tr>
+        </tbody>
+      </table></div>
+      <p>Run them <strong>serially, as one story</strong> — the same request moving through the workflow, not three unrelated fixtures. That is what the product actually does, and it is the demo.</p>
+
+      <h3>Signing in needs no automation</h3>
+      <p>While Auth0 is unconfigured, the app reads the acting user from <code>localStorage.devUserId</code>. Setting that key before the page loads <em>is</em> the sign-in — no login form to drive. Usually the most painful part of UI testing; here it is one line.</p>
+
+      <h3>Three selector traps, already hit</h3>
+      <div class="tw"><table>
+        <thead><tr><th>Trap</th><th>Fix</th></tr></thead>
+        <tbody>
+          <tr><td>Sidebar "Submit Request" vs form "Submit request"</td><td>Use <code>exact: true</code> — matching is case-insensitive without it, and you get a strict-mode error</td></tr>
+          <tr><td>Change type is not a <code>&lt;select&gt;</code></td><td>It is a combobox; scope to the form — the header has another one</td></tr>
+          <tr><td>Workspace stages are not buttons</td><td>They are <code>role="tab"</code></td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>What UI tests should never do</h3>
+      <ul>
+        <li><strong>Check a calculated number.</strong> The API proves the arithmetic in milliseconds.</li>
+        <li><strong>Check a status code.</strong> A browser is the most expensive possible way.</li>
+        <li><strong>Test every field's validation.</strong> One example in the UI to prove validation is wired; the rest at API level.</li>
+      </ul>
+
+      <div class="note">
+        <span class="lbl">The growth rule</span>
+        <p>Before adding a UI test, ask: <em>could the API layer prove this?</em> If yes, put it there. Twelve UI tests is a ceiling, not a target.</p>
+      </div>
+    </section>
+
+    <!-- ══ PLAN ══ -->
+    <section id="s6">
+      <div class="sec-head">
+        <h2>The 5-day plan</h2>
+        <p class="sec-sub">Ordered so each day's work makes the next day's easier.</p>
+      </div>
+
+      <div class="tw"><table>
+        <thead><tr><th>Day</th><th>Do this</th><th>You end with</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">1</td><td>Stack up; run the existing 12 API tests; write the nine scoring tests (S-01…09)</td><td>The risk calculation is provably correct</td></tr>
+          <tr><td class="mono">2</td><td>Workflow value tests (A) and ordering tests (B)</td><td>No invalid value or out-of-order transition can slip through</td></tr>
+          <tr><td class="mono">3</td><td>Resolution tests (C) and record-completeness (D)</td><td>The workflow closes correctly on all four outcomes</td></tr>
+          <tr><td class="mono">4</td><td>Role tests — question 3 on every write endpoint</td><td>The authorization gap is measured, not assumed</td></tr>
+          <tr><td class="mono">5</td><td>The three UI journeys; wire the suite into the PR pipeline</td><td>The golden path is protected on every change</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>A note on what you will find</h3>
+      <p>Several of these tests will fail on day one. That is the point — a test that cannot fail is not a test. When one fails, decide which it is:</p>
+      <div class="tw"><table>
+        <thead><tr><th>If…</th><th>Then</th></tr></thead>
+        <tbody>
+          <tr><td>The product is wrong</td><td>Raise a defect; keep the test asserting the <em>correct</em> behaviour, marked expected-to-fail so the fix announces itself</td></tr>
+          <tr><td>The test is wrong</td><td>Fix the test</td></tr>
+          <tr><td>The requirement was never clear</td><td>That is a BA finding — write the missing acceptance criterion</td></tr>
+        </tbody>
+      </table></div>
+      <p>The third case is the most valuable and the easiest to miss. DEF-004 started exactly there: US-6.3 never said what should happen when an assessment has no categories, so the code treated silence as permission.</p>
+
+      <div class="note crit">
+        <span class="lbl">Known before you start — so a failure is not a surprise</span>
+        <p><strong>Role tests will fail</strong> (DEF-002 — no endpoint checks role). <strong>Finalize-with-no-categories will pass when it should fail</strong> (DEF-004). <strong>The controls list is empty</strong> (DEF-005). <strong>The first workspace open returns 500</strong> (DEF-006). <strong>Unknown ids return 500 instead of 404</strong> (DEF-003). All five are raised, reproducible and owned — you are confirming known defects, not discovering the product is broken.</p>
+      </div>
+    </section>
+
+    <p class="foot">Allowed values and numeric bounds in this guide were read directly from the database <code>CHECK</code> constraints in <code>src/4-Persistence/…DB/schema/</code>, not from documentation — so they are the contract the system actually enforces. Companion documents: <em>UI, API and Data Test Strategy</em> (the full version), <em>QA Test Case Register</em>, <em>Test Strategy Alignment Review</em>.</p>
+  </main>
+</div>
+
+</body>
+</html>

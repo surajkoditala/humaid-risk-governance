@@ -1,0 +1,569 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root { color-scheme: light dark; }
+  body { margin: 0; }
+  img { max-width: 100%; }
+  [hidden] { display: none !important; }
+</style>
+<title>Story-by-Story Board Review</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@500;600;700&display=swap">
+<style>
+  :root {
+    --ground:#F6F7F9; --surface:#FFFFFF; --surface-2:#EFF2F5;
+    --ink:#131C26; --ink-2:#3B4956; --muted:#66757F;
+    --line:#DBE1E7; --line-2:#C7D0D8;
+    --accent:#0F4C5C; --accent-ink:#0F4C5C; --accent-soft:#E2EDF0;
+    --critical:#A02B21; --critical-soft:#F7E7E5;
+    --warn:#8A5A06; --warn-soft:#FBF0DC;
+    --pass:#1B6B4C; --pass-soft:#E2F0E9;
+    --neutral:#5D6B78; --neutral-soft:#E9EDF1;
+    --f-display:"IBM Plex Serif",Georgia,serif;
+    --f-body:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+    --measure:72ch; --radius:3px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:#0D141B; --surface:#131C25; --surface-2:#18232E;
+      --ink:#E5EBF1; --ink-2:#BDC9D4; --muted:#8B9BA8;
+      --line:#24313D; --line-2:#314250;
+      --accent:#5FB4C8; --accent-ink:#7CC5D6; --accent-soft:#10303A;
+      --critical:#E4837A; --critical-soft:#351917;
+      --warn:#D9A44E; --warn-soft:#33260F;
+      --pass:#6BC49C; --pass-soft:#122C22;
+      --neutral:#92A2AF; --neutral-soft:#1C2731;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:#0D141B; --surface:#131C25; --surface-2:#18232E;
+    --ink:#E5EBF1; --ink-2:#BDC9D4; --muted:#8B9BA8;
+    --line:#24313D; --line-2:#314250;
+    --accent:#5FB4C8; --accent-ink:#7CC5D6; --accent-soft:#10303A;
+    --critical:#E4837A; --critical-soft:#351917;
+    --warn:#D9A44E; --warn-soft:#33260F;
+    --pass:#6BC49C; --pass-soft:#122C22;
+    --neutral:#92A2AF; --neutral-soft:#1C2731;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--ground); color:var(--ink); font-family:var(--f-body); font-size:15px; line-height:1.62; -webkit-font-smoothing:antialiased; }
+  .shell { display:grid; grid-template-columns:212px minmax(0,1fr); gap:48px; max-width:1240px; margin:0 auto; padding:0 30px 90px; }
+  .rail { position:sticky; top:0; align-self:start; padding-top:46px; height:100vh; overflow-y:auto; }
+  .rail-mark { font-family:var(--f-mono); font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent-ink); margin-bottom:20px; }
+  .rail nav { display:flex; flex-direction:column; gap:1px; border-left:1px solid var(--line); }
+  .rail a { padding:5px 0 5px 13px; text-decoration:none; color:var(--muted); font-size:12px; line-height:1.3; border-left:2px solid transparent; margin-left:-1px; transition:color .12s,border-color .12s; }
+  .rail a:hover { color:var(--ink); border-left-color:var(--line-2); }
+  .rail a:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  .rail .grp { font-family:var(--f-mono); font-size:9px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-2); padding:12px 0 3px 13px; }
+
+  .masthead { padding:52px 0 0; }
+  .eyebrow { font-family:var(--f-mono); font-size:11px; letter-spacing:.15em; text-transform:uppercase; color:var(--muted); }
+  h1 { font-family:var(--f-display); font-weight:700; font-size:clamp(30px,4.4vw,44px); line-height:1.1; letter-spacing:-.015em; margin:14px 0 16px; text-wrap:balance; }
+  .standfirst { font-size:17px; line-height:1.6; color:var(--ink-2); max-width:var(--measure); margin:0 0 28px; }
+  .meta { display:grid; grid-template-columns:repeat(auto-fit,minmax(138px,1fr)); border-top:1px solid var(--line-2); border-bottom:1px solid var(--line-2); }
+  .meta div { padding:13px 16px 13px 0; border-right:1px solid var(--line); }
+  .meta div:last-child { border-right:0; }
+  .meta dt { font-family:var(--f-mono); font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); margin-bottom:5px; }
+  .meta dd { margin:0; font-size:13.5px; font-weight:500; }
+
+  section { padding-top:54px; scroll-margin-top:20px; }
+  .sec-head { border-top:2px solid var(--ink); padding-top:12px; margin-bottom:18px; }
+  h2 { font-family:var(--f-display); font-weight:600; font-size:clamp(21px,2.6vw,27px); line-height:1.22; margin:0; letter-spacing:-.01em; }
+  .sec-sub { color:var(--muted); font-size:14px; margin-top:5px; max-width:var(--measure); }
+  h3 { font-family:var(--f-display); font-weight:600; font-size:16.5px; margin:30px 0 8px; }
+  .epic-h { display:flex; flex-wrap:wrap; gap:9px; align-items:baseline; margin:30px 0 6px; }
+  .epic-id { font-family:var(--f-mono); font-size:11px; font-weight:600; color:var(--accent-ink); }
+  .epic-t { font-family:var(--f-display); font-weight:600; font-size:16.5px; }
+  p { max-width:var(--measure); margin:0 0 12px; }
+  ul,ol { max-width:var(--measure); padding-left:20px; margin:0 0 12px; }
+  li { margin-bottom:5px; }
+  code { font-family:var(--f-mono); font-size:.86em; background:var(--surface-2); padding:1px 4px; border-radius:var(--radius); border:1px solid var(--line); }
+  a { color:var(--accent-ink); }
+
+  .pill { display:inline-block; font-family:var(--f-mono); font-size:9.5px; font-weight:500; letter-spacing:.04em; text-transform:uppercase; padding:2px 6px; border-radius:2px; white-space:nowrap; }
+  .p-pass { background:var(--pass-soft); color:var(--pass); }
+  .p-crit { background:var(--critical-soft); color:var(--critical); }
+  .p-warn { background:var(--warn-soft); color:var(--warn); }
+  .p-neut { background:var(--neutral-soft); color:var(--neutral); }
+  .p-acc  { background:var(--accent-soft); color:var(--accent-ink); }
+
+  .tw { overflow-x:auto; margin:10px 0 18px; border:1px solid var(--line); border-radius:var(--radius); background:var(--surface); }
+  table { width:100%; border-collapse:collapse; font-size:12.4px; }
+  th,td { text-align:left; padding:7px 10px; border-bottom:1px solid var(--line); vertical-align:top; }
+  thead th { font-family:var(--f-mono); font-size:9.5px; letter-spacing:.09em; text-transform:uppercase; color:var(--muted); font-weight:500; background:var(--surface-2); white-space:nowrap; }
+  tbody tr:last-child td { border-bottom:0; }
+  td.mono,th.mono { font-family:var(--f-mono); font-size:10.8px; white-space:nowrap; }
+  td.num { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  td.c { text-align:center; white-space:nowrap; }
+
+  .b { font-family:var(--f-mono); font-size:13px; letter-spacing:-.5px; }
+  .b3 { color:var(--pass); } .b2 { color:var(--warn); } .b1 { color:var(--critical); }
+
+  pre { font-family:var(--f-mono); font-size:11.4px; line-height:1.55; background:var(--surface-2); border:1px solid var(--line); border-radius:var(--radius); padding:11px 13px; overflow-x:auto; margin:10px 0; }
+  pre code { background:none; border:0; padding:0; font-size:inherit; }
+
+  .note { border-left:2px solid var(--accent); background:var(--accent-soft); padding:13px 17px; margin:16px 0; max-width:var(--measure); }
+  .note p:last-child { margin-bottom:0; }
+  .note .lbl { font-family:var(--f-mono); font-size:9.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--accent-ink); display:block; margin-bottom:5px; }
+  .note.warn { border-left-color:var(--warn); background:var(--warn-soft); }
+  .note.warn .lbl { color:var(--warn); }
+  .note.crit { border-left-color:var(--critical); background:var(--critical-soft); }
+  .note.crit .lbl { color:var(--critical); }
+  .note.pass { border-left-color:var(--pass); background:var(--pass-soft); }
+  .note.pass .lbl { color:var(--pass); }
+
+  .lede-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(110px,1fr)); border:1px solid var(--line); border-radius:var(--radius); background:var(--surface); margin:20px 0 24px; }
+  .lede-stats div { padding:14px 16px; border-right:1px solid var(--line); }
+  .lede-stats div:last-child { border-right:0; }
+  .lede-stats .v { font-family:var(--f-display); font-size:25px; font-weight:700; line-height:1; font-variant-numeric:tabular-nums; }
+  .lede-stats .k { font-family:var(--f-mono); font-size:9px; letter-spacing:.09em; text-transform:uppercase; color:var(--muted); margin-top:6px; }
+
+  .foot { margin-top:60px; padding-top:18px; border-top:1px solid var(--line-2); font-size:12.5px; color:var(--muted); max-width:var(--measure); }
+
+  @media (max-width:980px) {
+    .shell { grid-template-columns:1fr; gap:0; padding:0 16px 56px; }
+    .rail { position:static; height:auto; padding-top:22px; }
+    .rail nav { flex-direction:row; flex-wrap:wrap; gap:4px; border-left:0; }
+    .rail a { border:1px solid var(--line); border-radius:2px; padding:4px 8px; margin-left:0; }
+    .rail .grp { display:none; }
+    .masthead { padding-top:26px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition:none !important; } }
+
+  @page { size:A4; margin:14mm 12mm 16mm; }
+  @media print {
+    :root, :root[data-theme="dark"], :root:not([data-theme="light"]) {
+      --ground:#FFF; --surface:#FFF; --surface-2:#F2F5F7; --ink:#101820; --ink-2:#33414E;
+      --muted:#5A6874; --line:#D3DAE1; --line-2:#B8C2CC; --accent:#0F4C5C; --accent-ink:#0F4C5C;
+      --accent-soft:#E6EFF2; --critical:#8E2219; --critical-soft:#F8E9E7; --warn:#7A4F05;
+      --warn-soft:#FBF1DE; --pass:#17593F; --pass-soft:#E5F1EB; --neutral:#4F5D69; --neutral-soft:#EDF0F3;
+    }
+    * { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
+    body { font-size:9pt; line-height:1.42; background:#fff; }
+    .shell { display:block; max-width:none; padding:0; }
+    .rail { display:none; }
+    .masthead { padding-top:0; }
+    h1 { font-size:23pt; } h2 { font-size:14pt; } h3,.epic-t { font-size:10.5pt; }
+    p,ul,ol,.standfirst,.sec-sub,.note { max-width:none; }
+    table { font-size:8pt; }
+    section { break-before:page; padding-top:0; }
+    #s1 { break-before:auto; }
+    .sec-head,h3,.epic-h { break-after:avoid; }
+    .tw,.note,pre,.lede-stats { break-inside:avoid; }
+    tr,li { break-inside:avoid; }
+    thead { display:table-header-group; }
+    a { color:var(--ink); text-decoration:none; }
+  }
+</style>
+
+<div class="shell">
+  <aside class="rail">
+    <div class="rail-mark">HumAId&nbsp;·&nbsp;QA</div>
+    <nav>
+      <a href="#s1">01 · Summary</a>
+      <a href="#s2">02 · Review method</a>
+      <div class="grp">Product epics</div>
+      <a href="#e1">1–5 · Intake → AI draft</a>
+      <a href="#e6">6–10 · Review → Config</a>
+      <a href="#e11">11–14 · QA-raised + Mocks</a>
+      <div class="grp">Platform epics</div>
+      <a href="#e15">15–16 · Terraform &amp; Dev env</a>
+      <a href="#e17">17–18 · CI/CD &amp; Observability</a>
+      <div class="grp">Analysis</div>
+      <a href="#s9">03 · Cross-cutting findings</a>
+      <a href="#s10">04 · What to do next</a>
+    </nav>
+  </aside>
+
+  <main>
+    <header class="masthead">
+      <div class="eyebrow">Genius Hacks Q3 2026 · Risk Assessment Workbench</div>
+      <h1>Story-by-Story Board Review</h1>
+      <p class="standfirst">Every one of the 73 user stories on the Azure DevOps board, reviewed against the code, the database, the pipelines and the test suites. What exists, what is tested, and what is still needed.</p>
+      <dl class="meta">
+        <div><dt>Reviewer</dt><dd>Shanthi Subramanian · BA&nbsp;/&nbsp;QA</dd></div>
+        <div><dt>Date</dt><dd>22 September 2026</dd></div>
+        <div><dt>Board</dt><dd>91 items · 18 epics · 73 stories</dd></div>
+        <div><dt>Days to submit</dt><dd>8</dd></div>
+      </dl>
+      <div class="lede-stats">
+        <div><div class="v">73</div><div class="k">Stories reviewed</div></div>
+        <div><div class="v">100%</div><div class="k">Have criteria</div></div>
+        <div><div class="v">31</div><div class="k">Well covered</div></div>
+        <div><div class="v">28</div><div class="k">Partial</div></div>
+        <div><div class="v">14</div><div class="k">Little or none</div></div>
+      </div>
+    </header>
+
+    <!-- ══ 01 ══ -->
+    <section id="s1">
+      <div class="sec-head">
+        <h2>Summary</h2>
+        <p class="sec-sub">The headline findings before the detail.</p>
+      </div>
+
+      <div class="note pass">
+        <span class="lbl">The backlog itself is in good shape</span>
+        <p><strong>All 73 stories have acceptance criteria — not one is empty.</strong> They average five criteria each, they are written in Given/When/Then, and the platform stories (Epics 15–18) are unusually specific for infrastructure work. This is a better-specified backlog than most delivery teams have, and it is the main reason a review like this is possible at all.</p>
+      </div>
+
+      <h3>Coverage at a glance</h3>
+      <div class="tw"><table>
+        <thead><tr><th>Group</th><th class="num">Stories</th><th class="c">Well covered</th><th class="c">Partial</th><th class="c">Little / none</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Product</strong> — Epics 1–10</td><td class="num">24</td><td class="c">11</td><td class="c">8</td><td class="c">5</td></tr>
+          <tr><td><strong>QA-raised</strong> — Epics 11–13</td><td class="num">6</td><td class="c">0</td><td class="c">2</td><td class="c">4</td></tr>
+          <tr><td><strong>Mock systems</strong> — Epic 14</td><td class="num">6</td><td class="c">4</td><td class="c">2</td><td class="c">0</td></tr>
+          <tr><td><strong>Platform</strong> — Epics 15–18</td><td class="num">36</td><td class="c">16</td><td class="c">15</td><td class="c">5</td></tr>
+          <tr><td>Documentation</td><td class="num">1</td><td class="c">0</td><td class="c">1</td><td class="c">0</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>The five things that matter most</h3>
+      <ol>
+        <li><strong>US-9.2 (Guarantee immutability)</strong> — the flagship governance claim, implemented by a database trigger, and <strong>tested by nothing at all</strong>. No HTTP endpoint can reach it.</li>
+        <li><strong>US-12.1 (Apply schema to a deployed environment)</strong> — still <code>New</code>, still unowned, and now blocking a live deployment attempt.</li>
+        <li><strong>US-11.1 (Role-based permissions)</strong> — not implemented. Five API tests exist and all record the gap.</li>
+        <li><strong>US-17.9 / 17.10 (Build and deploy the container images)</strong> — the pipeline files are <strong>zero bytes</strong> and are not registered in Azure DevOps.</li>
+        <li><strong>US-12.2 and US-12.3 are marked <code>Done</code> but the work is not complete</strong> — closed as superseded by Epics 17 and 18, which is reasonable, but <code>Done</code> reads as delivered.</li>
+      </ol>
+    </section>
+
+    <!-- ══ 02 ══ -->
+    <section id="s2">
+      <div class="sec-head">
+        <h2>Review method</h2>
+        <p class="sec-sub">What was consulted, and how each story was judged. Stated so the conclusions can be checked rather than taken on trust.</p>
+      </div>
+
+      <h3>Inputs</h3>
+      <div class="tw"><table>
+        <thead><tr><th>Source</th><th>Used for</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Azure DevOps REST API</strong><br><span class="mono">wit/workitems, /revisions, /comments</span></td><td>All 91 items, their criteria, revision history and comments — so "who changed what, when" is evidence rather than recollection</td></tr>
+          <tr><td><strong>Git repository</strong><br><span class="mono">main · release/1.00 · 6 feature branches</span></td><td>Whether each story is actually implemented, and on which branch</td></tr>
+          <tr><td><strong>Database schema</strong><br><span class="mono">schema/*.sql</span></td><td>Allowed values and numeric bounds read from <code>CHECK</code> constraints and triggers — the contract the system truly enforces, not documentation</td></tr>
+          <tr><td><strong>Test suites</strong><br><span class="mono">xUnit · Playwright · evals</span></td><td>Executed locally; 62 unit, 18 Playwright, 12 eval cases mapped back to stories</td></tr>
+          <tr><td><strong>Pipeline definitions + build history</strong><br><span class="mono">build/definitions, build/builds</span></td><td>What actually runs automatically, versus what exists as a file in the repo</td></tr>
+          <tr><td><strong>The running application</strong></td><td>Manual exploration of all six screens and the seven workspace tabs</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>How each story was rated</h3>
+      <p>Two independent axes. A story can be fully built and untested, or well specified and unbuilt — conflating them hides exactly the problems worth finding.</p>
+      <div class="tw"><table>
+        <thead><tr><th>Axis</th><th>Values</th><th>Judged by</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Built</strong></td><td><span class="pill p-pass">Yes</span> <span class="pill p-warn">Partial</span> <span class="pill p-crit">No</span></td><td>Reading the implementing code, schema or pipeline — never the story's state field</td></tr>
+          <tr><td><strong>Tested</strong></td><td><span class="b b3">●●●</span> strong · <span class="b b2">●●○</span> partial · <span class="b b1">●○○</span> little or none</td><td>An executed test that names the story or covers its criteria</td></tr>
+        </tbody>
+      </table></div>
+      <p><span class="b b3">●●●</span> means covered at <em>more than one layer</em>, including one that cannot be bypassed. <span class="b b2">●●○</span> means one layer only, or a known gap inside the story. <span class="b b1">●○○</span> means no automated coverage that would catch a regression.</p>
+
+      <div class="note">
+        <span class="lbl">One deliberate rule</span>
+        <p><strong>The story's state field was ignored when judging "Built".</strong> Two stories are marked <code>Done</code> whose work is incomplete, and many marked <code>New</code> are fully implemented — the board's state reflects workflow bookkeeping, not delivery. Reading the code is the only reliable method.</p>
+      </div>
+    </section>
+
+    <!-- ══ Epics 1-5 ══ -->
+    <section id="e1">
+      <div class="sec-head">
+        <h2>Epics 1–5 · Intake through AI draft</h2>
+        <p class="sec-sub">The core product flow. Largely built; the AI touchpoints carry the coverage risk.</p>
+      </div>
+
+      <div class="epic-h"><span class="epic-id">Epic 1</span><span class="epic-t">Change Request Intake</span></div>
+      <div class="tw"><table>
+        <thead><tr><th class="mono">ID</th><th>Story</th><th class="c">Built</th><th class="c">Tested</th><th>What's there</th><th>What's needed</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">2</td><td>US-1.1 Submit a change request</td><td class="c"><span class="pill p-pass">Yes</span></td><td class="c"><span class="b b3">●●●</span></td><td>Six change types, immutable <code>CR-2026-nnnnn</code>, type-specific JSON fields. Covered by UI journey 1, unit test on ingestion trigger</td><td>Nothing urgent</td></tr>
+          <tr><td class="mono">3</td><td>US-1.2 Attach supporting documents</td><td class="c"><span class="pill p-pass">Yes</span></td><td class="c"><span class="b b2">●●○</span></td><td>PDF/DOCX/XLSX enforced by DB constraint; 6 unit tests on content type and upload ordering</td><td>No test that <strong>replacing</strong> a document versions it rather than overwriting — a stated criterion</td></tr>
+          <tr><td class="mono">4</td><td>US-1.3 Track my request status</td><td class="c"><span class="pill p-warn">Partial</span></td><td class="c"><span class="b b2">●●○</span></td><td>Status and days-elapsed list; covered by UI journey 1</td><td><strong>Notifications are not implemented</strong> (criterion 2). Error-handling criteria added for <span class="pill p-crit">DEF-003</span> are untested and currently failing</td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="epic-h"><span class="epic-id">Epic 2</span><span class="epic-t">Risk Categorization &amp; Framework Mapping</span></div>
+      <div class="tw"><table>
+        <thead><tr><th class="mono">ID</th><th>Story</th><th class="c">Built</th><th class="c">Tested</th><th>What's there</th><th>What's needed</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">6</td><td>US-2.1 Auto-map to risk categories <span class="pill p-acc">AI</span></td><td class="c"><span class="pill p-pass">Yes</span></td><td class="c"><span class="b b2">●●○</span></td><td>FFIEC-grounded proposal; the client discards any category outside the allowed list — a structural guard. 5 unit tests, 5 eval cases. Francis's new criterion on grounding against the snapshot is supported by the code</td><td><strong>4 of 5 eval cases blocked</strong> on a model endpoint. <span class="pill p-crit">DEF-006</span> criterion untested and failing</td></tr>
+          <tr><td class="mono">7</td><td>US-2.2 Override proposed categories</td><td class="c"><span class="pill p-pass">Yes</span></td><td class="c"><span class="b b1">●○○</span></td><td>Override endpoint writes an audit row in the same transaction</td><td><strong>No test that a blank reason is refused</strong> — the story's central criterion. One API test would close it</td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="epic-h"><span class="epic-id">Epic 3</span><span class="epic-t">AI-Assisted Policy Research</span></div>
+      <div class="tw"><table>
+        <thead><tr><th class="mono">ID</th><th>Story</th><th class="c">Built</th><th class="c">Tested</th><th>What's there</th><th>What's needed</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">9</td><td>US-3.1 Surface relevant policy <span class="pill p-acc">AI</span></td><td class="c"><span class="pill p-pass">Yes</span></td><td class="c"><span class="b b1">●○○</span></td><td>Postgres full-text search — <em>deliberately not an LLM</em>, and a good "when not to use AI" decision</td><td><strong>No coverage at all.</strong> Needs: ranked results returned, and "no matching policy found" flagged explicitly rather than left blank</td></tr>
+          <tr><td class="mono">10</td><td>US-3.2 Confirm or reject surfaced policy</td><td class="c"><span class="pill p-pass">Yes</span></td><td class="c"><span class="b b2">●●○</span></td><td>Reliance decisions recorded; finalization blocked without one — proven by unit test UT-AS-03</td><td>No test of the <em>recording</em> itself, only of the downstream gate</td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="epic-h"><span class="epic-id">Epic 4</span><span class="epic-t">AI-Assisted Document Extraction</span></div>
+      <div class="tw"><table>
+        <thead><tr><th class="mono">ID</th><th>Story</th><th class="c">Built</th><th class="c">Tested</th><th>What's there</th><th>What's needed</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">12</td><td>US-4.1 Extract structured data <span class="pill p-acc">AI</span></td><td class="c"><span class="pill p-pass">Yes</span></td><td class="c"><span class="b b2">●●○</span></td><td>Each field carries a source excerpt and a <code>needsReview</code> flag; 3 unit tests, 4 eval cases; real PDF/DOCX text extraction</td><td>3 of 4 eval cases blocked on the model. No test that the <strong>source page/section pointer</strong> is populated</td></tr>
+          <tr><td class="mono">13</td><td>US-4.2 Correct extracted data</td><td class="c"><span class="pill p-pass">Yes</span></td><td class="c"><span class="b b1">●○○</span></td><td>Correction endpoint retains the original AI value alongside the correction</td><td><strong>No test that both values are retained</strong> — this is the "never a silent overwrite" rule and it is unproven</td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="epic-h"><span class="epic-id">Epic 5</span><span class="epic-t">AI-Drafted Risk Assessment</span></div>
+      <div class="tw"><table>
+        <thead><tr><th class="mono">ID</th><th>Story</th><th class="c">Built</th><th class="c">Tested</th><th>What's there</th><th>What's needed</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">15</td><td>US-5.1 Generate a draft assessment <span class="pill p-acc">AI</span></td><td class="c"><span class="pill p-pass">Yes</span></td><td class="c"><span class="b b3">●●●</span></td><td>Per-category narrative; unsupported claims returned in a separate field, never folded into the text; labelled "AI-drafted" and blocked from committee until reviewed (UT-AS-01)</td><td>Narrative <em>quality</em> is a heuristic proxy only — flagged as manual scenario MV-01</td></tr>
+          <tr><td class="mono">16</td><td>US-5.2 Regenerate a section with feedback</td><td class="c"><span class="pill p-pass">Yes</span></td><td class="c"><span class="b b2">●●○</span></td><td>Feedback reaches the prompt (unit test UT-AI-11); eval case nr-03</td><td>No test that <strong>other sections are untouched</strong> by a regeneration, or that the prior version stays retrievable</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- ══ Epics 6-10 ══ -->
+    <section id="e6">
+      <div class="sec-head">
+        <h2>Epics 6–10 · Review, scoring, committee, audit, config</h2>
+        <p class="sec-sub">Where the governance guarantees live — and where the single largest gap sits.</p>
+      </div>
+
+      <div class="epic-h"><span class="epic-id">Epic 6</span><span class="epic-t">Analyst Review, Edit &amp; Override</span></div>
+      <div class="tw"><table>
+        <thead><tr><th class="mono">ID</th><th>Story</th><th class="c">Built</th><th class="c">Tested</th><th>What's there</th><th>What's needed</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">18</td><td>US-6.1 Edit any AI-generated output</td><td class="c"><span class="pill p-pass">Yes</span></td><td class="c"><span class="b b1">●○○</span></td><td>Every service method takes a mandatory reason; stored functions write the audit row in the same transaction</td><td><strong>No test that a blank reason is refused.</strong> This is the cross-cutting override rule for the whole product and it is unproven at any layer</td></tr>
+          <tr><td class="mono">19</td><td>US-6.2 View full edit/override history</td><td class="c"><span class="pill p-pass">Yes</span></td><td class="c"><span class="b b2">●●○</span></td><td>Audit tab shows the chain; UI journey 2 asserts the intake event appears attributed to a named human</td><td>No test that a full chain shows <strong>original, edited value, actor, timestamp and reason</strong> together</td></tr>
+          <tr><td class="mono">20</td><td>US-6.3 Finalize the assessment</td><td class="c"><span class="pill p-pass">Yes</span></td><td class="c"><span class="b b3">●●●</span></td><td>Best-covered story on the board: 12 unit tests, 2 UI tests, verified by mutation testing</td><td><span class="pill p-crit">DEF-004</span> — an assessment with no categories still finalizes. Criteria added 17 Sep; fix outstanding</td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="epic-h"><span class="epic-id">Epic 7</span><span class="epic-t">Risk Scoring Engine</span></div>
+      <div class="tw"><table>
+        <thead><tr><th class="mono">ID</th><th>Story</th><th class="c">Built</th><th class="c">Tested</th><th>What's there</th><th>What's needed</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">22</td><td>US-7.1 Risk score with breakdown</td><td class="c"><span class="pill p-warn">Partial</span></td><td class="c"><span class="b b2">●●○</span></td><td>Deterministic formula; residual &gt; 0 guaranteed by arithmetic and enforced in three places. 2 unit tests</td><td><span class="pill p-warn">DEF-005</span> — the <code>control</code> table is never seeded, so "trace which controls were credited" <strong>cannot be satisfied</strong>. Needs a control catalogue (BA input) plus the 9-row scoring truth table</td></tr>
+          <tr><td class="mono">23</td><td>US-7.2 Override a calculated score</td><td class="c"><span class="pill p-pass">Yes</span></td><td class="c"><span class="b b3">●●●</span></td><td>3 unit tests: non-positive residual refused, blank reason refused, valid override accepted. DB constraint as backstop</td><td>No test that an overridden score is <strong>visually distinguishable</strong> from a calculated one</td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="epic-h"><span class="epic-id">Epic 8</span><span class="epic-t">Committee Review &amp; Voting</span></div>
+      <div class="tw"><table>
+        <thead><tr><th class="mono">ID</th><th>Story</th><th class="c">Built</th><th class="c">Tested</th><th>What's there</th><th>What's needed</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">25</td><td>US-8.1 Route a finalized assessment</td><td class="c"><span class="pill p-pass">Yes</span></td><td class="c"><span class="b b3">●●●</span></td><td>UI journeys 2 and 3 cover routing and queue arrival</td><td>No test that the committee view is genuinely <strong>read-only</strong></td></tr>
+          <tr><td class="mono">26</td><td>US-8.2 Cast a committee vote</td><td class="c"><span class="pill p-pass">Yes</span></td><td class="c"><span class="b b3">●●●</span></td><td>14 unit tests on quorum and the conservative resolution rule; UI journey 3 asserts the vote is named</td><td><span class="pill p-crit">DEF-002</span> — any caller can vote as anyone. Criterion added 17 Sep; API test records the gap</td></tr>
+          <tr><td class="mono">27</td><td>US-8.3 Record the final decision</td><td class="c"><span class="pill p-pass">Yes</span></td><td class="c"><span class="b b3">●●●</span></td><td>All four resolutions covered by unit tests; conditions text merged from every vote, nothing dropped</td><td>No test that the <strong>Product Owner is notified</strong>, or that conditions stay attached to the request record</td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="epic-h"><span class="epic-id">Epic 9</span><span class="epic-t">Immutable Audit Trail</span></div>
+      <div class="tw"><table>
+        <thead><tr><th class="mono">ID</th><th>Story</th><th class="c">Built</th><th class="c">Tested</th><th>What's there</th><th>What's needed</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">29</td><td>US-9.1 Reconstruct full history</td><td class="c"><span class="pill p-pass">Yes</span></td><td class="c"><span class="b b2">●●○</span></td><td>Audit endpoint returns the chain; UI journey 2 checks one event</td><td>No test that <strong>every</strong> event type appears in order with before/after state</td></tr>
+          <tr><td class="mono">30</td><td>US-9.2 Guarantee immutability</td><td class="c"><span class="pill p-pass">Yes</span></td><td class="c"><span class="b b1">●○○</span></td><td>A database trigger rejects <code>UPDATE</code> and <code>DELETE</code> on <code>audit_event</code> outright — enforced at the data layer exactly as the story requires</td><td><strong>Tested by nothing.</strong> No endpoint attempts to alter an audit row, so no API or UI test can reach it. <strong>This is the single most important gap on the board</strong> — needs the Testcontainers suite (DT-01…03)</td></tr>
+          <tr><td class="mono">38</td><td>US-9.3 Export an examiner-ready trail <span class="pill p-acc">QA-raised</span></td><td class="c"><span class="pill p-warn">Partial</span></td><td class="c"><span class="b b1">●○○</span></td><td><strong>Being built now</strong> on <code>fix/azure-deploy-and-audit-export</code> — new <code>AuditExportService</code>, PDF export, controller endpoint and UI wiring</td><td>No tests yet. Examiner-readiness is manual scenario MV-02 — no assertion can judge "suitable for handing to an examiner"</td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="epic-h"><span class="epic-id">Epic 10</span><span class="epic-t">Platform Configuration</span></div>
+      <div class="tw"><table>
+        <thead><tr><th class="mono">ID</th><th>Story</th><th class="c">Built</th><th class="c">Tested</th><th>What's there</th><th>What's needed</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">32</td><td>US-10.1 Configure scoring parameters</td><td class="c"><span class="pill p-pass">Yes</span></td><td class="c"><span class="b b3">●●●</span></td><td>6 unit tests on the mitigation-factor bounds plus an API test; versioned config so in-flight assessments keep their original values</td><td>No test that an in-flight assessment is genuinely unaffected by a config change</td></tr>
+          <tr><td class="mono">33</td><td>US-10.2 Configure workflow rules</td><td class="c"><span class="pill p-pass">Yes</span></td><td class="c"><span class="b b1">●○○</span></td><td>Workflow rules stored as JSON with a mandatory reason; the committee quorum is read from here</td><td><strong>No coverage.</strong> Needs: change is audited, reason mandatory, in-flight requests follow the rules active when submitted</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- ══ Epics 11-14 ══ -->
+    <section id="e11">
+      <div class="sec-head">
+        <h2>Epics 11–14 · QA-raised and mock systems</h2>
+        <p class="sec-sub">Six stories QA raised on 17 September, and the mock-systems epic added by Dev.</p>
+      </div>
+
+      <div class="epic-h"><span class="epic-id">Epics 11–13</span><span class="epic-t">Access Control · Deployment &amp; Operations · Non-Functional</span></div>
+      <div class="tw"><table>
+        <thead><tr><th class="mono">ID</th><th>Story</th><th class="c">Built</th><th class="c">Tested</th><th>What's there</th><th>What's needed</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">37</td><td>US-11.1 Enforce role-based permissions</td><td class="c"><span class="pill p-crit">No</span></td><td class="c"><span class="b b2">●●○</span></td><td>Roles are seeded and the frontend filters navigation by role. 5 API tests exist and all record the gap</td><td><strong>The API enforces nothing.</strong> The acting user is read from the request body. Needs the authorization layer <span class="pill p-crit">DEF-001 DEF-002</span></td></tr>
+          <tr><td class="mono">39</td><td>US-12.1 Apply schema to a deployed env</td><td class="c"><span class="pill p-crit">No</span></td><td class="c"><span class="b b1">●○○</span></td><td>Nothing. The DB folder is not in either image, the app performs no bootstrap, no pipeline applies it</td><td><strong>First-deploy blocker.</strong> PostgreSQL is now provisioned in Azure and empty. Still unowned — open question Q6 <span class="pill p-crit">DEF-007</span></td></tr>
+          <tr><td class="mono">40</td><td>US-12.2 Build and publish images <span class="pill p-neut">Done</span></td><td class="c"><span class="pill p-warn">Partial</span></td><td class="c"><span class="b b1">●○○</span></td><td>Containers now run <strong>non-root</strong> (fixed 21 Sep); <code>.dockerignore</code> keeps secrets out of layers</td><td>No pipeline builds, scans or pushes an image. Closed as "covered by Epic 17" — <strong>see the state-accuracy note below</strong></td></tr>
+          <tr><td class="mono">41</td><td>US-12.3 Observe a running environment <span class="pill p-neut">Done</span></td><td class="c"><span class="pill p-warn">Partial</span></td><td class="c"><span class="b b1">●○○</span></td><td>Both services register OpenTelemetry and activate on a connection string; the Log Analytics module now exists</td><td><code>log_analytics_workspace_id</code> is <strong>still commented out</strong> in <code>main.cae.tf</code>. Closed as "covered by Epic 18"</td></tr>
+          <tr><td class="mono">42</td><td>US-13.1 Retain records for the supervisory period</td><td class="c"><span class="pill p-crit">No</span></td><td class="c"><span class="b b1">●○○</span></td><td>Nothing — no retention or backup policy defined</td><td>A stated retention period (5 years minimum) and point-in-time restore on the Flexible Server</td></tr>
+          <tr><td class="mono">43</td><td>US-13.2 Keep model calls inside the tenant</td><td class="c"><span class="pill p-warn">Partial</span></td><td class="c"><span class="b b1">●○○</span></td><td>Azure AI Foundry is provisioned and the provider is swappable with no prompt changes</td><td>The default provider is still the non-Azure path. Needs a config assertion that a deployed environment cannot select it</td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="note warn">
+        <span class="lbl">State accuracy — worth raising with Suraj</span>
+        <p>US-12.2 and US-12.3 were moved to <strong>Done</strong> on 21 September with the comments <em>"Covered as part of epic 17"</em> and <em>"Covered as part of Epic 18"</em>. Closing them as superseded is entirely reasonable — Epics 17 and 18 do cover that ground.</p>
+        <p>But <strong><code>Done</code> means delivered</strong>, and neither is: the image pipeline files are zero bytes and unregistered in Azure DevOps, and Log Analytics is still commented out. In a Scrum process the state for superseded work is <strong>Removed</strong>, with a link to the superseding item. As it stands the burndown is inflated and anyone scanning the board reads image publishing and observability as complete.</p>
+      </div>
+
+      <div class="epic-h"><span class="epic-id">Epic 14</span><span class="epic-t">Mock External Systems &amp; Data Ingestion</span></div>
+      <div class="tw"><table>
+        <thead><tr><th class="mono">ID</th><th>Story</th><th class="c">Built</th><th class="c">Tested</th><th>What's needed</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">45</td><td>US-14.1 Stand up the three mock systems</td><td class="c"><span class="pill p-pass">Yes</span></td><td class="c"><span class="b b3">●●●</span></td><td>Separate service, own schema, own port; API smoke test confirms 6 customers / 5 products / 4 vendors</td></tr>
+          <tr><td class="mono">46</td><td>US-14.2 Fields the framework scores against</td><td class="c"><span class="pill p-pass">Yes</span></td><td class="c"><span class="b b2">●●○</span></td><td>No test that each mock record carries the fields the FFIEC categories actually need</td></tr>
+          <tr><td class="mono">47</td><td>US-14.3 Look up an existing record at intake</td><td class="c"><span class="pill p-pass">Yes</span></td><td class="c"><span class="b b3">●●●</span></td><td>Covered by the three <code>/api/DataIngestion/Mock*</code> endpoints and smoke tests</td></tr>
+          <tr><td class="mono">48</td><td>US-14.4 Ingest and snapshot at intake</td><td class="c"><span class="pill p-pass">Yes</span></td><td class="c"><span class="b b3">●●●</span></td><td>5 unit tests including partial resolution and outage tolerance. Snapshot immutability untested — belongs in the Data layer</td></tr>
+          <tr><td class="mono">49</td><td>US-14.5 Push the decision back to the source</td><td class="c"><span class="pill p-pass">Yes</span></td><td class="c"><span class="b b3">●●●</span></td><td>4 unit tests; a Mock Systems outage correctly does not fail the vote</td></tr>
+          <tr><td class="mono">50</td><td>US-14.6 Generate mock data reproducibly</td><td class="c"><span class="pill p-pass">Yes</span></td><td class="c"><span class="b b2">●●○</span></td><td>Seed exists and is documented in <code>ai/data-generation/</code>; no test that a re-seed is reproducible</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- ══ Epics 15-16 ══ -->
+    <section id="e15">
+      <div class="sec-head">
+        <h2>Epics 15–16 · Terraform modules &amp; dev environment</h2>
+        <p class="sec-sub">23 stories. Well specified, largely built, and covered by the IaC pipeline rather than by QA test suites.</p>
+      </div>
+
+      <div class="note">
+        <span class="lbl">How these are tested</span>
+        <p>Infrastructure is not tested by QA test suites — it is tested by the <strong>IaC PR pipeline</strong>, which now hard-gates on <code>terraform validate</code>, TFLint error-severity, Trivy HIGH/CRITICAL and a successful <code>terraform plan</code>. Checkov remains soft-fail by a documented decision with every suppression justified. That is a reasonable model and it runs on every infrastructure PR, which is more than the application layers currently get.</p>
+      </div>
+
+      <div class="epic-h"><span class="epic-id">Epic 15</span><span class="epic-t">Terraform Modules · 10 stories</span></div>
+      <div class="tw"><table>
+        <thead><tr><th class="mono">ID</th><th>Module</th><th class="c">Built</th><th class="c">Tested</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">53</td><td>US-15.1 Resource Group</td><td class="c"><span class="pill p-pass">Yes</span></td><td class="c"><span class="b b3">●●●</span></td><td>Six mandatory tag validations — a real governance rule, enforced in the module</td></tr>
+          <tr><td class="mono">54</td><td>US-15.2 Virtual Network</td><td class="c"><span class="pill p-pass">Yes</span></td><td class="c"><span class="b b3">●●●</span></td><td>Subnets, NSGs, route tables, peering; four worked examples</td></tr>
+          <tr><td class="mono">55</td><td>US-15.3 Private DNS Zone</td><td class="c"><span class="pill p-pass">Yes</span></td><td class="c"><span class="b b2">●●○</span></td><td>Built and wired</td></tr>
+          <tr><td class="mono">56</td><td>US-15.4 Key Vault</td><td class="c"><span class="pill p-pass">Yes</span></td><td class="c"><span class="b b2">●●○</span></td><td>8 criteria — the most security-relevant module; role assignments wired</td></tr>
+          <tr><td class="mono">57</td><td>US-15.5 Storage Account</td><td class="c"><span class="pill p-pass">Yes</span></td><td class="c"><span class="b b2">●●○</span></td><td>9 criteria</td></tr>
+          <tr><td class="mono">58</td><td>US-15.6 PostgreSQL Flexible Server</td><td class="c"><span class="pill p-pass">Yes</span></td><td class="c"><span class="b b2">●●○</span></td><td>Random password generated; <strong>no backup/retention criterion</strong> — links to US-13.1</td></tr>
+          <tr><td class="mono">59</td><td>US-15.7 Log Analytics Workspace</td><td class="c"><span class="pill p-pass">Yes</span></td><td class="c"><span class="b b2">●●○</span></td><td>Module exists; consumption is the gap, not the module</td></tr>
+          <tr><td class="mono">60</td><td>US-15.8 Container Registry</td><td class="c"><span class="pill p-pass">Yes</span></td><td class="c"><span class="b b2">●●○</span></td><td><code>admin_enabled = false</code>; six Checkov suppressions, each justified in writing</td></tr>
+          <tr><td class="mono">61</td><td>US-15.9 Container Apps Environment</td><td class="c"><span class="pill p-pass">Yes</span></td><td class="c"><span class="b b2">●●○</span></td><td>Supports VNet integration, internal load balancer and DNS linking</td></tr>
+          <tr><td class="mono">62</td><td>US-15.10 Container Apps</td><td class="c"><span class="pill p-pass">Yes</span></td><td class="c"><span class="b b2">●●○</span></td><td>9 criteria; env vars and identity wired</td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="epic-h"><span class="epic-id">Epic 16</span><span class="epic-t">Dev Environment · 13 stories</span></div>
+      <div class="tw"><table>
+        <thead><tr><th class="mono">ID</th><th>Story</th><th class="c">Built</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">64–69</td><td>US-16.1…16.6 State, RG, VNet, DNS, Key Vault, Storage</td><td class="c"><span class="pill p-pass">Yes</span></td><td>All wired into <code>iac/environments/dev</code>. The VNet is now genuinely consumed — the CAE takes the delegated subnet <span class="pill p-pass">DEF-008 closed</span></td></tr>
+          <tr><td class="mono">70</td><td>US-16.7 PostgreSQL server and database</td><td class="c"><span class="pill p-pass">Yes</span></td><td><strong>Provisions the server; nothing populates the schema.</strong> This is where US-12.1 bites</td></tr>
+          <tr><td class="mono">71</td><td>US-16.8 Log Analytics + Application Insights</td><td class="c"><span class="pill p-warn">Partial</span></td><td>Workspace module exists; <strong>not connected to the Container Apps Environment</strong></td></tr>
+          <tr><td class="mono">72–74</td><td>US-16.9…16.11 Registry, managed identity, CAE</td><td class="c"><span class="pill p-pass">Yes</span></td><td>Identity-based image pull — no stored registry credential</td></tr>
+          <tr><td class="mono">75–76</td><td>US-16.12/16.13 Workbench and Mock API container apps</td><td class="c"><span class="pill p-pass">Yes</span></td><td>Renamed to <code>gh-hrg-workbench</code> / <code>gh-hrg-mockapi</code>; env vars wired</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- ══ Epics 17-18 ══ -->
+    <section id="e17">
+      <div class="sec-head">
+        <h2>Epics 17–18 · CI/CD and observability</h2>
+        <p class="sec-sub">13 stories. Most are genuinely delivered; three are not, and one of those blocks deployment.</p>
+      </div>
+
+      <div class="epic-h"><span class="epic-id">Epic 17</span><span class="epic-t">DevOps CI/CD Pipelines · 11 stories</span></div>
+      <div class="tw"><table>
+        <thead><tr><th class="mono">ID</th><th>Story</th><th class="c">Built</th><th>Evidence</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">78</td><td>US-17.1 Azure DevOps prerequisites</td><td class="c"><span class="pill p-pass">Yes</span></td><td>Service connections and variable groups in use by four live pipelines</td></tr>
+          <tr><td class="mono">80</td><td>US-17.2 Infra PR pipeline: fmt, validate, lint, scans</td><td class="c"><span class="pill p-pass">Yes</span></td><td>Running; hard gates added 21 Sep</td></tr>
+          <tr><td class="mono">81</td><td>US-17.3 Infra PR: plan without stored credentials</td><td class="c"><span class="pill p-pass">Yes</span></td><td>Workload Identity Federation — no client secret anywhere</td></tr>
+          <tr><td class="mono">82</td><td>US-17.4 AI review for infra PRs with verdict gate</td><td class="c"><span class="pill p-pass">Yes</span></td><td>Running; verdict derived deterministically, PR author now @mentioned</td></tr>
+          <tr><td class="mono">83</td><td>US-17.5 Infra deploy pipeline: apply on merge</td><td class="c"><span class="pill p-pass">Yes</span></td><td><code>gh-infra-dev-deploy</code> succeeded 21 Sep</td></tr>
+          <tr><td class="mono">84</td><td>US-17.6 Workbench PR: build, tests, audit, SAST</td><td class="c"><span class="pill p-pass">Yes</span></td><td><code>gh-workbench-dev-pr-review</code> succeeded 21 Sep. <strong>Gates unit tests only</strong> — no API, Data or UI stage</td></tr>
+          <tr><td class="mono">85</td><td>US-17.7 Mock API PR: SQL drift check, build, audit</td><td class="c"><span class="pill p-pass">Yes</span></td><td>Succeeded 22 Sep. The <code>deploy_all.sql</code> drift check is a nice touch</td></tr>
+          <tr><td class="mono">86</td><td>US-17.8 Shared AI code review for app PRs</td><td class="c"><span class="pill p-pass">Yes</span></td><td>Refactored into shared templates and scripts</td></tr>
+          <tr><td class="mono">87</td><td>US-17.9 Workbench: build, publish, deploy image</td><td class="c"><span class="pill p-crit">No</span></td><td><code>workbench.yml</code> is <strong>0 bytes</strong> and not registered as a pipeline</td></tr>
+          <tr><td class="mono">88</td><td>US-17.10 Mock API: build, publish, deploy image</td><td class="c"><span class="pill p-crit">No</span></td><td><code>mock-api.yml</code> is <strong>0 bytes</strong> and not registered</td></tr>
+          <tr><td class="mono">89</td><td>US-17.11 Enforce as required checks; document</td><td class="c"><span class="pill p-warn">Partial</span></td><td><code>.azure-pipelines/README.md</code> exists; branch-protection status not verifiable from here</td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="epic-h"><span class="epic-id">Epic 18</span><span class="epic-t">Observability · 2 stories</span></div>
+      <div class="tw"><table>
+        <thead><tr><th class="mono">ID</th><th>Story</th><th class="c">Built</th><th>What's needed</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">91</td><td>US-18.1 Send logs and metrics to App Insights</td><td class="c"><span class="pill p-warn">Partial</span></td><td>Application code is instrumented and inert until a connection string is set. <code>log_analytics_workspace_id</code> is one commented line from working</td></tr>
+          <tr><td class="mono">92</td><td>US-18.2 SRE agent watching App Insights</td><td class="c"><span class="pill p-crit">No</span></td><td>Not started. Depends on US-18.1; the most deferrable item on the board with 8 days left</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- ══ cross-cutting ══ -->
+    <section id="s9">
+      <div class="sec-head">
+        <h2>Cross-cutting findings</h2>
+        <p class="sec-sub">Patterns that only appear when you read all 73 stories together.</p>
+      </div>
+
+      <h3>1 · The override rule is the least-tested rule in the product</h3>
+      <p>"A human can override any AI output; must state a reason; both original and override are retained" is a <strong>non-negotiable constraint</strong> in the project brief and appears in US-2.2, US-4.2, US-6.1, US-7.2 and US-10.1. Of those five, <strong>only US-7.2 has a test that a blank reason is refused.</strong></p>
+      <p>The implementation looks right everywhere — every service method takes a reason and the stored functions write the audit row in the same transaction. But "looks right" is not "proven", and this is the rule the 15% human-in-the-loop criterion rests on. <strong>Five API tests would close it.</strong></p>
+
+      <h3>2 · Data-layer guarantees are systematically untested</h3>
+      <p>Four separate stories depend on something the database enforces: audit immutability (US-9.2), residual risk above zero (US-7.1), snapshot immutability (US-14.4), and config versioning (US-10.1). <strong>None of the four has a test that reaches the database.</strong> One Testcontainers suite closes all of them at once — which is why it has been the top recommendation since 12 September.</p>
+
+      <h3>3 · The platform epics are better specified than the product epics</h3>
+      <p>Epics 15–18 average <strong>6.6 criteria per story</strong>; Epics 1–10 average <strong>3.2</strong>. The infrastructure stories are also more precise — they name resources, settings and expected outputs. That is unusual and worth keeping: it is why this review could assess them against the Terraform directly.</p>
+
+      <h3>4 · Notifications appear in three stories and are implemented in none</h3>
+      <p>US-1.3, US-8.1 and US-8.3 each require the Product Owner to be notified. There is no notification mechanism in the codebase. This is a coherent scope decision if made deliberately — but it is currently an <em>implicit</em> one, and three stories cannot be marked complete until it is either built or the criteria are removed with a stated reason.</p>
+
+      <h3>5 · Board state does not reflect delivery</h3>
+      <p>Seventy-one of 73 stories are <code>New</code>, including US-6.3 and US-8.2 which are among the best-implemented and best-tested on the board. The two marked <code>Done</code> are the two whose work is <em>not</em> complete. The state field is currently the least reliable signal on the board — worth a five-minute pass before any demo or review.</p>
+    </section>
+
+    <!-- ══ next ══ -->
+    <section id="s10">
+      <div class="sec-head">
+        <h2>What to do next</h2>
+        <p class="sec-sub">Eight days. Ordered by what protects the most, for the least effort.</p>
+      </div>
+
+      <div class="tw"><table>
+        <thead><tr><th class="num">#</th><th>Action</th><th>Closes</th><th>Effort</th><th>Owner</th></tr></thead>
+        <tbody>
+          <tr><td class="num">1</td><td><strong>Schema deployment to Azure</strong></td><td>US-12.1 · unblocks any deploy at all</td><td>Medium</td><td>DevOps + Dev</td></tr>
+          <tr><td class="num">2</td><td><strong>Testcontainers suite</strong> — 24 tests</td><td>US-9.2, plus data guarantees in US-7.1, US-10.1, US-14.4</td><td>Medium</td><td>QA</td></tr>
+          <tr><td class="num">3</td><td><strong>Five override-reason API tests</strong></td><td>US-2.2, US-4.2, US-6.1, US-10.2 — the cross-cutting rule</td><td><strong>Low</strong></td><td>QA</td></tr>
+          <tr><td class="num">4</td><td>Fill <code>workbench.yml</code> / <code>mock-api.yml</code></td><td>US-17.9, US-17.10 · nothing deploys without them</td><td>Medium</td><td>DevOps</td></tr>
+          <tr><td class="num">5</td><td>Wire API + Data suites into the PR pipeline</td><td>Turns 30 written tests into gates</td><td>Low</td><td>DevOps + QA</td></tr>
+          <tr><td class="num">6</td><td>Fix DEF-002 and DEF-004</td><td>US-11.1, US-6.3 · the two High governance defects</td><td>Medium</td><td>Dev</td></tr>
+          <tr><td class="num">7</td><td>Uncomment Log Analytics on the CAE</td><td>US-18.1, US-16.8</td><td><strong>Very low</strong></td><td>DevOps</td></tr>
+          <tr><td class="num">8</td><td>Seed the control catalogue</td><td>US-7.1 explainability <span class="pill p-warn">DEF-005</span></td><td>Low</td><td>Dev + BA</td></tr>
+          <tr><td class="num">9</td><td>Board hygiene: states, and Removed vs Done</td><td>Makes the board readable for a reviewer</td><td><strong>Very low</strong></td><td>All</td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="note">
+        <span class="lbl">If only three things get done</span>
+        <p><strong>Items 1, 2 and 3.</strong> Item 1 is the difference between a deployed product and a broken one. Item 2 converts the product's flagship governance claim from an assertion into evidence. Item 3 is a few hours of work that covers the constraint the brief calls non-negotiable across four stories at once.</p>
+      </div>
+
+      <h3>Decisions still needed from the team</h3>
+      <div class="tw"><table>
+        <thead><tr><th>Question</th><th>Blocks</th><th>Raised</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Q3</strong> — does a scoring override need secondary sign-off?</td><td>US-7.2, US-6.3 criteria</td><td>Original backlog</td></tr>
+          <tr><td><strong>Q5</strong> — who may approve configuration changes?</td><td>US-10.1, US-10.2 criteria</td><td>Original backlog</td></tr>
+          <tr><td><strong>Q6</strong> — who owns database schema deployment?</td><td>US-12.1 — <em>the deploy blocker</em></td><td>17 Sep · still unanswered</td></tr>
+          <tr><td><strong>New</strong> — are notifications in scope?</td><td>US-1.3, US-8.1, US-8.3</td><td>This review</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <p class="foot">Reviewed 22 September 2026 against the Azure DevOps board (91 items), <code>origin/main</code> at <code>863ead0</code>, <code>origin/release/1.00</code> at <code>c0705b0</code>, six feature branches, the database schema, four live pipeline definitions with their build history, and locally executed test suites. "Built" was judged from the implementing code rather than from the story's state field. Where a conclusion could not be verified from here — branch protection settings, for instance — it is marked as such rather than assumed.</p>
+  </main>
+</div>
+
+</body>
+</html>

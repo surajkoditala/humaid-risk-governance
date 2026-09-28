@@ -1,0 +1,772 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root { color-scheme: light dark; }
+  body { margin: 0; }
+  img { max-width: 100%; }
+  [hidden] { display: none !important; }
+</style>
+<title>Workbench Test Strategy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@500;600;700&display=swap">
+<style>
+  :root {
+    --ground:#F6F7F9; --surface:#FFFFFF; --surface-2:#EFF2F5;
+    --ink:#131C26; --ink-2:#3B4956; --muted:#66757F;
+    --line:#DBE1E7; --line-2:#C7D0D8;
+    --accent:#0F4C5C; --accent-ink:#0F4C5C; --accent-soft:#E2EDF0;
+    --critical:#A02B21; --critical-soft:#F7E7E5;
+    --warn:#8A5A06; --warn-soft:#FBF0DC;
+    --pass:#1B6B4C; --pass-soft:#E2F0E9;
+    --neutral:#5D6B78; --neutral-soft:#E9EDF1;
+    --f-display:"IBM Plex Serif",Georgia,serif;
+    --f-body:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+    --measure:72ch; --radius:3px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --ground:#0D141B; --surface:#131C25; --surface-2:#18232E;
+      --ink:#E5EBF1; --ink-2:#BDC9D4; --muted:#8B9BA8;
+      --line:#24313D; --line-2:#314250;
+      --accent:#5FB4C8; --accent-ink:#7CC5D6; --accent-soft:#10303A;
+      --critical:#E4837A; --critical-soft:#351917;
+      --warn:#D9A44E; --warn-soft:#33260F;
+      --pass:#6BC49C; --pass-soft:#122C22;
+      --neutral:#92A2AF; --neutral-soft:#1C2731;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --ground:#0D141B; --surface:#131C25; --surface-2:#18232E;
+    --ink:#E5EBF1; --ink-2:#BDC9D4; --muted:#8B9BA8;
+    --line:#24313D; --line-2:#314250;
+    --accent:#5FB4C8; --accent-ink:#7CC5D6; --accent-soft:#10303A;
+    --critical:#E4837A; --critical-soft:#351917;
+    --warn:#D9A44E; --warn-soft:#33260F;
+    --pass:#6BC49C; --pass-soft:#122C22;
+    --neutral:#92A2AF; --neutral-soft:#1C2731;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--ground); color:var(--ink); font-family:var(--f-body); font-size:15.5px; line-height:1.65; -webkit-font-smoothing:antialiased; }
+  .shell { display:grid; grid-template-columns:210px minmax(0,1fr); gap:54px; max-width:1180px; margin:0 auto; padding-inline:32px; padding-block:0 90px; }
+  .rail { position:sticky; top:env(safe-area-inset-top,0px); align-self:start; padding-top:46px; height:100vh; overflow-y:auto; }
+  .rail-mark { font-family:var(--f-mono); font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent-ink); margin-bottom:22px; }
+  .rail nav { display:flex; flex-direction:column; gap:1px; border-left:1px solid var(--line); }
+  .rail a { display:grid; grid-template-columns:20px 1fr; gap:8px; padding:7px 0 7px 14px; text-decoration:none; color:var(--muted); font-size:12.5px; line-height:1.35; border-left:2px solid transparent; margin-left:-1px; transition:color .12s,border-color .12s; }
+  .rail a:hover { color:var(--ink); border-left-color:var(--line-2); }
+  .rail a .n { font-family:var(--f-mono); font-size:11px; color:var(--accent-ink); }
+  .rail a:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+
+  .masthead { padding:54px 0 0; }
+  .eyebrow { font-family:var(--f-mono); font-size:11px; letter-spacing:.15em; text-transform:uppercase; color:var(--muted); }
+  h1 { font-family:var(--f-display); font-weight:700; font-size:clamp(32px,4.6vw,46px); line-height:1.1; letter-spacing:-.015em; margin:14px 0 16px; text-wrap:balance; }
+  .standfirst { font-size:17.5px; line-height:1.6; color:var(--ink-2); max-width:var(--measure); margin:0 0 30px; }
+  .meta { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); border-top:1px solid var(--line-2); border-bottom:1px solid var(--line-2); margin:0; }
+  .meta div { padding:13px 16px 13px 0; border-right:1px solid var(--line); }
+  .meta div:last-child { border-right:0; }
+  .meta dt { font-family:var(--f-mono); font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); margin-bottom:5px; }
+  .meta dd { margin:0; font-size:13.5px; font-weight:500; }
+
+  section { padding-top:60px; scroll-margin-top:20px; }
+  .sec-head { display:grid; grid-template-columns:40px 1fr; gap:14px; align-items:start; border-top:2px solid var(--ink); padding-top:13px; margin-bottom:22px; }
+  .sec-n { font-family:var(--f-mono); font-size:12px; font-weight:600; color:var(--accent-ink); padding-top:7px; }
+  h2 { font-family:var(--f-display); font-weight:600; font-size:clamp(22px,2.7vw,28px); line-height:1.22; margin:0; letter-spacing:-.01em; text-wrap:balance; }
+  .sec-sub { grid-column:2; color:var(--muted); font-size:14.5px; margin:6px 0 0; max-width:var(--measure); }
+  h3 { font-family:var(--f-display); font-weight:600; font-size:17.5px; margin:32px 0 10px; text-wrap:balance; }
+  h4 { font-weight:600; font-size:14px; margin:20px 0 7px; }
+  p { max-width:var(--measure); margin:0 0 13px; }
+  ul,ol { max-width:var(--measure); padding-left:21px; margin:0 0 13px; }
+  li { margin-bottom:6px; }
+  code { font-family:var(--f-mono); font-size:.86em; background:var(--surface-2); padding:1px 5px; border-radius:var(--radius); border:1px solid var(--line); overflow-wrap:anywhere; }
+  a { color:var(--accent-ink); }
+
+  .pill { display:inline-block; font-family:var(--f-mono); font-size:10px; font-weight:500; letter-spacing:.05em; text-transform:uppercase; padding:2px 7px; border-radius:2px; white-space:nowrap; }
+  .p-pass { background:var(--pass-soft); color:var(--pass); }
+  .p-crit { background:var(--critical-soft); color:var(--critical); }
+  .p-warn { background:var(--warn-soft); color:var(--warn); }
+  .p-neut { background:var(--neutral-soft); color:var(--neutral); }
+  .p-acc  { background:var(--accent-soft); color:var(--accent-ink); }
+
+  .tw { overflow-x:auto; margin:16px 0 22px; border:1px solid var(--line); border-radius:var(--radius); background:var(--surface); }
+  table { width:100%; border-collapse:collapse; font-size:13.2px; }
+  th,td { text-align:left; padding:9px 13px; border-bottom:1px solid var(--line); vertical-align:top; }
+  thead th { font-family:var(--f-mono); font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); font-weight:500; background:var(--surface-2); white-space:nowrap; }
+  tbody tr:last-child td { border-bottom:0; }
+  td.mono,th.mono { font-family:var(--f-mono); font-size:11.5px; }
+  td.num,th.num { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  td .sb { display:block; font-family:var(--f-mono); font-size:10.5px; color:var(--muted); margin-top:2px; }
+  tr.grp td { background:var(--surface-2); font-family:var(--f-mono); font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--accent-ink); padding:6px 13px; }
+
+  pre { font-family:var(--f-mono); font-size:11.8px; line-height:1.58; background:var(--surface-2); border:1px solid var(--line); border-radius:var(--radius); padding:12px 14px; overflow-x:auto; margin:11px 0; }
+  pre code { background:none; border:0; padding:0; font-size:inherit; }
+
+  .note { border-left:2px solid var(--accent); background:var(--accent-soft); padding:14px 18px; margin:18px 0; max-width:var(--measure); }
+  .note p:last-child, .note ul:last-child { margin-bottom:0; }
+  .note .lbl { font-family:var(--f-mono); font-size:9.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--accent-ink); display:block; margin-bottom:6px; }
+  .note.warn { border-left-color:var(--warn); background:var(--warn-soft); }
+  .note.warn .lbl { color:var(--warn); }
+  .note.pass { border-left-color:var(--pass); background:var(--pass-soft); }
+  .note.pass .lbl { color:var(--pass); }
+  .note.crit { border-left-color:var(--critical); background:var(--critical-soft); }
+  .note.crit .lbl { color:var(--critical); }
+
+  .lede-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(122px,1fr)); border:1px solid var(--line); border-radius:var(--radius); background:var(--surface); margin:22px 0 26px; }
+  .lede-stats div { padding:15px 18px; border-right:1px solid var(--line); }
+  .lede-stats div:last-child { border-right:0; }
+  .lede-stats .v { font-family:var(--f-display); font-size:27px; font-weight:700; line-height:1; font-variant-numeric:tabular-nums; }
+  .lede-stats .k { font-family:var(--f-mono); font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin-top:7px; }
+
+  .scope { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:18px; margin:18px 0 22px; }
+  .scope > div { border:1px solid var(--line); border-top:3px solid var(--pass); background:var(--surface); border-radius:var(--radius); padding:16px 18px 6px; }
+  .scope > div.out { border-top-color:var(--neutral); }
+  .scope h4 { margin:0 0 10px; font-family:var(--f-mono); font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--pass); }
+  .scope .out h4 { color:var(--neutral); }
+  .scope ul { padding-left:18px; font-size:14px; }
+
+  .conf { display:inline-flex; gap:2px; vertical-align:middle; }
+  .conf i { width:13px; height:8px; border-radius:1px; background:var(--line-2); display:inline-block; }
+  .conf.c3 i:nth-child(-n+3) { background:var(--pass); }
+  .conf.c2 i:nth-child(-n+2) { background:var(--warn); }
+  .conf.c1 i:nth-child(-n+1) { background:var(--critical); }
+
+  figure { margin:26px 0 28px; }
+  figure svg { display:block; width:100%; min-width:720px; height:auto; color:var(--ink-2); }
+  figcaption { font-size:12.5px; color:var(--muted); margin-top:10px; max-width:var(--measure); }
+  .svg-box { background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:20px 18px; overflow-x:auto; }
+  .nd { fill:var(--surface-2); stroke:var(--line-2); stroke-width:1.2; }
+  .nd-a { fill:var(--accent-soft); stroke:var(--accent); stroke-width:1.5; }
+  .nd-t { fill:var(--pass-soft); stroke:var(--pass); stroke-width:1.4; }
+  .nd-x { fill:var(--surface); stroke:var(--line-2); stroke-width:1; stroke-dasharray:4 3; }
+  .nd-g { fill:var(--warn-soft); stroke:var(--warn); stroke-width:1; stroke-dasharray:5 3; }
+  .lb { font-family:var(--f-body); font-size:11.5px; font-weight:600; fill:var(--ink); }
+  .sb { font-family:var(--f-mono); font-size:9.5px; fill:var(--muted); }
+  .ed { stroke:var(--line-2); stroke-width:1.4; fill:none; }
+  .et { stroke:var(--pass); stroke-width:1.4; fill:none; }
+  .ah { fill:var(--line-2); }
+  .aht { fill:var(--pass); }
+
+  .foot { margin-top:64px; padding-top:18px; border-top:1px solid var(--line-2); font-size:12.5px; color:var(--muted); max-width:var(--measure); }
+
+  @media (max-width:900px) {
+    .shell { grid-template-columns:1fr; gap:0; padding-inline:18px; padding-block:0 56px; }
+    .rail { position:static; height:auto; padding-top:24px; }
+    .rail nav { flex-direction:row; flex-wrap:wrap; gap:4px; border-left:0; }
+    .rail a { border:1px solid var(--line); border-radius:2px; padding:5px 9px; margin-left:0; grid-template-columns:auto auto; }
+    .masthead { padding-top:28px; }
+    .sec-head { grid-template-columns:30px 1fr; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition:none !important; } }
+
+  @page { size:A4; margin:16mm 15mm 18mm; }
+  @media print {
+    :root, :root[data-theme="dark"], :root:not([data-theme="light"]) {
+      color-scheme: light;
+      --ground:#FFF; --surface:#FFF; --surface-2:#F2F5F7; --ink:#101820; --ink-2:#33414E;
+      --muted:#5A6874; --line:#D3DAE1; --line-2:#B8C2CC; --accent:#0F4C5C; --accent-ink:#0F4C5C;
+      --accent-soft:#E6EFF2; --critical:#8E2219; --critical-soft:#F8E9E7; --warn:#7A4F05;
+      --warn-soft:#FBF1DE; --pass:#17593F; --pass-soft:#E5F1EB; --neutral:#4F5D69; --neutral-soft:#EDF0F3;
+    }
+    * { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
+    body { font-size:10pt; line-height:1.48; background:#fff; }
+    .shell { display:block; max-width:none; padding:0; }
+    .rail { display:none; }
+    .masthead { padding-top:0; }
+    h1 { font-size:25pt; } h2 { font-size:15pt; } h3 { font-size:11.5pt; }
+    p,ul,ol,.standfirst,.sec-sub,.note { max-width:none; }
+    figure svg { min-width:0; }
+    section { break-before:page; padding-top:0; }
+    #s1 { break-before:auto; }
+    .sec-head,h3,h4 { break-after:avoid; }
+    .note,pre,figure,.lede-stats,.scope > div { break-inside:avoid; }
+    tr,li { break-inside:avoid; }
+    thead { display:table-header-group; }
+    a { color:var(--ink); text-decoration:none; }
+  }
+</style>
+
+<div class="shell">
+  <aside class="rail">
+    <div class="rail-mark">HumAId&nbsp;·&nbsp;QA</div>
+    <nav aria-label="Sections">
+      <a href="#s1"><span class="n">01</span><span>The project</span></a>
+      <a href="#s2"><span class="n">02</span><span>In scope &amp; out of scope</span></a>
+      <a href="#s3"><span class="n">03</span><span>Architecture through a tester's eyes</span></a>
+      <a href="#s4"><span class="n">04</span><span>How each layer is validated</span></a>
+      <a href="#s5"><span class="n">05</span><span>Test mechanisms</span></a>
+      <a href="#s6"><span class="n">06</span><span>Governance rules &amp; their proof</span></a>
+      <a href="#s7"><span class="n">07</span><span>Environments &amp; test data</span></a>
+      <a href="#s8"><span class="n">08</span><span>Pipeline integration</span></a>
+      <a href="#s9"><span class="n">09</span><span>Entry, exit &amp; defects</span></a>
+      <a href="#s10"><span class="n">10</span><span>Risks &amp; current position</span></a>
+    </nav>
+  </aside>
+
+  <main>
+    <header class="masthead">
+      <div class="eyebrow">Genius Hacks Q3 2026 · Risk Assessment Workbench</div>
+      <h1>Test Strategy</h1>
+      <p class="standfirst">What the Workbench is, how it is built, and how QA proves it behaves, one architectural layer at a time. For each layer: what can go wrong there, which mechanism catches it, where that check runs, and what is deliberately left out.</p>
+      <dl class="meta">
+        <div><dt>Owner</dt><dd>Shanthi Subramanian · BA&nbsp;/&nbsp;QA</dd></div>
+        <div><dt>Version</dt><dd>2.0 · 24 September 2026</dd></div>
+        <div><dt>Baseline</dt><dd><code>release/1.00</code> @ 9f6a3be</dd></div>
+        <div><dt>Board</dt><dd>Azure DevOps · Epics 1–19</dd></div>
+      </dl>
+    </header>
+
+    <!-- ══ 01 ══ -->
+    <section id="s1">
+      <div class="sec-head">
+        <div class="sec-n">01</div>
+        <h2>The project</h2>
+        <p class="sec-sub">What is under test, who uses it, and the rules it must never break.</p>
+      </div>
+
+      <p>The client is a large national bank. Before any business unit launches a product, adds a feature, changes a process, onboards a vendor, enters a geography or opens to a new customer segment, its Financial Crimes Risk Management (FCRM) function must assess the financial crime risk. Today that runs on email, Word, Excel and SharePoint, takes <strong>15–20 business days</strong>, produces inconsistent conclusions between analysts, and leaves examiners reconstructing reasoning by hand.</p>
+      <p>The <strong>Risk Assessment Workbench</strong> carries a change request from intake to a committee decision on one governed platform. AI prepares: it maps the request to FFIEC risk categories, extracts structure from submitted documents and drafts the assessment narrative. Humans decide at every step.</p>
+
+      <div class="tw"><table>
+        <thead><tr><th>Stage</th><th>Actor</th><th>What happens</th><th>Status after</th></tr></thead>
+        <tbody>
+          <tr><td>Intake</td><td>Product Owner</td><td>Raises one of six change types, attaches documents, links a mock CRM / core-banking / vendor record</td><td class="mono">Submitted</td></tr>
+          <tr><td>Assessment</td><td>FCRM Analyst</td><td>Reviews AI category mapping, extracted fields, policy reliance and drafted narrative; scores; overrides with a reason; finalizes</td><td class="mono">InAssessment</td></tr>
+          <tr><td>Committee</td><td>Committee Member</td><td>Votes on the routed, read-only assessment until quorum resolves it</td><td class="mono">PendingCommittee</td></tr>
+          <tr><td>Decision</td><td>System records</td><td>Approved · Rejected · Deferred · Approved with conditions, pushed back to the source system</td><td class="mono">Decisioned</td></tr>
+          <tr><td>Configuration</td><td>Admin</td><td>Tunes scoring, workflow rules and (Epic 19) SLA targets and breach distribution lists, always with a reason</td><td class="mono">—</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>The rules the product is judged on</h3>
+      <p>These are the reason the test strategy is shaped the way it is. Each is a <em>must never</em>, and each needs proof at a layer that cannot be bypassed.</p>
+      <ol>
+        <li><strong>The system prepares, humans decide.</strong> Nothing is auto-approved, auto-rejected, or allowed past a review gate unreviewed.</li>
+        <li><strong>Residual risk never reaches zero</strong>, at calculation time and at configuration time.</li>
+        <li><strong>Any AI output can be overridden, with a stated reason</strong>, and both the original and the override are kept.</li>
+        <li><strong>The audit trail is append-only at the data layer</strong>, not merely hidden from the UI.</li>
+        <li><strong>Risk categories come from a real, citable framework</strong> (FFIEC BSA/AML), never invented by the model.</li>
+        <li><strong>Synthetic data only.</strong> No connection to a real bank system, and no real mailbox.</li>
+      </ol>
+
+      <div class="lede-stats">
+        <div><div class="v">46</div><div class="k">API endpoints · 13 controllers</div></div>
+        <div><div class="v">23</div><div class="k">DB tables · 46 stored functions</div></div>
+        <div><div class="v">3</div><div class="k">AI touchpoints</div></div>
+        <div><div class="v">4</div><div class="k">Roles</div></div>
+        <div><div class="v">19</div><div class="k">Epics on the board</div></div>
+      </div>
+    </section>
+
+    <!-- ══ 02 ══ -->
+    <section id="s2">
+      <div class="sec-head">
+        <div class="sec-n">02</div>
+        <h2>In scope &amp; out of scope</h2>
+        <p class="sec-sub">Stated explicitly, so an untested area is a decision on record rather than a surprise.</p>
+      </div>
+
+      <div class="scope">
+        <div>
+          <h4>In scope — QA owns</h4>
+          <ul>
+            <li>Functional behaviour of Epics 1–10 and 14 against their acceptance criteria</li>
+            <li>API contract, validation, error mapping and workflow-order rules on all 46 endpoints</li>
+            <li>Database-enforced governance: audit trigger, CHECK constraints, reason guards</li>
+            <li>The three role journeys end to end in the browser</li>
+            <li>AI output quality for category mapping, extraction and narrative (evaluation harness)</li>
+            <li>Human-in-the-loop gates: every AI output reaches the committee only through a review</li>
+            <li>Role-based access (Epic 11) at the API, not just the UI</li>
+            <li>Examiner-ready audit export (US-9.3), content and completeness</li>
+            <li>Mock-system integration and behaviour when a mock system is down</li>
+            <li>SLA tracking and breach email (Epic 19), as it is built</li>
+            <li>Deployment smoke checks on the dev Container Apps environment</li>
+            <li>Security gates in the pipeline: dependency, static and image scans (reviewing results)</li>
+          </ul>
+        </div>
+        <div class="out">
+          <h4>Out of scope — and why</h4>
+          <ul>
+            <li><strong>Writing unit tests</strong> — Dev owned; QA consumes the result (39 test methods today)</li>
+            <li><strong>Load and performance at bank scale</strong> — a hackathon workload; only response-time sanity is observed</li>
+            <li><strong>Penetration testing</strong> — automated scanners only; no adversarial engagement</li>
+            <li><strong>Real integrations</strong> — CRM, core banking and vendor systems are mocks by rule</li>
+            <li><strong>Real email delivery</strong> — breach mail is captured in a local inbox, never sent</li>
+            <li><strong>Auth0, Azure AI Foundry and Azure platform behaviour</strong> — trusted as managed services; only our integration with them is tested</li>
+            <li><strong>Model internals</strong> — we evaluate outputs, not weights, training or provider latency</li>
+            <li><strong>Cross-browser and mobile</strong> — Chromium desktop only</li>
+            <li><strong>Disaster recovery, backup restore, localisation</strong></li>
+            <li><strong>Infrastructure-as-code correctness</strong> — owned by DevOps through the Terraform PR pipeline</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="note">
+        <span class="lbl">The rule that prevents duplicated effort</span>
+        <p><strong>Every check happens at the cheapest layer that can actually see it.</strong> API tests never re-assert scoring arithmetic — unit tests do that in milliseconds. UI tests never check a status code. Each layer only covers what the layers beneath it structurally cannot reach.</p>
+      </div>
+    </section>
+
+    <!-- ══ 03 ══ -->
+    <section id="s3">
+      <div class="sec-head">
+        <div class="sec-n">03</div>
+        <h2>Architecture through a tester's eyes</h2>
+        <p class="sec-sub">The same diagram the developers know, annotated with where each kind of test enters and what each layer can get wrong.</p>
+      </div>
+
+      <figure>
+        <div class="svg-box">
+          <svg viewBox="0 0 860 470" role="img" aria-label="Layered architecture. The React webapp calls the Workbench API, which calls the Services layer, which calls the Dapper data-access layer and PostgreSQL. Services also call the AI clients, which call Azure AI Foundry or Anthropic, plus blob storage and the Mock Systems service. UI journeys enter at the webapp, API tests at the API, unit tests at services, data tests at PostgreSQL, and AI evaluations at the AI clients. Pipeline gates span everything.">
+            <defs>
+              <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path class="ah" d="M 0 0 L 10 5 L 0 10 z"/></marker>
+              <marker id="at" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path class="aht" d="M 0 0 L 10 5 L 0 10 z"/></marker>
+            </defs>
+
+            <text class="sb" x="14" y="16">QA / DEV TESTS</text>
+            <text class="sb" x="250" y="16">WORKBENCH</text>
+            <text class="sb" x="540" y="16">AI + EXTERNAL</text>
+            <text class="sb" x="720" y="16">AI EVALS</text>
+
+            <!-- center stack -->
+            <rect class="nd" x="250" y="30" width="220" height="44" rx="2"/>
+            <text class="lb" x="360" y="49" text-anchor="middle">webapp · React 19 + Vite</text>
+            <text class="sb" x="360" y="64" text-anchor="middle">:3000 · 6 pages · role nav</text>
+
+            <rect class="nd-a" x="250" y="100" width="220" height="50" rx="2"/>
+            <text class="lb" x="360" y="120" text-anchor="middle">1-API · Workbench API</text>
+            <text class="sb" x="360" y="136" text-anchor="middle">:5210 · 13 controllers · 46 routes</text>
+
+            <rect class="nd-a" x="250" y="170" width="220" height="50" rx="2"/>
+            <text class="lb" x="360" y="190" text-anchor="middle">3-Service · Services</text>
+            <text class="sb" x="360" y="206" text-anchor="middle">workflow · scoring · audit · export</text>
+
+            <rect class="nd-a" x="250" y="250" width="220" height="44" rx="2"/>
+            <text class="lb" x="360" y="269" text-anchor="middle">4-Persistence · DA</text>
+            <text class="sb" x="360" y="284" text-anchor="middle">Dapper · 12 repos · func_* only</text>
+
+            <rect class="nd-a" x="250" y="320" width="220" height="56" rx="2"/>
+            <text class="lb" x="360" y="340" text-anchor="middle">PostgreSQL 16 · DB</text>
+            <text class="sb" x="360" y="355" text-anchor="middle">audit trigger · CHECK constraints</text>
+            <text class="sb" x="360" y="368" text-anchor="middle">RAISE guards in functions</text>
+
+            <line class="ed" x1="360" y1="74" x2="360" y2="96" marker-end="url(#ar)"/>
+            <line class="ed" x1="360" y1="150" x2="360" y2="166" marker-end="url(#ar)"/>
+            <line class="ed" x1="360" y1="220" x2="360" y2="246" marker-end="url(#ar)"/>
+            <line class="ed" x1="360" y1="294" x2="360" y2="316" marker-end="url(#ar)"/>
+
+            <!-- right column -->
+            <rect class="nd-x" x="540" y="30" width="160" height="44" rx="2"/>
+            <text class="lb" x="620" y="49" text-anchor="middle">Auth0</text>
+            <text class="sb" x="620" y="64" text-anchor="middle">JWT · dev bypass locally</text>
+            <line class="ed" x1="470" y1="44" x2="536" y2="44" marker-end="url(#ar)"/>
+            <path class="ed" d="M 470 118 L 505 118 L 505 62 L 536 62" marker-end="url(#ar)"/>
+
+            <rect class="nd-a" x="540" y="170" width="160" height="50" rx="2"/>
+            <text class="lb" x="620" y="190" text-anchor="middle">3-Service · AI clients</text>
+            <text class="sb" x="620" y="206" text-anchor="middle">map · extract · draft</text>
+            <line class="ed" x1="470" y1="186" x2="536" y2="186" marker-end="url(#ar)"/>
+
+            <rect class="nd-x" x="540" y="240" width="160" height="40" rx="2"/>
+            <text class="lb" x="620" y="258" text-anchor="middle">Foundry / Anthropic</text>
+            <text class="sb" x="620" y="272" text-anchor="middle">AI_PROVIDER · 180s</text>
+            <line class="ed" x1="620" y1="220" x2="620" y2="236" marker-end="url(#ar)"/>
+
+            <rect class="nd-x" x="540" y="298" width="160" height="38" rx="2"/>
+            <text class="lb" x="620" y="315" text-anchor="middle">Blob storage</text>
+            <text class="sb" x="620" y="328" text-anchor="middle">Azurite :10000 locally</text>
+
+            <rect class="nd-x" x="540" y="352" width="160" height="40" rx="2"/>
+            <text class="lb" x="620" y="370" text-anchor="middle">6 · Mock Systems</text>
+            <text class="sb" x="620" y="384" text-anchor="middle">:5220 · CRM/Core/Vendor</text>
+            <path class="ed" d="M 470 206 L 518 206 L 518 316 L 536 316" marker-end="url(#ar)"/>
+            <path class="ed" d="M 518 316 L 518 372 L 536 372" marker-end="url(#ar)"/>
+
+            <!-- tests left -->
+            <rect class="nd-t" x="14" y="30" width="170" height="44" rx="2"/>
+            <text class="lb" x="99" y="49" text-anchor="middle">UI journeys</text>
+            <text class="sb" x="99" y="64" text-anchor="middle">Playwright · 6</text>
+            <line class="et" x1="184" y1="52" x2="246" y2="52" marker-end="url(#at)"/>
+
+            <rect class="nd-t" x="14" y="100" width="170" height="50" rx="2"/>
+            <text class="lb" x="99" y="120" text-anchor="middle">API tests</text>
+            <text class="sb" x="99" y="136" text-anchor="middle">Playwright request · 12</text>
+            <line class="et" x1="184" y1="125" x2="246" y2="125" marker-end="url(#at)"/>
+
+            <rect class="nd-t" x="14" y="170" width="170" height="50" rx="2"/>
+            <text class="lb" x="99" y="190" text-anchor="middle">Unit tests (Dev)</text>
+            <text class="sb" x="99" y="206" text-anchor="middle">xUnit + Moq · 39</text>
+            <line class="et" x1="184" y1="195" x2="246" y2="195" marker-end="url(#at)"/>
+
+            <rect class="nd-t" x="14" y="320" width="170" height="56" rx="2"/>
+            <text class="lb" x="99" y="340" text-anchor="middle">Data tests</text>
+            <text class="sb" x="99" y="355" text-anchor="middle">Testcontainers PG</text>
+            <text class="sb" x="99" y="368" text-anchor="middle">24 planned</text>
+            <line class="et" x1="184" y1="348" x2="246" y2="348" marker-end="url(#at)"/>
+
+            <!-- evals right -->
+            <rect class="nd-t" x="720" y="170" width="126" height="50" rx="2"/>
+            <text class="lb" x="783" y="190" text-anchor="middle">AI evaluation</text>
+            <text class="sb" x="783" y="206" text-anchor="middle">12 cases · live</text>
+            <line class="et" x1="720" y1="195" x2="704" y2="195" marker-end="url(#at)"/>
+
+            <!-- pipeline band -->
+            <rect class="nd-g" x="14" y="408" width="832" height="46" rx="2"/>
+            <text class="lb" x="30" y="428">Pipeline gates (Azure DevOps)</text>
+            <text class="sb" x="30" y="444">PR: build · unit · npm/dotnet vuln · Semgrep · AI review · SQL drift  —  CI: docker build · Trivy · deploy to Container Apps (dev)</text>
+          </svg>
+        </div>
+        <figcaption><strong>Figure 1.</strong> Five test entry points plus the pipeline. The lowest entry point matters most for governance: the append-only audit trigger and the risk-score constraints live in PostgreSQL, and no HTTP endpoint ever attempts to alter an audit row — so only a direct database connection can prove the database refuses one.</figcaption>
+      </figure>
+
+      <h3>What each layer can get wrong</h3>
+      <p>Read from the code on <code>release/1.00</code>, not from documentation. The right-hand column is the finding that shapes how the layer is tested.</p>
+      <div class="tw"><table>
+        <thead><tr><th>Layer</th><th>Responsibility</th><th>Characteristic failure</th><th>Observed in code</th></tr></thead>
+        <tbody>
+          <tr><td><strong>webapp</strong><span class="sb">5-Presentation</span></td><td>Screens per role, state-switched (no router), Auth0 login, dev user switcher</td><td>A screen hidden by role is mistaken for access control; a gate shown as ready when it is not</td><td>Role only hides navigation; DEF-004 shows "Ready to finalize" on an empty assessment</td></tr>
+          <tr><td><strong>1-API</strong><span class="sb">Web</span></td><td>Controllers, auth scheme, DI, <code>OperationResult</code> envelope</td><td>Wrong status codes; missing authorization; caller able to name the actor</td><td>Bare <code>[Authorize]</code>, no role policy; <code>actorUserId</code> taken from the body; any exception becomes 500</td></tr>
+          <tr><td><strong>3-Service</strong><span class="sb">Services</span></td><td>Workflow order, scoring, committee resolution, ingestion, audit export</td><td>Transitions in the wrong order; a downstream outage breaks intake</td><td>Mock-system calls catch <code>HttpRequestException</code> only — a timeout escapes</td></tr>
+          <tr><td><strong>3-Service</strong><span class="sb">AI</span></td><td>Prompting, JSON parsing, grounding against allowed categories</td><td>Fabricated category or citation; malformed JSON; provider down</td><td>Unknown category ids dropped; parse failure falls back to empty; provider outage returns 500, no retry</td></tr>
+          <tr><td><strong>4-Persistence</strong><span class="sb">DA</span></td><td>Dapper repos calling stored functions only</td><td>Unmapped database errors surface as 500</td><td>FK violation and unique-key race (DEF-006) both reach the caller as 500</td></tr>
+          <tr><td><strong>DB</strong><span class="sb">PostgreSQL</span></td><td>Schema, 46 functions, triggers, constraints, seeds</td><td>A governance rule enforced only above the database</td><td>Audit trigger, <code>residual_rating &gt; 0</code>, <code>mitigation &lt; 1.0</code>, override-reason CHECK all present; <code>deploy_all.sql</code> not idempotent</td></tr>
+          <tr><td><strong>6 · Mock Systems</strong></td><td>Synthetic CRM, core banking and vendor registry</td><td>Contract drift between mock and Workbench; outage handling</td><td>No auth, no custom timeout (100 s default), separate schema in the same database</td></tr>
+          <tr><td><strong>Pipelines &amp; ops</strong></td><td>PR gates, image build and scan, deploy to dev</td><td>A green pipeline that ran no behavioural test</td><td>CI runs no tests; only the PR pipeline runs unit tests; no health endpoint beyond Ping</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- ══ 04 ══ -->
+    <section id="s4">
+      <div class="sec-head">
+        <div class="sec-n">04</div>
+        <h2>How each layer is validated</h2>
+        <p class="sec-sub">For every layer: what is checked, by which mechanism, where it runs, and who owns it.</p>
+      </div>
+
+      <h3>Presentation — webapp</h3>
+      <div class="tw"><table>
+        <thead><tr><th>What is validated</th><th>Mechanism</th><th>Runs</th><th>Owner</th></tr></thead>
+        <tbody>
+          <tr><td>The three role journeys complete end to end on one request: raise → assess and finalize → vote and decide</td><td>Playwright UI, serial, one browser context per role</td><td>Local now; merge pipeline (target)</td><td>QA</td></tr>
+          <tr><td>Gates refuse visibly: Finalize refuses an unreviewed assessment; an unreviewed assessment cannot be routed</td><td>Playwright UI, expected-to-fail until DEF-004 closes</td><td>Same</td><td>QA</td></tr>
+          <tr><td>Error messages are plain language and never show stack traces</td><td>Assertions inside the journeys; exploratory</td><td>Same</td><td>QA</td></tr>
+          <tr><td>Accessibility of the Assessment Workspace</td><td>Manual spot-check (keyboard, contrast, screen reader)</td><td>Before demo</td><td>QA</td></tr>
+          <tr><td>Build and dependencies</td><td><code>npm ci</code> + build + <code>npm audit --audit-level=high</code></td><td>Every PR</td><td>Pipeline</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>API — 1-API</h3>
+      <p>The workhorse layer. Four questions for every write endpoint:</p>
+      <ol>
+        <li><strong>Happy path</strong> — valid input gives the correct result inside the <code>OperationResult</code> envelope.</li>
+        <li><strong>Bad input</strong> — a blank reason, an out-of-range value, an unsupported file or a malformed GUID is refused with a 4xx, never a 500.</li>
+        <li><strong>Wrong person</strong> — a Product Owner cannot vote, finalize or change configuration; the actor comes from the token, never the body.</li>
+        <li><strong>Wrong time</strong> — a vote before routing or a route before finalize is refused.</li>
+      </ol>
+      <div class="tw"><table>
+        <thead><tr><th>What is validated</th><th>Mechanism</th><th>Runs</th><th>Owner</th></tr></thead>
+        <tbody>
+          <tr><td>Envelope, seeded roles, FFIEC framework present</td><td>Playwright <code>request</code> — smoke (3)</td><td>Local; PR (target)</td><td>QA</td></tr>
+          <tr><td>Authentication and role enforcement (Epic 11)</td><td>Playwright <code>request</code> — 7 tests, 4 expected-to-fail recording DEF-001/002</td><td>Same</td><td>QA</td></tr>
+          <tr><td>Error mapping: FK violation and unknown ids return 4xx</td><td>Playwright <code>request</code> — 2 tests, both expected-to-fail (currently 500)</td><td>Same</td><td>QA</td></tr>
+          <tr><td>Controller-to-service wiring</td><td>Covered implicitly by the above; no separate test</td><td>—</td><td>—</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Services — 3-Service</h3>
+      <div class="tw"><table>
+        <thead><tr><th>What is validated</th><th>Mechanism</th><th>Runs</th><th>Owner</th></tr></thead>
+        <tbody>
+          <tr><td>Scoring arithmetic and bounds; residual never zero</td><td>xUnit + Moq, <code>[Theory]</code> tables (ScoringServiceTests)</td><td>Every PR</td><td>Dev</td></tr>
+          <tr><td>Committee quorum and resolution precedence: Reject &gt; Defer &gt; Conditions &gt; Approve</td><td>xUnit (CommitteeServiceTests, 9)</td><td>Every PR</td><td>Dev</td></tr>
+          <tr><td>Intake validation; ingestion snapshot; mock outage does not fail intake</td><td>xUnit with mocked <code>IMockSystemsClient</code></td><td>Every PR</td><td>Dev</td></tr>
+          <tr><td>Mock-system <em>timeout</em> (not just refusal) is survived</td><td>New QA case: API test with the mock stopped / slowed</td><td>Planned</td><td>QA</td></tr>
+          <tr><td>Finalize refuses while any section is still <code>AiDrafted</code> or lacks policy reliance</td><td>Unit (Dev) + UI tripwire (QA)</td><td>PR / local</td><td>Dev + QA</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>AI — 3-Service AI</h3>
+      <p>Two different questions, answered by two different mechanisms. <strong>Does our code handle whatever the model returns?</strong> is deterministic, so it is a unit test with a fake model. <strong>Is what the model returns good enough?</strong> is probabilistic, so it is an evaluation against fixed datasets.</p>
+      <div class="tw"><table>
+        <thead><tr><th>What is validated</th><th>Mechanism</th><th>Runs</th><th>Owner</th></tr></thead>
+        <tbody>
+          <tr><td>Parsing, fallbacks, dropping categories not in the allowed list, empty input</td><td>xUnit with <code>FakeChatCompletionClient</code> (11 tests across the three clients)</td><td>Every PR</td><td>Dev</td></tr>
+          <tr><td>Category mapping: correct FFIEC set, zero fabricated codes</td><td>Eval — exact set-overlap, 5 cases</td><td>On demand; nightly (target)</td><td>QA</td></tr>
+          <tr><td>Extraction: expected values found, low-confidence fields flagged <code>needsReview</code></td><td>Eval — substring match + flag check, 4 cases</td><td>Same</td><td>QA</td></tr>
+          <tr><td>Narrative: cites something, well-formed, honours regeneration feedback</td><td>Eval — labelled heuristic, 3 cases</td><td>Same</td><td>QA</td></tr>
+          <tr><td>Whether a citation is apposite and the reasoning sound</td><td>Manual review by a domain reader</td><td>Before demo</td><td>QA</td></tr>
+          <tr><td>Every AI write is persisted as <code>AiProposed / AiExtracted / AiDrafted</code> with a <code>system/AI</code> audit entry</td><td>Data test on the audit table</td><td>Planned</td><td>QA</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Data access and database — 4-Persistence</h3>
+      <p>The only layer where the governance rules are <em>guaranteed</em> rather than coded. Data tests connect straight to a throwaway PostgreSQL 16 container loaded with the real <code>deploy_all.sql</code> and try to break each rule directly.</p>
+      <div class="tw"><table>
+        <thead><tr><th>What is validated</th><th>Mechanism</th><th>Runs</th><th>Owner</th></tr></thead>
+        <tbody>
+          <tr><td><code>UPDATE</code> and <code>DELETE</code> on <code>audit_event</code> are rejected by <code>trg_block_audit_event_mutation</code></td><td>Testcontainers data test</td><td>Planned · PR</td><td>QA</td></tr>
+          <tr><td><code>residual_rating = 0</code>, <code>mitigation_factor = 1.0</code> and an override without a reason are refused by CHECK constraints</td><td>Same</td><td>Same</td><td>QA</td></tr>
+          <tr><td>The five reason guards in stored functions raise on blank reasons</td><td>Same</td><td>Same</td><td>QA</td></tr>
+          <tr><td>Each state change writes its audit row in the same transaction (rollback leaves neither)</td><td>Same</td><td>Same</td><td>QA</td></tr>
+          <tr><td>Config versioning: a change deactivates the old row and inserts a new one; assessments keep their pinned version</td><td>Same</td><td>Same</td><td>QA</td></tr>
+          <tr><td>Generated <code>deploy_all.sql</code> matches the schema sources</td><td>SQL drift check (<code>git diff --exit-code</code>)</td><td>Mock-API PR</td><td>Pipeline</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Mock Systems — 6</h3>
+      <div class="tw"><table>
+        <thead><tr><th>What is validated</th><th>Mechanism</th><th>Runs</th><th>Owner</th></tr></thead>
+        <tbody>
+          <tr><td>Lookups return the seeded synthetic records with the fields the framework scores</td><td>API test against :5220</td><td>Planned</td><td>QA</td></tr>
+          <tr><td>The Workbench snapshot at intake matches what the mock returned at that moment</td><td>API test, then compare snapshot</td><td>Planned</td><td>QA</td></tr>
+          <tr><td>The committee decision is pushed back as a risk flag</td><td>API test reading the mock after a decision</td><td>Planned</td><td>QA</td></tr>
+          <tr><td>Data is reproducible from the seed</td><td>Re-seed and compare</td><td>Planned</td><td>QA</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Deployment and operations</h3>
+      <div class="tw"><table>
+        <thead><tr><th>What is validated</th><th>Mechanism</th><th>Runs</th><th>Owner</th></tr></thead>
+        <tbody>
+          <tr><td>Image has no HIGH / CRITICAL vulnerabilities</td><td>Trivy 0.50.2, fails the job</td><td>Every CI run</td><td>DevOps</td></tr>
+          <tr><td>Both services answer after a deploy</td><td>Smoke: <code>/api/Ping</code> and <code>/api/ping</code> on the dev Container Apps</td><td>Post-deploy (target)</td><td>QA + DevOps</td></tr>
+          <tr><td>The deployed configuration is the intended one</td><td>Manual first-deployment walkthrough</td><td>Per new environment</td><td>QA</td></tr>
+          <tr><td>Telemetry reaches Application Insights when the connection string is set</td><td>Manual query in the workspace after a smoke run</td><td>Per environment</td><td>DevOps</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- ══ 05 ══ -->
+    <section id="s5">
+      <div class="sec-head">
+        <div class="sec-n">05</div>
+        <h2>Test mechanisms</h2>
+        <p class="sec-sub">The tools, and the four practices that make their results trustworthy.</p>
+      </div>
+
+      <div class="tw"><table>
+        <thead><tr><th>Mechanism</th><th>Tool</th><th>Location</th><th>Count today</th><th>Needs running</th></tr></thead>
+        <tbody>
+          <tr><td>Unit</td><td>xUnit 2.9 · Moq 4.20</td><td class="mono">tests/…UnitTests</td><td class="num">39</td><td>Nothing</td></tr>
+          <tr><td>API</td><td>Playwright <code>request</code></td><td class="mono">tests/e2e/api</td><td class="num">12</td><td>API + DB</td></tr>
+          <tr><td>UI journeys</td><td>Playwright Chromium</td><td class="mono">tests/e2e/ui</td><td class="num">6</td><td>webapp + API + mock + DB</td></tr>
+          <tr><td>Data</td><td>Testcontainers PostgreSQL 16</td><td class="mono">tests/…DataTests</td><td class="num">0 of 24</td><td>Docker</td></tr>
+          <tr><td>AI evaluation</td><td>.NET console harness</td><td class="mono">evals/</td><td class="num">12</td><td>Live model endpoint</td></tr>
+          <tr><td>Static &amp; dependency security</td><td>Semgrep · dotnet vuln check · npm audit</td><td class="mono">.azure-pipelines</td><td class="num">—</td><td>Pipeline</td></tr>
+          <tr><td>AI code review</td><td>Claude review of the PR diff, blocking issues fail</td><td class="mono">.azure-pipelines</td><td class="num">—</td><td>Pipeline</td></tr>
+          <tr><td>Manual</td><td>Written charter + recorded outcome</td><td class="mono">docs/qa</td><td class="num">6</td><td>A person</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>1 · We break the code on purpose to check the tests notice</h3>
+      <p>A passing test proves nothing until it has been seen to fail for the right reason. Before any governance test is trusted, the rule it guards is inverted locally and exactly that test must go red. Done for the finalization gate: disabling it failed <strong>exactly five tests</strong> and left the rest green. That selectivity is the signal.</p>
+
+      <h3>2 · Known gaps are recorded as tests, never deleted</h3>
+      <p>Where the product does not yet do the right thing, the test asserts the <strong>correct</strong> behaviour and is marked <code>test.fail()</code>. The board stays readable, the requirement is never softened to match the bug, and the day a fix lands the runner reports <em>"expected to fail, but passed"</em> — the fix announces itself. Ten of the eighteen QA tests are such tripwires today.</p>
+
+      <h3>3 · A dead environment can never look like a pass</h3>
+      <p>An expected-to-fail test also "passes" when the server is down. So <code>global-setup.js</code> confirms the API answers before any test runs and aborts loudly if it does not. A suite run against nothing must never produce a green board.</p>
+
+      <h3>4 · Every test names the story it proves</h3>
+      <pre><code>test('US-8.2 AC5 — a vote is recorded against the member by name', …)</code></pre>
+      <p>Both runners write these names into their results, so traceability back to the Azure DevOps board comes out of a build, not a spreadsheet. A story with no matching test shows up as an empty row on its own.</p>
+
+      <div class="note">
+        <span class="lbl">Deterministic versus probabilistic</span>
+        <p>Anything with one right answer is tested with an exact assertion: scoring, quorum, SLA due dates, constraints. Only model output is evaluated statistically, and the narrative eval is labelled a <em>heuristic</em> because it checks form rather than judgement. No LLM is used to grade anything a plain assertion can decide.</p>
+      </div>
+    </section>
+
+    <!-- ══ 06 ══ -->
+    <section id="s6">
+      <div class="sec-head">
+        <div class="sec-n">06</div>
+        <h2>Governance rules &amp; their proof</h2>
+        <p class="sec-sub">Each non-negotiable, where it is enforced, and which test would catch it being broken.</p>
+      </div>
+
+      <div class="tw"><table>
+        <thead><tr><th>Rule</th><th>Enforced in</th><th>Proved by</th><th>Confidence</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Humans decide</strong> — nothing reaches committee unreviewed</td><td>Service finalize gate; <code>func_routeToCommittee</code> requires Finalized</td><td>Unit + UI tripwires (DEF-004)</td><td><span class="conf c2"><i></i><i></i><i></i></span> <span class="pill p-warn">Medium</span></td></tr>
+          <tr><td><strong>Residual never zero</strong></td><td>Formula bound, C# guard, CHECK <code>&gt; 0</code>, config CHECK <code>&lt; 1.0</code></td><td>Unit + API + Data (planned)</td><td><span class="conf c3"><i></i><i></i><i></i></span> <span class="pill p-pass">High</span></td></tr>
+          <tr><td><strong>Override needs a reason; both values kept</strong></td><td>Five function guards + CHECK on risk score</td><td>Unit for one of five; Data for all five (planned)</td><td><span class="conf c2"><i></i><i></i><i></i></span> <span class="pill p-warn">Medium</span></td></tr>
+          <tr><td><strong>Audit append-only</strong></td><td><code>trg_block_audit_event_mutation</code></td><td>Data test (planned) — the only layer that can</td><td><span class="conf c1"><i></i><i></i><i></i></span> <span class="pill p-crit">Low</span></td></tr>
+          <tr><td><strong>Citable framework only</strong></td><td>AI client drops unknown ids; FFIEC seed</td><td>Unit + eval (zero fabricated codes)</td><td><span class="conf c3"><i></i><i></i><i></i></span> <span class="pill p-pass">High</span></td></tr>
+          <tr><td><strong>Role owns the action</strong></td><td>Not yet enforced server-side</td><td>API tripwires (DEF-001/002)</td><td><span class="conf c1"><i></i><i></i><i></i></span> <span class="pill p-crit">Low</span></td></tr>
+          <tr><td><strong>SLA breach only informs</strong> (Epic 19)</td><td>To be built</td><td>API: breach leaves status, assessment and decision unchanged</td><td><span class="pill p-neut">Not built</span></td></tr>
+        </tbody>
+      </table></div>
+      <p><span class="conf c3"><i></i><i></i><i></i></span> <strong>High</strong> — proved at more than one layer, including one that cannot be bypassed. · <span class="conf c2"><i></i><i></i><i></i></span> <strong>Medium</strong> — proved at one layer, or with a known gap. · <span class="conf c1"><i></i><i></i><i></i></span> <strong>Low</strong> — little or no automated proof today.</p>
+
+      <h3>Epic 19 — how SLA tracking will be tested</h3>
+      <p>Designed now so the stories are built testable. The confirmed rules — business days, an Admin-maintained holiday calendar, defaults of 2 / 8 / 5 / 15, and the clock pausing during a Product Owner clarification — all have exact answers.</p>
+      <ul>
+        <li><strong>Due-date arithmetic (unit):</strong> a table of submit times across weekends, holidays and clarification pauses, each with its expected due date. Time is injected through <code>TimeProvider</code>, so no test waits on a real clock.</li>
+        <li><strong>Configuration (API + data):</strong> zero, negative and blank targets refused; a reason required; a new version written; an in-flight request keeps its pinned version.</li>
+        <li><strong>Breach email (API):</strong> mail is captured by a local Mailpit inbox and read back through its API. Exactly one email per request per stage; the content carries no scoring rationale.</li>
+        <li><strong>Humans decide (API):</strong> after a breach, the request's status, assessment and committee decision are byte-for-byte unchanged.</li>
+        <li><strong>Audit (data):</strong> <code>SlaBreached</code> and <code>NotificationSent</code> rows are appended, never updated.</li>
+      </ul>
+    </section>
+
+    <!-- ══ 07 ══ -->
+    <section id="s7">
+      <div class="sec-head">
+        <div class="sec-n">07</div>
+        <h2>Environments &amp; test data</h2>
+        <p class="sec-sub">Where tests run, and the data they run against.</p>
+      </div>
+
+      <div class="tw"><table>
+        <thead><tr><th>Environment</th><th>Composition</th><th>Used for</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Local</strong></td><td>docker-compose: PostgreSQL 16 on :5433, Azurite on :10000; API :5210, Mock :5220, webapp :3000; dev auth bypass</td><td>All QA layers during development</td></tr>
+          <tr><td><strong>PR pipeline</strong></td><td>Hosted agent; .NET 10, Node 22; Postgres service container (target)</td><td>Build, unit, security; API and data tests (target)</td></tr>
+          <tr><td><strong>Dev (Azure)</strong></td><td>Container Apps <code>ca-gh-hrg-workbench-dev</code> and <code>ca-gh-hrg-mockapi-dev</code>, PostgreSQL Flexible Server, Auth0</td><td>Post-deploy smoke, manual walkthrough, demo</td></tr>
+        </tbody>
+      </table></div>
+
+      <ul>
+        <li><strong>All data is synthetic.</strong> Seeds provide six users covering four roles, the FFIEC framework, a policy corpus, workflow rules, and mock records (six customers, five products, four vendors).</li>
+        <li><strong>Each test creates what it needs</strong> and never depends on another test's leftovers, except the three role journeys, which deliberately share one request because that is the story being proven.</li>
+        <li><strong>Resets are explicit:</strong> <code>ops/setup-local-db.sh --reset</code> rebuilds the local database; data tests get a fresh container per run.</li>
+        <li><strong>AI evals use fixed datasets</strong> in <code>evals/datasets/</code>, versioned with the code, so a score change is attributable to a prompt or model change rather than to data drift.</li>
+      </ul>
+    </section>
+
+    <!-- ══ 08 ══ -->
+    <section id="s8">
+      <div class="sec-head">
+        <div class="sec-n">08</div>
+        <h2>Pipeline integration</h2>
+        <p class="sec-sub">What runs automatically today, and what should.</p>
+      </div>
+
+      <div class="tw"><table>
+        <thead><tr><th>Check</th><th>Today</th><th>Target</th><th>Blocks?</th><th class="num">Time</th></tr></thead>
+        <tbody>
+          <tr class="grp"><td colspan="5">Workbench PR (into release/1.00)</td></tr>
+          <tr><td>Build API + webapp</td><td><span class="pill p-pass">Running</span></td><td>Every PR</td><td>Yes</td><td class="num">~2 min</td></tr>
+          <tr><td>Unit tests (trx published)</td><td><span class="pill p-pass">Running</span></td><td>Every PR</td><td>Yes</td><td class="num">~1 min</td></tr>
+          <tr><td>dotnet vuln check · npm audit</td><td><span class="pill p-pass">Running</span></td><td>Every PR</td><td>Yes</td><td class="num">&lt;1 min</td></tr>
+          <tr><td>Semgrep</td><td><span class="pill p-pass">Running</span></td><td>Every PR</td><td>Informational</td><td class="num">~1 min</td></tr>
+          <tr><td>AI code review</td><td><span class="pill p-pass">Running</span></td><td>Every PR</td><td>On blocking issues</td><td class="num">≤15 min</td></tr>
+          <tr><td>API tests</td><td><span class="pill p-crit">Not wired</span></td><td>Every PR</td><td>Yes</td><td class="num">~3 min</td></tr>
+          <tr><td>Data tests</td><td><span class="pill p-crit">Not built</span></td><td>Every PR</td><td>Yes</td><td class="num">~3 min</td></tr>
+          <tr class="grp"><td colspan="5">Mock API PR</td></tr>
+          <tr><td>SQL drift check · build · vuln · Semgrep · AI review</td><td><span class="pill p-pass">Running</span></td><td>Every PR</td><td>Yes</td><td class="num">~5 min</td></tr>
+          <tr class="grp"><td colspan="5">CI on release/* and later</td></tr>
+          <tr><td>Docker build · push · Trivy · deploy to dev</td><td><span class="pill p-pass">Running</span></td><td>On merge</td><td>Yes</td><td class="num">~8 min</td></tr>
+          <tr><td>Post-deploy smoke</td><td><span class="pill p-crit">Not wired</span></td><td>After deploy</td><td>Yes</td><td class="num">&lt;1 min</td></tr>
+          <tr><td>UI journeys</td><td><span class="pill p-crit">Not wired</span></td><td>On merge</td><td>Soft, then hard</td><td class="num">~5 min</td></tr>
+          <tr><td>AI evaluation</td><td><span class="pill p-crit">Not wired</span></td><td>Nightly</td><td>Report only</td><td class="num">~3 min</td></tr>
+        </tbody>
+      </table></div>
+
+      <p><strong>PR feedback stays under fifteen minutes</strong>, dominated by the AI review. A gate slower than that gets bypassed, and a bypassed gate is worse than none because it creates false confidence.</p>
+
+      <div class="note warn">
+        <span class="lbl">Stated plainly</span>
+        <p>The CI pipelines that deploy to dev run <strong>no behavioural tests</strong>, and no pipeline collects coverage. A green deploy today means "it built, it scanned clean and it started", not "it works". Wiring the API suite and a post-deploy smoke closes most of that gap for little effort.</p>
+      </div>
+    </section>
+
+    <!-- ══ 09 ══ -->
+    <section id="s9">
+      <div class="sec-head">
+        <div class="sec-n">09</div>
+        <h2>Entry, exit &amp; defects</h2>
+        <p class="sec-sub">When a story is ready to test, when it is done, and what happens when it is not.</p>
+      </div>
+
+      <div class="tw"><table>
+        <thead><tr><th>Gate</th><th>Criteria</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Entry — a story is testable</strong></td><td>Acceptance criteria in Given/When/Then on the board · merged to <code>release/1.00</code> · PR pipeline green · seed data covers the scenario</td></tr>
+          <tr><td><strong>Exit — a story is done</strong></td><td>Every criterion has a named test or a recorded manual outcome · no open Critical or High defect against it · governance rules it touches proved at the data layer where one exists</td></tr>
+          <tr><td><strong>Exit — the release</strong></td><td>Three role journeys pass on dev · all expected-to-fail tripwires either still failing for the recorded reason or promoted to passing · eval run recorded in <code>evals/results/</code> · six manual scenarios signed off</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Severity</h3>
+      <div class="tw"><table>
+        <thead><tr><th>Level</th><th>Meaning</th><th>Example</th></tr></thead>
+        <tbody>
+          <tr><td><span class="pill p-crit">Critical</span></td><td>A governance rule can be broken</td><td>An unreviewed assessment reaches the committee</td></tr>
+          <tr><td><span class="pill p-warn">High</span></td><td>A role cannot complete its job, or data is exposed</td><td>User directory readable without a credential</td></tr>
+          <tr><td><span class="pill p-neut">Medium</span></td><td>Wrong behaviour with a workaround</td><td>Unknown category returns 500 instead of 400</td></tr>
+          <tr><td><span class="pill p-neut">Low</span></td><td>Cosmetic or wording</td><td>Inconsistent label</td></tr>
+        </tbody>
+      </table></div>
+      <p>Defects are raised on the Azure DevOps board with a reproduction, the story they break and the test that covers them. A criterion is only added to a story when it states behaviour the system should have and does not — never to describe what the code happens to do.</p>
+
+      <h3>Manual scenarios</h3>
+      <div class="tw"><table>
+        <thead><tr><th>Scenario</th><th>Why a person</th></tr></thead>
+        <tbody>
+          <tr><td>AI narrative quality</td><td>The eval checks form; only a domain reader judges whether a citation is apposite</td></tr>
+          <tr><td>Examiner-readiness of the audit export</td><td>"Suitable for an examiner" is judged by reading it</td></tr>
+          <tr><td>Exploratory testing of overrides</td><td>Free-text reasons; scripts find only what they were told to</td></tr>
+          <tr><td>First deployment walkthrough</td><td>Only a person spots a present-but-wrong setting</td></tr>
+          <tr><td>Accessibility spot-check</td><td>Scanners catch roughly a third of real problems</td></tr>
+          <tr><td>Committee decision semantics</td><td>Whether the flow makes sense to people deliberating</td></tr>
+        </tbody>
+      </table></div>
+      <p>Each gets a written outcome: date, who ran it, what they found. A manual pass with no note is indistinguishable from one that never ran.</p>
+    </section>
+
+    <!-- ══ 10 ══ -->
+    <section id="s10">
+      <div class="sec-head">
+        <div class="sec-n">10</div>
+        <h2>Risks &amp; current position</h2>
+        <p class="sec-sub">What could undermine this strategy, and the next five things, in order.</p>
+      </div>
+
+      <div class="lede-stats">
+        <div><div class="v">18</div><div class="k">QA tests automated</div></div>
+        <div><div class="v">10</div><div class="k">Of which tripwires</div></div>
+        <div><div class="v">39</div><div class="k">Dev unit tests</div></div>
+        <div><div class="v">12</div><div class="k">AI eval cases</div></div>
+        <div><div class="v">24</div><div class="k">Data tests to build</div></div>
+      </div>
+
+      <div class="tw"><table>
+        <thead><tr><th>Risk</th><th>Effect on testing</th><th>Mitigation</th></tr></thead>
+        <tbody>
+          <tr><td>Auth is bypassed locally and roles are not enforced</td><td>Role tests can only record the gap</td><td>Tripwires stay until Epic 11 lands; rerun against Auth0 on dev</td></tr>
+          <tr><td>AI evals need a live, paid endpoint</td><td>Evals skip silently when not configured</td><td>Treat "Skip" as not run, never as pass; nightly job with a configured key</td></tr>
+          <tr><td><code>deploy_all.sql</code> is not idempotent</td><td>Re-running setup on a used database fails</td><td>Fresh container per data-test run; <code>--reset</code> locally</td></tr>
+          <tr><td>Six days to submission</td><td>Not everything planned will be built</td><td>Order below is by governance value, not effort</td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="tw"><table>
+        <thead><tr><th class="num">#</th><th>Next</th><th>Gives us</th><th>Owner</th></tr></thead>
+        <tbody>
+          <tr><td class="num">1</td><td>Build the audit-immutability and constraint data tests</td><td>The one rule only the database can prove moves from Low to High</td><td>QA</td></tr>
+          <tr><td class="num">2</td><td>Wire the API suite into the Workbench PR pipeline</td><td>12 tests start protecting every change</td><td>DevOps + QA</td></tr>
+          <tr><td class="num">3</td><td>Add a post-deploy smoke to CI</td><td>A green deploy means the services answer</td><td>DevOps</td></tr>
+          <tr><td class="num">4</td><td>Run the evals against the live model and commit the result</td><td>AI quality evidence for the 10% evaluation criterion</td><td>QA + Dev</td></tr>
+          <tr><td class="num">5</td><td>Execute and record the six manual scenarios</td><td>Judgement checks done before the demo</td><td>QA</td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="note">
+        <span class="lbl">The strategy in one sentence</span>
+        <p>We test each thing once, at the cheapest layer that can see it; we prove governance rules at the layer that cannot be bypassed; we prove our tests work by breaking the code on purpose; and where we are not yet confident, this document says so rather than rounding up.</p>
+      </div>
+    </section>
+
+    <p class="foot">Component names, ports, counts, constraints and pipeline steps were read from <code>release/1.00</code> at commit 9f6a3be and from the QA suite on <code>qa/ba-qa-workstream</code>, not from documentation. Counts are as of 24 September 2026. Supersedes version 1.0 (21 September 2026). Companion documents: Test Starter Guide, QA Test Case Register, Business Requirement Coverage.</p>
+  </main>
+</div>
+
+</body>
+</html>

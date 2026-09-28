@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root { color-scheme: light dark; }
+  body { margin: 0; }
+  img { max-width: 100%; }
+  [hidden] { display: none !important; }
+</style>
+<title>Test Strategy Alignment Review</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@500;600;700&display=swap">
+<style>
+  :root {
+    --ground:#F6F7F9; --surface:#FFFFFF; --surface-2:#EFF2F5;
+    --ink:#131C26; --ink-2:#3B4956; --muted:#66757F;
+    --line:#DBE1E7; --line-2:#C7D0D8;
+    --accent:#0F4C5C; --accent-ink:#0F4C5C; --accent-soft:#E2EDF0;
+    --critical:#A02B21; --critical-soft:#F7E7E5;
+    --warn:#8A5A06; --warn-soft:#FBF0DC;
+    --pass:#1B6B4C; --pass-soft:#E2F0E9;
+    --neutral:#5D6B78; --neutral-soft:#E9EDF1;
+    --f-display:"IBM Plex Serif",Georgia,serif;
+    --f-body:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+    --measure:70ch; --radius:3px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:#0D141B; --surface:#131C25; --surface-2:#18232E;
+      --ink:#E5EBF1; --ink-2:#BDC9D4; --muted:#8B9BA8;
+      --line:#24313D; --line-2:#314250;
+      --accent:#5FB4C8; --accent-ink:#7CC5D6; --accent-soft:#10303A;
+      --critical:#E4837A; --critical-soft:#351917;
+      --warn:#D9A44E; --warn-soft:#33260F;
+      --pass:#6BC49C; --pass-soft:#122C22;
+      --neutral:#92A2AF; --neutral-soft:#1C2731;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:#0D141B; --surface:#131C25; --surface-2:#18232E;
+    --ink:#E5EBF1; --ink-2:#BDC9D4; --muted:#8B9BA8;
+    --line:#24313D; --line-2:#314250;
+    --accent:#5FB4C8; --accent-ink:#7CC5D6; --accent-soft:#10303A;
+    --critical:#E4837A; --critical-soft:#351917;
+    --warn:#D9A44E; --warn-soft:#33260F;
+    --pass:#6BC49C; --pass-soft:#122C22;
+    --neutral:#92A2AF; --neutral-soft:#1C2731;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--ground); color:var(--ink); font-family:var(--f-body); font-size:15px; line-height:1.6; -webkit-font-smoothing:antialiased; }
+  .shell { display:grid; grid-template-columns:224px minmax(0,1fr); gap:52px; max-width:1190px; margin:0 auto; padding:0 32px 90px; }
+  .rail { position:sticky; top:0; align-self:start; padding-top:46px; height:100vh; overflow-y:auto; }
+  .rail-mark { font-family:var(--f-mono); font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent-ink); margin-bottom:22px; }
+  .rail nav { display:flex; flex-direction:column; gap:1px; border-left:1px solid var(--line); }
+  .rail a { padding:6px 0 6px 14px; text-decoration:none; color:var(--muted); font-size:12.5px; line-height:1.35; border-left:2px solid transparent; margin-left:-1px; transition:color .12s,border-color .12s; }
+  .rail a:hover { color:var(--ink); border-left-color:var(--line-2); }
+  .rail a:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+
+  .masthead { padding:54px 0 0; }
+  .eyebrow { font-family:var(--f-mono); font-size:11px; letter-spacing:.15em; text-transform:uppercase; color:var(--muted); }
+  h1 { font-family:var(--f-display); font-weight:700; font-size:clamp(31px,4.5vw,45px); line-height:1.1; letter-spacing:-.015em; margin:14px 0 16px; text-wrap:balance; }
+  .standfirst { font-size:17px; line-height:1.6; color:var(--ink-2); max-width:var(--measure); margin:0 0 28px; }
+  .meta { display:grid; grid-template-columns:repeat(auto-fit,minmax(142px,1fr)); border-top:1px solid var(--line-2); border-bottom:1px solid var(--line-2); }
+  .meta div { padding:13px 16px 13px 0; border-right:1px solid var(--line); }
+  .meta div:last-child { border-right:0; }
+  .meta dt { font-family:var(--f-mono); font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); margin-bottom:5px; }
+  .meta dd { margin:0; font-size:13.5px; font-weight:500; }
+
+  section { padding-top:58px; scroll-margin-top:20px; }
+  .sec-head { border-top:2px solid var(--ink); padding-top:13px; margin-bottom:20px; }
+  h2 { font-family:var(--f-display); font-weight:600; font-size:clamp(21px,2.6vw,27px); line-height:1.22; margin:0; letter-spacing:-.01em; }
+  .sec-sub { color:var(--muted); font-size:14px; margin-top:6px; max-width:var(--measure); }
+  h3 { font-family:var(--f-display); font-weight:600; font-size:16.5px; margin:28px 0 9px; }
+  h4 { font-weight:600; font-size:13.5px; margin:18px 0 7px; }
+  p { max-width:var(--measure); margin:0 0 12px; }
+  ul,ol { max-width:var(--measure); padding-left:20px; margin:0 0 12px; }
+  li { margin-bottom:5px; }
+  code { font-family:var(--f-mono); font-size:.875em; background:var(--surface-2); padding:1px 5px; border-radius:var(--radius); border:1px solid var(--line); }
+  a { color:var(--accent-ink); }
+
+  .pill { display:inline-block; font-family:var(--f-mono); font-size:10px; font-weight:500; letter-spacing:.05em; text-transform:uppercase; padding:2px 7px; border-radius:2px; white-space:nowrap; }
+  .p-pass { background:var(--pass-soft); color:var(--pass); }
+  .p-crit { background:var(--critical-soft); color:var(--critical); }
+  .p-warn { background:var(--warn-soft); color:var(--warn); }
+  .p-neut { background:var(--neutral-soft); color:var(--neutral); }
+  .p-acc  { background:var(--accent-soft); color:var(--accent-ink); }
+
+  .tw { overflow-x:auto; margin:15px 0 20px; border:1px solid var(--line); border-radius:var(--radius); background:var(--surface); }
+  table { width:100%; border-collapse:collapse; font-size:12.9px; }
+  th,td { text-align:left; padding:8px 12px; border-bottom:1px solid var(--line); vertical-align:top; }
+  thead th { font-family:var(--f-mono); font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); font-weight:500; background:var(--surface-2); white-space:nowrap; }
+  tbody tr:last-child td { border-bottom:0; }
+  td.mono,th.mono { font-family:var(--f-mono); font-size:11px; }
+  td.num { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  tr.gap td { background:var(--critical-soft); }
+  tr.ok  td { background:var(--pass-soft); }
+
+  pre { font-family:var(--f-mono); font-size:11.4px; line-height:1.55; background:var(--surface-2); border:1px solid var(--line); border-radius:var(--radius); padding:11px 13px; overflow-x:auto; margin:10px 0; }
+  pre code { background:none; border:0; padding:0; font-size:inherit; }
+
+  .note { border-left:2px solid var(--accent); background:var(--accent-soft); padding:13px 17px; margin:17px 0; max-width:var(--measure); }
+  .note p:last-child { margin-bottom:0; }
+  .note .lbl { font-family:var(--f-mono); font-size:9.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--accent-ink); display:block; margin-bottom:5px; }
+  .note.warn { border-left-color:var(--warn); background:var(--warn-soft); }
+  .note.warn .lbl { color:var(--warn); }
+  .note.crit { border-left-color:var(--critical); background:var(--critical-soft); }
+  .note.crit .lbl { color:var(--critical); }
+  .note.pass { border-left-color:var(--pass); background:var(--pass-soft); }
+  .note.pass .lbl { color:var(--pass); }
+
+  .lede-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(112px,1fr)); border:1px solid var(--line); border-radius:var(--radius); background:var(--surface); margin:20px 0 24px; }
+  .lede-stats div { padding:14px 17px; border-right:1px solid var(--line); }
+  .lede-stats div:last-child { border-right:0; }
+  .lede-stats .v { font-family:var(--f-display); font-size:26px; font-weight:700; line-height:1; font-variant-numeric:tabular-nums; }
+  .lede-stats .k { font-family:var(--f-mono); font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin-top:6px; }
+
+  figure { margin:24px 0 26px; }
+  figure svg { display:block; width:100%; max-width:100%; height:auto; color:var(--ink-2); }
+  figcaption { font-size:12.5px; color:var(--muted); margin-top:9px; max-width:var(--measure); }
+  .svg-box { background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:18px 16px; overflow-x:auto; }
+  .n-ok { fill:var(--pass-soft); stroke:var(--pass); stroke-width:1.4; }
+  .n-gap { fill:var(--critical-soft); stroke:var(--critical); stroke-width:1.4; stroke-dasharray:4 3; }
+  .n-pl { fill:var(--surface-2); stroke:var(--line-2); stroke-width:1; }
+  .lb { font-family:var(--f-body); font-size:11.5px; font-weight:600; fill:var(--ink); }
+  .sb { font-family:var(--f-mono); font-size:9px; fill:var(--muted); }
+  .ed { stroke:var(--line-2); stroke-width:1.3; fill:none; }
+
+  .foot { margin-top:62px; padding-top:18px; border-top:1px solid var(--line-2); font-size:12.5px; color:var(--muted); max-width:var(--measure); }
+
+  @media (max-width:900px) {
+    .shell { grid-template-columns:1fr; gap:0; padding:0 18px 56px; }
+    .rail { position:static; height:auto; padding-top:24px; }
+    .rail nav { flex-direction:row; flex-wrap:wrap; gap:4px; border-left:0; }
+    .rail a { border:1px solid var(--line); border-radius:2px; padding:5px 9px; margin-left:0; }
+    .masthead { padding-top:28px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition:none !important; } }
+
+  @page { size:A4; margin:16mm 15mm 18mm; }
+  @media print {
+    :root, :root[data-theme="dark"], :root:not([data-theme="light"]) {
+      --ground:#FFF; --surface:#FFF; --surface-2:#F2F5F7; --ink:#101820; --ink-2:#33414E;
+      --muted:#5A6874; --line:#D3DAE1; --line-2:#B8C2CC; --accent:#0F4C5C; --accent-ink:#0F4C5C;
+      --accent-soft:#E6EFF2; --critical:#8E2219; --critical-soft:#F8E9E7; --warn:#7A4F05;
+      --warn-soft:#FBF1DE; --pass:#17593F; --pass-soft:#E5F1EB; --neutral:#4F5D69; --neutral-soft:#EDF0F3;
+    }
+    * { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
+    body { font-size:9.8pt; line-height:1.45; background:#fff; }
+    .shell { display:block; max-width:none; padding:0; }
+    .rail { display:none; }
+    .masthead { padding-top:0; }
+    h1 { font-size:24pt; } h2 { font-size:15pt; } h3 { font-size:11pt; }
+    p,ul,ol,.standfirst,.sec-sub,.note { max-width:none; }
+    section { break-before:page; padding-top:0; }
+    #s1 { break-before:auto; }
+    .sec-head,h3,h4 { break-after:avoid; }
+    .tw,.note,pre,.lede-stats,figure { break-inside:avoid; }
+    tr,li { break-inside:avoid; }
+    thead { display:table-header-group; }
+    a { color:var(--ink); text-decoration:none; }
+  }
+</style>
+
+<div class="shell">
+  <aside class="rail">
+    <div class="rail-mark">HumAId&nbsp;·&nbsp;QA</div>
+    <nav>
+      <a href="#s1">01 · The verdict</a>
+      <a href="#s2">02 · What changed</a>
+      <a href="#s3">03 · Alignment scorecard</a>
+      <a href="#s4">04 · The methodology</a>
+      <a href="#s5">05 · Closing the gap</a>
+      <a href="#s6">06 · Defect status</a>
+    </nav>
+  </aside>
+
+  <main>
+    <header class="masthead">
+      <div class="eyebrow">Genius Hacks Q3 2026 · Risk Assessment Workbench</div>
+      <h1>Test Strategy Alignment Review</h1>
+      <p class="standfirst">Are the team's testing methods and QA's strategy pointing the same way? Reviewed against everything merged between 17 and 21 September — four new application pipelines and eight new Terraform modules.</p>
+      <dl class="meta">
+        <div><dt>Author</dt><dd>Shanthi Subramanian · BA&nbsp;/&nbsp;QA</dd></div>
+        <div><dt>Reviewed</dt><dd>21 September 2026</dd></div>
+        <div><dt>Range</dt><dd class="mono">9106553…4e36778<br>a816378…bc45271</dd></div>
+        <div><dt>Days to submit</dt><dd>9</dd></div>
+      </dl>
+      <div class="lede-stats">
+        <div><div class="v">62</div><div class="k">of 80 tests in CI</div></div>
+        <div><div class="v">1</div><div class="k">of 4 QA layers gated</div></div>
+        <div><div class="v">2</div><div class="k">findings closed</div></div>
+        <div><div class="v">6</div><div class="k">app defects still open</div></div>
+      </div>
+    </header>
+
+    <!-- ══ 01 ══ -->
+    <section id="s1">
+      <div class="sec-head">
+        <h2>The verdict</h2>
+        <p class="sec-sub">Partially aligned — and the misalignment is a coordination gap, not a disagreement.</p>
+      </div>
+
+      <div class="note pass">
+        <span class="lbl">What is genuinely good</span>
+        <p>The new application pipelines are <strong>better engineering than I specified.</strong> The AI review derives its verdict deterministically from the findings rather than trusting the model's own word, runs Claude with read-only tools and an explicit deny-list so the OAuth token cannot be read out of <code>/proc</code>, treats the diff as untrusted input against prompt injection, and posts inline PR comments only on lines GitHub will actually accept. It also adds SCA and SAST scanning, which my strategy did not ask for. None of that is box-ticking.</p>
+      </div>
+
+      <div class="note crit">
+        <span class="lbl">Where it does not line up</span>
+        <p>The pipeline gates <strong>the one layer the Dev team owns</strong> — unit tests — and <strong>none of the three QA owns.</strong> API, UI and Data tests do not run. Of the 80 automated tests in the repo, <strong>62 execute in CI and 18 do not</strong>, and the 18 are the ones that cover authorization, the human-in-the-loop gates and the end-to-end journeys.</p>
+      </div>
+
+      <p>This is not a dispute about method. The pipeline work and my strategy document appear to have been written in parallel over the same few days, so the strategy was never an input to the pipeline. The fix is additive: a Postgres service container and three steps. Nothing already built needs to change.</p>
+
+      <p>Two of my earlier findings were independently closed, which matters — it means the loop works when the finding reaches the right person.</p>
+    </section>
+
+    <!-- ══ 02 ══ -->
+    <section id="s2">
+      <div class="sec-head">
+        <h2>What changed</h2>
+        <p class="sec-sub">Seven commits on main, three on release/1.00, and a new CI branch.</p>
+      </div>
+
+      <h3>New — application CI <span class="pill p-acc">feature/app-cicd-pipelines</span></h3>
+      <p>Four files, of which two are real and two are empty placeholders:</p>
+      <div class="tw"><table>
+        <thead><tr><th>File</th><th>State</th><th>What it gates</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">workbench/pr-review.yml</td><td><span class="pill p-pass">Complete</span></td><td>restore, build, <strong>unit tests</strong>, webapp build, AI verdict</td></tr>
+          <tr><td class="mono">mock-api/pr-review.yml</td><td><span class="pill p-pass">Complete</span></td><td>same, plus a <code>deploy_all.sql</code> drift check</td></tr>
+          <tr><td class="mono">workbench/workbench.yml</td><td><span class="pill p-crit">Empty</span></td><td>— build/deploy not written</td></tr>
+          <tr><td class="mono">mock-api/mock-api.yml</td><td><span class="pill p-crit">Empty</span></td><td>— build/deploy not written</td></tr>
+        </tbody>
+      </table></div>
+      <p>Both PR pipelines trigger on PRs to <code>release/1.00</code>, path-filtered per service. That is a sensible split — Workbench changes do not run the Mock API build and vice versa.</p>
+
+      <h3>Improved — the IaC pipeline now has real gates</h3>
+      <p>My 12 September finding was that Trivy, Checkov and <code>terraform plan</code> were all soft-fail, so a PR with genuine security findings still went green and auto-applied. <strong>Largely closed:</strong></p>
+      <div class="tw"><table>
+        <thead><tr><th>Step</th><th>Before</th><th>Now</th></tr></thead>
+        <tbody>
+          <tr class="ok"><td>terraform validate</td><td>—</td><td><span class="pill p-pass">Hard gate</span></td></tr>
+          <tr class="ok"><td>TFLint</td><td>warn only</td><td><span class="pill p-pass">Hard gate</span> on error severity</td></tr>
+          <tr class="ok"><td>Trivy</td><td>soft-fail</td><td><span class="pill p-pass">Hard gate</span> on HIGH/CRITICAL</td></tr>
+          <tr class="ok"><td>terraform plan / init</td><td>warn, continue</td><td><span class="pill p-pass">Hard gate</span></td></tr>
+          <tr><td>Checkov</td><td>soft-fail</td><td>soft-fail — a stated decision, with every suppression justified</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>New infrastructure</h3>
+      <p>Eight modules now wired into dev: PostgreSQL Flexible Server, Key Vault, Storage Account, Log Analytics, Container Apps, Container Apps Environment, Private DNS zone, ACR — plus container env vars and Key Vault / Storage role assignments.</p>
+
+      <div class="note pass">
+        <span class="lbl">DEF-008 closed</span>
+        <p>The VNet is no longer orphaned. <code>main.cae.tf</code> now passes <code>infrastructure_subnet_id = module.vnet.subnet_ids["snet-cae-…"]</code> and links the private DNS zone. The delegated subnet that existed unused on 17 September is now actually doing its job.</p>
+      </div>
+
+      <h3>Application changes</h3>
+      <p>Swagger UI added to both services, Development-only. That is the entire <code>src/</code> diff — two <code>Program.cs</code> files and two <code>.csproj</code> files.</p>
+    </section>
+
+    <!-- ══ 03 ══ -->
+    <section id="s3">
+      <div class="sec-head">
+        <h2>Alignment scorecard</h2>
+        <p class="sec-sub">My strategy of 17 September against what the pipeline actually does.</p>
+      </div>
+
+      <div class="tw"><table>
+        <thead><tr><th>Layer</th><th>Owner</th><th>Strategy says</th><th>Pipeline does</th><th>Tests</th><th></th></tr></thead>
+        <tbody>
+          <tr class="ok"><td><strong>Unit</strong></td><td>Dev</td><td>Hard gate, every PR</td><td>Hard gate, every PR</td><td class="num">62</td><td><span class="pill p-pass">Aligned</span></td></tr>
+          <tr class="gap"><td><strong>API</strong></td><td>QA</td><td>Hard gate, every PR</td><td>Not run</td><td class="num">12</td><td><span class="pill p-crit">Gap</span></td></tr>
+          <tr class="gap"><td><strong>Data</strong></td><td>QA</td><td>Hard gate, every PR</td><td>Not run</td><td class="num">0*</td><td><span class="pill p-crit">Gap</span></td></tr>
+          <tr class="gap"><td><strong>UI</strong></td><td>QA</td><td>Gate on merge</td><td>Not run</td><td class="num">6</td><td><span class="pill p-crit">Gap</span></td></tr>
+          <tr class="gap"><td><strong>AI evaluation</strong></td><td>QA</td><td>Nightly, report only</td><td>Not run</td><td class="num">12</td><td><span class="pill p-crit">Gap</span></td></tr>
+          <tr class="gap"><td>Image build + scan</td><td>DevOps</td><td>Gate on merge</td><td>Placeholder is empty</td><td class="num">—</td><td><span class="pill p-crit">Gap</span></td></tr>
+          <tr class="ok"><td>Build / compile</td><td>Dev</td><td>Hard gate</td><td>Hard gate, both services + webapp</td><td class="num">—</td><td><span class="pill p-pass">Aligned</span></td></tr>
+          <tr class="ok"><td>AI code review</td><td>shared</td><td>Reuse the IaC pattern</td><td>Done, and better</td><td class="num">—</td><td><span class="pill p-pass">Exceeded</span></td></tr>
+          <tr class="ok"><td>SCA / SAST</td><td>shared</td><td>not specified</td><td>Mend + Semgrep, informational</td><td class="num">—</td><td><span class="pill p-acc">Bonus</span></td></tr>
+        </tbody>
+      </table></div>
+      <p class="sb">* Data-layer tests are specified (24 cases, DT-01…24) but not yet written — that one is QA's own outstanding work, not a pipeline omission.</p>
+
+      <figure>
+        <div class="svg-box">
+          <svg viewBox="0 0 700 250" role="img" aria-label="The PR pipeline runs restore, build, unit tests, webapp build, SCA, SAST and AI review. Three QA-owned stages — API tests, Data tests and UI tests — are absent from the pipeline entirely.">
+            <text class="sb" x="12" y="16">IN THE PIPELINE TODAY</text>
+            <rect class="n-ok" x="12" y="26" width="92" height="38" rx="2"/><text class="lb" x="58" y="44" text-anchor="middle">Restore</text><text class="sb" x="58" y="57" text-anchor="middle">hard gate</text>
+            <rect class="n-ok" x="116" y="26" width="92" height="38" rx="2"/><text class="lb" x="162" y="44" text-anchor="middle">Build</text><text class="sb" x="162" y="57" text-anchor="middle">hard gate</text>
+            <rect class="n-ok" x="220" y="26" width="104" height="38" rx="2"/><text class="lb" x="272" y="44" text-anchor="middle">Unit tests</text><text class="sb" x="272" y="57" text-anchor="middle">62 · hard gate</text>
+            <rect class="n-ok" x="336" y="26" width="104" height="38" rx="2"/><text class="lb" x="388" y="44" text-anchor="middle">Webapp build</text><text class="sb" x="388" y="57" text-anchor="middle">hard gate</text>
+            <rect class="n-pl" x="452" y="26" width="104" height="38" rx="2"/><text class="lb" x="504" y="44" text-anchor="middle">SCA / SAST</text><text class="sb" x="504" y="57" text-anchor="middle">informational</text>
+            <rect class="n-ok" x="568" y="26" width="120" height="38" rx="2"/><text class="lb" x="628" y="44" text-anchor="middle">AI review</text><text class="sb" x="628" y="57" text-anchor="middle">hard on BLOCKING</text>
+            <line class="ed" x1="104" y1="45" x2="114" y2="45"/><line class="ed" x1="208" y1="45" x2="218" y2="45"/>
+            <line class="ed" x1="324" y1="45" x2="334" y2="45"/><line class="ed" x1="440" y1="45" x2="450" y2="45"/>
+            <line class="ed" x1="556" y1="45" x2="566" y2="45"/>
+
+            <text class="sb" x="12" y="116">MISSING — THE THREE QA-OWNED LAYERS</text>
+            <rect class="n-gap" x="12" y="126" width="150" height="44" rx="2"/><text class="lb" x="87" y="146" text-anchor="middle">API tests</text><text class="sb" x="87" y="160" text-anchor="middle">12 written · not run</text>
+            <rect class="n-gap" x="176" y="126" width="150" height="44" rx="2"/><text class="lb" x="251" y="146" text-anchor="middle">Data tests</text><text class="sb" x="251" y="160" text-anchor="middle">24 specified · not built</text>
+            <rect class="n-gap" x="340" y="126" width="150" height="44" rx="2"/><text class="lb" x="415" y="146" text-anchor="middle">UI journeys</text><text class="sb" x="415" y="160" text-anchor="middle">6 written · not run</text>
+            <rect class="n-gap" x="504" y="126" width="150" height="44" rx="2"/><text class="lb" x="579" y="146" text-anchor="middle">AI evals</text><text class="sb" x="579" y="160" text-anchor="middle">12 cases · not run</text>
+
+            <text class="sb" x="12" y="204">These four cover: authorization, the finalize gate, the audit trigger,</text>
+            <text class="sb" x="12" y="218">residual-risk constraints, the three role journeys, and model output quality.</text>
+            <text class="sb" x="12" y="238">All of them need one thing the pipeline does not yet have: a database.</text>
+          </svg>
+        </div>
+        <figcaption><strong>Figure 1.</strong> The gap is not scattered — it is exactly the set of tests that need a running database or a running app. Add a Postgres service container and most of it becomes reachable.</figcaption>
+      </figure>
+
+      <div class="note warn">
+        <span class="lbl">Why this matters more than the numbers suggest</span>
+        <p>The 18 tests that do not run are not a random 18. They are the ones that prove <strong>DEF-001, DEF-002, DEF-003, DEF-004 and DEF-006</strong> — every open defect that has an automated reproduction. A pipeline that runs 62 of 80 tests sounds like 78% coverage; in practice it means <strong>every known defect passes CI silently.</strong></p>
+      </div>
+    </section>
+
+    <!-- ══ 04 ══ -->
+    <section id="s4">
+      <div class="sec-head">
+        <h2>The methodology</h2>
+        <p class="sec-sub">Five principles the QA suites are built on. Worth understanding before extending them, because each solves a specific way test suites go wrong.</p>
+      </div>
+
+      <h3>1 · Each layer tests only what the layers below cannot</h3>
+      <p>The commonest way a test strategy fails is asking one layer to cover another's ground — which doubles cost and halves clarity about what actually broke.</p>
+      <div class="tw"><table>
+        <thead><tr><th>Layer</th><th>Only it can reach</th><th>Must never do</th></tr></thead>
+        <tbody>
+          <tr><td>Unit</td><td>Business logic in isolation, in milliseconds</td><td>Touch I/O</td></tr>
+          <tr><td>API</td><td>Status mapping, authorization, the HTTP contract</td><td>Re-assert scoring arithmetic</td></tr>
+          <tr><td>Data</td><td>Triggers, CHECK constraints, transactional atomicity</td><td>Go through HTTP</td></tr>
+          <tr><td>UI</td><td>Whether the screens compose into a workflow</td><td>Re-prove API behaviour</td></tr>
+        </tbody>
+      </table></div>
+      <p>The clearest example: <strong>no endpoint anywhere attempts <code>UPDATE audit_event</code></strong>, so no API or UI test can ever exercise the append-only trigger. US-9.2 — the product's flagship governance claim — is reachable only from the Data layer. That is why the Data layer is not optional.</p>
+
+      <h3>2 · Known defects are recorded, never deleted</h3>
+      <p>Where the product does not yet do the right thing, the test asserts the <strong>right</strong> behaviour and is marked expected-to-fail. Three things follow: the board stays green while the gap is open; the moment someone fixes it the runner reports <em>"expected to fail, but passed"</em>, so <strong>the fix announces itself</strong>; and the requirement is never lost, which is what happens if you delete the test or weaken it to match the bug.</p>
+
+      <h3>3 · Green means nothing until you have broken something on purpose</h3>
+      <p>Before trusting a governance test, invert the rule it guards and confirm precisely that test fails — then revert. Done for the finalization gate: replacing the condition with <code>if (false)</code> failed exactly five tests and left the other seven green, because those call the readiness check directly and never traverse the gate. That selectivity is the signal. A suite that fails more, or fewer, is telling you something different from what you think.</p>
+
+      <h3>4 · Never let a dead environment look like a pass</h3>
+      <p>An expected-to-fail test passes when it fails for <em>any</em> reason — including a refused connection. So every suite first confirms its dependency is reachable and aborts loudly if not. Without that guard, running the suite against nothing produces a fully green board proving absolutely nothing. This is why the API suite has a <code>global-setup</code> that pings before anything else.</p>
+
+      <h3>5 · Tests name the story they prove</h3>
+      <pre><code>test('US-8.2 AC5 — a vote is recorded against the member by name', ...)</code></pre>
+      <p>Both runners emit test names into their result files, so the traceability matrix becomes a <strong>build artifact</strong> rather than a spreadsheet someone has to maintain. A story with no matching test name shows up as an empty row automatically. This is also what lets the new pipeline's <code>PublishTestResults</code> step do double duty — it is already publishing the data a matrix would be generated from.</p>
+
+      <h3>And one thing deliberately not automated</h3>
+      <p>Six scenarios stay manual because automation would answer the wrong question confidently — most importantly <strong>AI narrative quality</strong> (the eval harness checks a narrative is well-formed and cites something; it cannot judge whether the citation is apposite or the reasoning sound) and <strong>examiner-readiness of the audit export</strong> (US-9.1 asks for a format "suitable for handing to an examiner" — only reading it can assess that).</p>
+    </section>
+
+    <!-- ══ 05 ══ -->
+    <section id="s5">
+      <div class="sec-head">
+        <h2>Closing the gap</h2>
+        <p class="sec-sub">Additive only — nothing already built needs changing.</p>
+      </div>
+
+      <p>All four missing layers need the same one thing the pipeline lacks: <strong>a database</strong>. Azure DevOps service containers provide it in three lines.</p>
+
+      <pre><code>resources:
+  containers:
+    - container: pg
+      image: postgres:16
+      env: { POSTGRES_PASSWORD: postgres, POSTGRES_DB: risk_governance_db }
+      ports: [ '5432:5432' ]
+
+# ... after the existing '.NET Unit Tests' step:
+
+  # HARD GATE: data layer — triggers and CHECK constraints (US-9.2, US-7.1)
+  - script: dotnet test tests/…IntegrationTests -c Release --logger trx
+    displayName: 'Data Tests (Testcontainers)'
+
+  # HARD GATE: API + authorization (DEF-001/002/003)
+  - script: |
+      psql -h localhost -U postgres -d risk_governance_db \
+           -f src/4-Persistence/…DB/deploy_all.sql
+      dotnet run --project src/1-API/… &
+      cd tests/e2e && npm ci && npm run test:api
+    displayName: 'API Tests (Playwright)'</code></pre>
+
+      <p>The UI project needs the Vite dev server too, so it belongs on the merge pipeline rather than the PR one — keeping PR feedback under ten minutes, which is the design constraint. A gate slower than that gets bypassed, and a bypassed gate is worse than none.</p>
+
+      <div class="note">
+        <span class="lbl">A second benefit, free</span>
+        <p>That <code>psql … deploy_all.sql</code> line is also the <strong>proof-of-concept for DEF-007.</strong> Applying the schema in CI is the same operation the release pipeline needs against the Azure database. Solve it once for tests and the deployment blocker is most of the way solved too.</p>
+      </div>
+
+      <h3>Sequence, with nine days left</h3>
+      <div class="tw"><table>
+        <thead><tr><th class="num">#</th><th>Action</th><th>Owner</th><th>Why now</th></tr></thead>
+        <tbody>
+          <tr><td class="num">1</td><td>Add the Postgres service container + API test step to both PR pipelines</td><td>DevOps + QA</td><td>Turns 12 written tests from shelfware into a gate; unblocks everything below</td></tr>
+          <tr><td class="num">2</td><td><strong>DEF-007</strong> — schema deployment</td><td>DevOps + Dev</td><td>PostgreSQL is now provisioned in Azure and <em>empty</em>. The blocker got closer, not further away</td></tr>
+          <tr><td class="num">3</td><td>Build the Data-layer suite (DT-01…24)</td><td>QA</td><td>The only route to US-9.2; needs no API key and no running app</td></tr>
+          <tr><td class="num">4</td><td><strong>DEF-002 / DEF-004</strong></td><td>Dev</td><td>The two High governance defects; 15% of the score</td></tr>
+          <tr><td class="num">5</td><td>Fill the empty <code>workbench.yml</code> / <code>mock-api.yml</code> — image build, scan, push</td><td>DevOps</td><td>Nothing deploys without them</td></tr>
+          <tr><td class="num">6</td><td>Wire Log Analytics to the Container Apps Environment</td><td>DevOps</td><td>Module exists; one commented line from working</td></tr>
+          <tr><td class="num">7</td><td>Merge <code>release/1.00</code> → <code>main</code></td><td>DevOps</td><td>Raised 12 Sep. <code>main</code> still has no product on it</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- ══ 06 ══ -->
+    <section id="s6">
+      <div class="sec-head">
+        <h2>Defect status</h2>
+        <p class="sec-sub">Established by diffing each implementing file, not inferred from a test run.</p>
+      </div>
+
+      <div class="tw"><table>
+        <thead><tr><th>ID</th><th>Defect</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">DEF-001</td><td>User directory readable with no credential</td><td><span class="pill p-crit">Open</span> — unchanged</td></tr>
+          <tr><td class="mono">DEF-002</td><td>No role enforcement; actor self-declared</td><td><span class="pill p-crit">Open</span> — unchanged</td></tr>
+          <tr><td class="mono">DEF-003</td><td>Unknown ids surface as HTTP 500</td><td><span class="pill p-crit">Open</span> — unchanged</td></tr>
+          <tr><td class="mono">DEF-004</td><td>Empty assessment reaches the committee</td><td><span class="pill p-crit">Open</span> — unchanged</td></tr>
+          <tr><td class="mono">DEF-005</td><td><code>control</code> table never seeded</td><td><span class="pill p-crit">Open</span> — unchanged</td></tr>
+          <tr><td class="mono">DEF-006</td><td><code>func_getOrCreateAssessment</code> race</td><td><span class="pill p-crit">Open</span> — unchanged</td></tr>
+          <tr><td class="mono">DEF-007</td><td>No schema deployment path to Azure</td><td><span class="pill p-crit">Open</span> — <strong>now more urgent</strong></td></tr>
+          <tr class="ok"><td class="mono">DEF-008</td><td>VNet provisioned but unused</td><td><span class="pill p-pass">Closed</span></td></tr>
+          <tr><td class="mono">DEF-009</td><td>Containers run as root</td><td><span class="pill p-crit">Open</span> — Dockerfiles unchanged</td></tr>
+          <tr><td class="mono">DEF-010</td><td>Observability disabled</td><td><span class="pill p-warn">Partial</span> — module added, still not wired to the CAE</td></tr>
+          <tr><td class="mono">DEF-011</td><td>No HEALTHCHECK, floating base tags</td><td><span class="pill p-crit">Open</span></td></tr>
+          <tr class="ok"><td class="mono">—</td><td>IaC scans soft-fail</td><td><span class="pill p-pass">Closed</span> — Trivy, TFLint, validate and plan now hard-gate</td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="note crit">
+        <span class="lbl">DEF-007 has become the critical path</span>
+        <p>On 17 September the Azure database did not exist, so "nothing applies the schema" was a future problem. It now <strong>does</strong> exist — PostgreSQL Flexible Server is provisioned, with Key Vault, Storage, Container Apps and networking around it. The infrastructure is ready and <em>empty</em>, and still nothing populates it. The first deploy will start containers cleanly and fail on every request.</p>
+        <p>This also remains unowned. Open question <strong>Q6 — who owns database schema deployment</strong> — was raised on 17 September and has no name against it. That is precisely why it fell through the gap between two owners in the first place.</p>
+      </div>
+    </section>
+
+    <p class="foot">Reviewed against <code>origin/main</code> at <code>4e36778</code>, <code>origin/release/1.00</code> at <code>bc45271</code> and <code>origin/feature/app-cicd-pipelines</code> at <code>70f749e</code>, fetched 21 September 2026. Defect status established by diffing each implementing file across the range. Pipeline behaviour read from the YAML, not observed running — no build has been triggered from this review. Companion documents: <em>QA &amp; BA Strategy</em>, <em>UI, API and Data Test Strategy</em>, <em>QA Test Case Register</em>, <em>Deployment Increment Review</em>.</p>
+  </main>
+</div>
+
+</body>
+</html>
