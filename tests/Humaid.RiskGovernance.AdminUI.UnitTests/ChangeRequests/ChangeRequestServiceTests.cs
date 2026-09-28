@@ -35,17 +35,31 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.ChangeRequests
         }
 
         [Theory]
-        [InlineData("application/pdf")]
-        [InlineData("application/vnd.openxmlformats-officedocument.wordprocessingml.document")]
-        [InlineData("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")]
-        public async Task AttachDocumentAsync_AcceptsSupportedContentTypes(string contentType)
+        [InlineData("application/pdf", "f.pdf")]
+        [InlineData("application/vnd.openxmlformats-officedocument.wordprocessingml.document", "f.docx")]
+        [InlineData("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "f.xlsx")]
+        public async Task AttachDocumentAsync_AcceptsSupportedContentTypes(string contentType, string fileName)
         {
-            var input = new AttachDocumentInput { ChangeRequestId = Guid.NewGuid(), FileName = "f", ContentType = contentType, StoragePath = "dev://f" };
+            // DEF-006: the extension must agree with the declared content type now, not just the
+            // content type alone - a bare "f" with no extension is exactly what a spoofed upload
+            // looked like before that fix.
+            var input = new AttachDocumentInput { ChangeRequestId = Guid.NewGuid(), FileName = fileName, ContentType = contentType, StoragePath = "dev://f" };
             _repo.Setup(r => r.AttachDocumentAsync(input)).ReturnsAsync((Guid.NewGuid(), 1));
 
             await _sut.AttachDocumentAsync(input);
 
             _repo.Verify(r => r.AttachDocumentAsync(input), Times.Once);
+        }
+
+        [Fact]
+        public async Task AttachDocumentAsync_RejectsContentTypeExtensionMismatch()
+        {
+            // DEF-006: a file claiming to be a PDF but named .exe (or vice versa) must be rejected
+            // even though "application/pdf" is itself an allowed content type.
+            var input = new AttachDocumentInput { ChangeRequestId = Guid.NewGuid(), FileName = "malware.exe", ContentType = "application/pdf", StoragePath = "dev://f" };
+
+            await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.AttachDocumentAsync(input));
+            _repo.Verify(r => r.AttachDocumentAsync(It.IsAny<AttachDocumentInput>()), Times.Never);
         }
 
         [Fact]
@@ -75,7 +89,9 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.ChangeRequests
             var changeRequestId = Guid.NewGuid();
             var uploadedByUserId = Guid.NewGuid();
             const string contentType = "application/pdf";
-            using var stream = new MemoryStream([1, 2, 3]);
+            // DEF-006: the service now sniffs the file's magic bytes ("%PDF" for a PDF), so the
+            // fake upload content has to actually look like one.
+            using var stream = new MemoryStream([0x25, 0x50, 0x44, 0x46, 0x2D, 0x31, 0x2E, 0x34]);
 
             _blobStorageClient.Setup(b => b.UploadAsync("brief.pdf", contentType, It.IsAny<Stream>(), default))
                 .ReturnsAsync("https://blob/brief.pdf");

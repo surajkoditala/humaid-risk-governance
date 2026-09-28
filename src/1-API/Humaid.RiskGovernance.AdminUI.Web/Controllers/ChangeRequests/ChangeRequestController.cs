@@ -30,8 +30,15 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.ChangeRequests
         public Task<IActionResult> Submit([FromBody] SubmitChangeRequestInput input) =>
             ExecuteAsync(async () =>
             {
-                var created = await _changeRequestService.SubmitAsync(input);
-                return OperationResult<ChangeRequest>.Success(created);
+                try
+                {
+                    var created = await _changeRequestService.SubmitAsync(input);
+                    return OperationResult<ChangeRequest>.Success(created);
+                }
+                catch (InvalidOperationException ex)
+                {
+                    return OperationResult<ChangeRequest>.BadRequest(ex.Message);
+                }
             }, "Failed to submit change request.");
 
         [HttpGet("{changeRequestId:guid}")]
@@ -65,8 +72,15 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.ChangeRequests
         public Task<IActionResult> AttachDocument([FromBody] AttachDocumentInput input) =>
             ExecuteAsync(async () =>
             {
-                var (id, version) = await _changeRequestService.AttachDocumentAsync(input);
-                return OperationResult<object>.Success(new { id, version });
+                try
+                {
+                    var (id, version) = await _changeRequestService.AttachDocumentAsync(input);
+                    return OperationResult<object>.Success(new { id, version });
+                }
+                catch (InvalidOperationException ex)
+                {
+                    return OperationResult<object>.BadRequest(ex.Message);
+                }
             }, "Failed to attach document.");
 
         /// <summary>Phase 3 Step 4 - a real uploaded file (multipart), not pasted text. Uploads to
@@ -77,10 +91,17 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.ChangeRequests
             [FromForm] Guid changeRequestId, [FromForm] Guid uploadedByUserId, [FromForm] Guid? supersedesAttachmentId, IFormFile file) =>
             ExecuteAsync(async () =>
             {
-                await using var stream = file.OpenReadStream();
-                var (id, version) = await _changeRequestService.AttachDocumentFileAsync(
-                    changeRequestId, file.FileName, file.ContentType, stream, uploadedByUserId, supersedesAttachmentId);
-                return OperationResult<object>.Success(new { id, version });
+                try
+                {
+                    await using var stream = file.OpenReadStream();
+                    var (id, version) = await _changeRequestService.AttachDocumentFileAsync(
+                        changeRequestId, file.FileName, file.ContentType, stream, uploadedByUserId, supersedesAttachmentId);
+                    return OperationResult<object>.Success(new { id, version });
+                }
+                catch (InvalidOperationException ex)
+                {
+                    return OperationResult<object>.BadRequest(ex.Message);
+                }
             }, "Failed to attach document.");
 
         [HttpGet("{changeRequestId:guid}/Attachments")]
