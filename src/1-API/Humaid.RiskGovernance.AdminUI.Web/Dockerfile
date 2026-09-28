@@ -14,6 +14,17 @@
 # this stage wwwroot is empty and every non-API route 404s - that's what shipped before this fix.
 FROM node:22-alpine AS webapp-build
 WORKDIR /webapp
+
+# Epic 11: Vite inlines import.meta.env.VITE_* into the bundle at THIS build step, not at container
+# start - unlike every backend config value in this repo (flat IConfiguration keys read at runtime),
+# these three cannot be set as a Container App env var later and take effect. They must reach
+# `docker build` as --build-args (see .azure-pipelines/workbench/environments/dev.yml and
+# templates/variables.yml). Defaulting to empty keeps every build that doesn't pass them identical
+# to before this change - isAuth0Configured (authConfig.js) is false, same "acting as" dev mode.
+ARG VITE_AUTH0_DOMAIN=""
+ARG VITE_AUTH0_CLIENT_ID=""
+ARG VITE_AUTH0_AUDIENCE=""
+
 COPY webapp/package.json webapp/package-lock.json ./
 RUN npm ci
 COPY webapp/ ./
@@ -22,6 +33,9 @@ COPY webapp/ ./
 # Vite inlines import.meta.env.VITE_* at build time. Empty string means same-origin, which is
 # correct once the built assets are served from this same container.
 ENV VITE_API_BASE_URL=""
+ENV VITE_AUTH0_DOMAIN=${VITE_AUTH0_DOMAIN}
+ENV VITE_AUTH0_CLIENT_ID=${VITE_AUTH0_CLIENT_ID}
+ENV VITE_AUTH0_AUDIENCE=${VITE_AUTH0_AUDIENCE}
 RUN npm run build
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
