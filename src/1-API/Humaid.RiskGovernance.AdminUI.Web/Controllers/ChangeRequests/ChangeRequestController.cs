@@ -35,7 +35,7 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.ChangeRequests
                     var created = await _changeRequestService.SubmitAsync(input);
                     return OperationResult<ChangeRequest>.Success(created);
                 }
-                catch (InvalidOperationException ex)
+                catch (ValidationException ex)
                 {
                     return OperationResult<ChangeRequest>.BadRequest(ex.Message);
                 }
@@ -77,7 +77,7 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.ChangeRequests
                     var (id, version) = await _changeRequestService.AttachDocumentAsync(input);
                     return OperationResult<object>.Success(new { id, version });
                 }
-                catch (InvalidOperationException ex)
+                catch (ValidationException ex)
                 {
                     return OperationResult<object>.BadRequest(ex.Message);
                 }
@@ -98,7 +98,7 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.ChangeRequests
                         changeRequestId, file.FileName, file.ContentType, stream, uploadedByUserId, supersedesAttachmentId);
                     return OperationResult<object>.Success(new { id, version });
                 }
-                catch (InvalidOperationException ex)
+                catch (ValidationException ex)
                 {
                     return OperationResult<object>.BadRequest(ex.Message);
                 }

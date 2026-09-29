@@ -35,7 +35,7 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.DocumentExtraction
                         request.ChangeRequestId, request.AttachmentId, request.ChangeType);
                     return OperationResult<IReadOnlyList<ExtractedField>>.Success(fields);
                 }
-                catch (InvalidOperationException ex)
+                catch (ValidationException ex)
                 {
                     return OperationResult<IReadOnlyList<ExtractedField>>.BadRequest(ex.Message);
                 }
@@ -53,7 +53,7 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.DocumentExtraction
                     var id = await _documentExtractionService.CorrectAsync(request.Input, request.IsMaterialChange);
                     return OperationResult<Guid>.Success(id);
                 }
-                catch (InvalidOperationException ex)
+                catch (ValidationException ex)
                 {
                     return OperationResult<Guid>.BadRequest(ex.Message);
                 }

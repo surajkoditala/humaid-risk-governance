@@ -12,6 +12,7 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Committee
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.ChangeRequests;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Committee;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Configuration;
+    using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Core;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.DataIngestion;
     using Humaid.RiskGovernance.AdminUI.Services.Committee;
     using Microsoft.Extensions.Logging.Abstractions;
@@ -69,7 +70,7 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Committee
 
             var input = new CastCommitteeVoteInput { AssessmentId = _assessmentId, CommitteeMemberUserId = Guid.NewGuid(), Vote = "Approve" };
 
-            await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.CastVoteAsync(input));
+            await Assert.ThrowsAsync<ValidationException>(() => _sut.CastVoteAsync(input));
             _committeeRepo.Verify(r => r.CastVoteAsync(It.IsAny<CastCommitteeVoteInput>()), Times.Never);
         }
 
@@ -81,7 +82,7 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Committee
 
             var input = new CastCommitteeVoteInput { AssessmentId = _assessmentId, CommitteeMemberUserId = voterId, Vote = "Approve" };
 
-            await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.CastVoteAsync(input));
+            await Assert.ThrowsAsync<ValidationException>(() => _sut.CastVoteAsync(input));
             _committeeRepo.Verify(r => r.CastVoteAsync(It.IsAny<CastCommitteeVoteInput>()), Times.Never);
         }
 

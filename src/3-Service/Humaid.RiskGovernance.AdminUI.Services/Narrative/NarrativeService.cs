@@ -9,6 +9,7 @@ namespace Humaid.RiskGovernance.AdminUI.Services.Narrative
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.PolicyResearch;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.Narrative;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Ai;
+    using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Core;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Narrative;
     using System.Text.Json;
 
@@ -50,21 +51,21 @@ namespace Humaid.RiskGovernance.AdminUI.Services.Narrative
         {
             if (assessment.Status == "Finalized")
             {
-                throw new InvalidOperationException("This assessment is finalized and locked from further edits.");
+                throw new ValidationException("This assessment is finalized and locked from further edits.");
             }
         }
 
         public async Task<NarrativeSection> DraftAsync(Guid assessmentId, Guid riskCategoryId, string? regenerationFeedback = null)
         {
             var assessment = await _assessmentRepo.GetByIdAsync(assessmentId)
-                ?? throw new InvalidOperationException($"Assessment {assessmentId} not found.");
+                ?? throw new ValidationException($"Assessment {assessmentId} not found.");
             EnsureNotFinalized(assessment);
             var changeRequest = await _changeRequestRepo.GetByIdAsync(assessment.ChangeRequestId)
-                ?? throw new InvalidOperationException($"Change request {assessment.ChangeRequestId} not found.");
+                ?? throw new ValidationException($"Change request {assessment.ChangeRequestId} not found.");
 
             var mapping = await _categoryMappingRepo.GetMappingAsync(assessmentId);
             var category = mapping.FirstOrDefault(m => m.RiskCategoryId == riskCategoryId && m.IsActive)
-                ?? throw new InvalidOperationException($"Risk category {riskCategoryId} is not an active mapped category for this assessment.");
+                ?? throw new ValidationException($"Risk category {riskCategoryId} is not an active mapped category for this assessment.");
 
             var reliance = await _policyResearchRepo.GetRelianceAsync(assessmentId);
             var reliedUponExcerpts = reliance
@@ -101,7 +102,7 @@ namespace Humaid.RiskGovernance.AdminUI.Services.Narrative
         public async Task<Guid> ReviewAsync(Guid assessmentId, Guid riskCategoryId, Guid actorUserId)
         {
             var assessment = await _assessmentRepo.GetByIdAsync(assessmentId)
-                ?? throw new InvalidOperationException($"Assessment {assessmentId} not found.");
+                ?? throw new ValidationException($"Assessment {assessmentId} not found.");
             EnsureNotFinalized(assessment);
             return await _narrativeSectionRepo.ReviewAsync(assessmentId, riskCategoryId, actorUserId);
         }
@@ -109,7 +110,7 @@ namespace Humaid.RiskGovernance.AdminUI.Services.Narrative
         public async Task<Guid> EditAsync(EditNarrativeSectionInput input)
         {
             var assessment = await _assessmentRepo.GetByIdAsync(input.AssessmentId)
-                ?? throw new InvalidOperationException($"Assessment {input.AssessmentId} not found.");
+                ?? throw new ValidationException($"Assessment {input.AssessmentId} not found.");
             EnsureNotFinalized(assessment);
             return await _narrativeSectionRepo.EditAsync(input);
         }

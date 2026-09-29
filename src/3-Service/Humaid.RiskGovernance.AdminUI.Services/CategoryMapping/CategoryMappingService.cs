@@ -7,6 +7,7 @@ namespace Humaid.RiskGovernance.AdminUI.Services.CategoryMapping
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.CategoryMapping;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.DataIngestion;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.CategoryMapping;
+    using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Core;
 
     public class CategoryMappingService : ICategoryMappingService
     {
@@ -35,10 +36,10 @@ namespace Humaid.RiskGovernance.AdminUI.Services.CategoryMapping
         private async Task EnsureNotFinalizedAsync(Guid assessmentId)
         {
             var assessment = await _assessmentRepo.GetByIdAsync(assessmentId)
-                ?? throw new InvalidOperationException($"Assessment {assessmentId} not found.");
+                ?? throw new ValidationException($"Assessment {assessmentId} not found.");
             if (assessment.Status == "Finalized")
             {
-                throw new InvalidOperationException("This assessment is finalized and locked from further edits.");
+                throw new ValidationException("This assessment is finalized and locked from further edits.");
             }
         }
 
@@ -46,7 +47,7 @@ namespace Humaid.RiskGovernance.AdminUI.Services.CategoryMapping
         {
             await EnsureNotFinalizedAsync(assessmentId);
             var changeRequest = await _changeRequestRepo.GetByIdAsync(changeRequestId)
-                ?? throw new InvalidOperationException($"Change request {changeRequestId} not found.");
+                ?? throw new ValidationException($"Change request {changeRequestId} not found.");
 
             var defaults = await _categoryMappingRepo.GetChangeTypeDefaultsAsync(changeRequest.ChangeType);
             var externalContextSummary = await BuildExternalContextSummaryAsync(changeRequestId);

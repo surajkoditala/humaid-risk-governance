@@ -4,6 +4,7 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.ChangeRequests
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.DataIngestion;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.DocumentProcessing;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.ChangeRequests;
+    using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Core;
     using Humaid.RiskGovernance.AdminUI.Services.ChangeRequests;
     using Moq;
     using Xunit;
@@ -58,7 +59,7 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.ChangeRequests
             // even though "application/pdf" is itself an allowed content type.
             var input = new AttachDocumentInput { ChangeRequestId = Guid.NewGuid(), FileName = "malware.exe", ContentType = "application/pdf", StoragePath = "dev://f" };
 
-            await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.AttachDocumentAsync(input));
+            await Assert.ThrowsAsync<ValidationException>(() => _sut.AttachDocumentAsync(input));
             _repo.Verify(r => r.AttachDocumentAsync(It.IsAny<AttachDocumentInput>()), Times.Never);
         }
 
@@ -67,7 +68,7 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.ChangeRequests
         {
             var input = new AttachDocumentInput { ChangeRequestId = Guid.NewGuid(), FileName = "f.exe", ContentType = "application/x-msdownload", StoragePath = "dev://f" };
 
-            await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.AttachDocumentAsync(input));
+            await Assert.ThrowsAsync<ValidationException>(() => _sut.AttachDocumentAsync(input));
             _repo.Verify(r => r.AttachDocumentAsync(It.IsAny<AttachDocumentInput>()), Times.Never);
         }
 
@@ -77,7 +78,7 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.ChangeRequests
             var changeRequestId = Guid.NewGuid();
             using var stream = new MemoryStream([1, 2, 3]);
 
-            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            await Assert.ThrowsAsync<ValidationException>(() =>
                 _sut.AttachDocumentFileAsync(changeRequestId, "malware.exe", "application/x-msdownload", stream, Guid.NewGuid(), null));
 
             _blobStorageClient.Verify(b => b.UploadAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Stream>(), default), Times.Never);

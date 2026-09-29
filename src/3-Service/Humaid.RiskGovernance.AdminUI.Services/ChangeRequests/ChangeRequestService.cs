@@ -6,6 +6,7 @@ namespace Humaid.RiskGovernance.AdminUI.Services.ChangeRequests
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.DataIngestion;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.DocumentProcessing;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.ChangeRequests;
+    using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Core;
 
     public class ChangeRequestService : IChangeRequestService
     {
@@ -37,7 +38,7 @@ namespace Humaid.RiskGovernance.AdminUI.Services.ChangeRequests
                 !RequiredExtensionByContentType.TryGetValue(contentType, out var requiredExtension) ||
                 !fileName.EndsWith(requiredExtension, StringComparison.OrdinalIgnoreCase))
             {
-                throw new InvalidOperationException(
+                throw new ValidationException(
                     $"Unsupported attachment type for '{fileName}'. Allowed: PDF, DOCX, XLSX.");
             }
         }
@@ -47,7 +48,7 @@ namespace Humaid.RiskGovernance.AdminUI.Services.ChangeRequests
             var expectedSignature = contentType.Equals("application/pdf", StringComparison.OrdinalIgnoreCase) ? PdfSignature : ZipSignature;
             if (headerBytes.Length < expectedSignature.Length || !headerBytes[..expectedSignature.Length].SequenceEqual(expectedSignature))
             {
-                throw new InvalidOperationException(
+                throw new ValidationException(
                     $"File '{fileName}' does not match its declared type. Allowed: PDF, DOCX, XLSX.");
             }
         }
@@ -112,12 +113,12 @@ namespace Humaid.RiskGovernance.AdminUI.Services.ChangeRequests
             }
 
             if (missing.Count > 0)
-                throw new InvalidOperationException($"Missing or invalid required field(s): {string.Join(", ", missing)}.");
+                throw new ValidationException($"Missing or invalid required field(s): {string.Join(", ", missing)}.");
 
             if (input.Title.Length > MaxTitleLength)
-                throw new InvalidOperationException($"Title must be {MaxTitleLength} characters or fewer.");
+                throw new ValidationException($"Title must be {MaxTitleLength} characters or fewer.");
             if (input.Description.Length > MaxDescriptionLength)
-                throw new InvalidOperationException($"Description must be {MaxDescriptionLength} characters or fewer.");
+                throw new ValidationException($"Description must be {MaxDescriptionLength} characters or fewer.");
         }
 
         private static Dictionary<string, string> TryParseTypeSpecificFields(string typeSpecificFieldsJson)

@@ -3,6 +3,7 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Scoring
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.Assessment;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.Scoring;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.Users;
+    using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Core;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Scoring;
     using Humaid.RiskGovernance.AdminUI.Services.Scoring;
     using Moq;
@@ -38,7 +39,7 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Scoring
                 .ReturnsAsync(new Infrastructure.Models.Assessment.Assessment { Status = "Finalized" });
             var input = new CalculateRiskScoreInput { AssessmentId = assessmentId, RiskCategoryId = Guid.NewGuid(), InherentRating = 3, ControlEffectiveness = 0.5m };
 
-            await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.CalculateAsync(input));
+            await Assert.ThrowsAsync<ValidationException>(() => _sut.CalculateAsync(input));
             _repo.Verify(r => r.CalculateAndSaveAsync(It.IsAny<CalculateRiskScoreInput>()), Times.Never);
         }
 
@@ -50,7 +51,7 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Scoring
                 .ReturnsAsync(new Infrastructure.Models.Assessment.Assessment { Status = "Finalized" });
             var input = new OverrideRiskScoreInput { AssessmentId = assessmentId, RiskCategoryId = Guid.NewGuid(), NewResidualRating = 2, Reason = "analyst judgement" };
 
-            await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.OverrideAsync(input));
+            await Assert.ThrowsAsync<ValidationException>(() => _sut.OverrideAsync(input));
             _repo.Verify(r => r.OverrideAsync(It.IsAny<OverrideRiskScoreInput>()), Times.Never);
         }
 
@@ -61,7 +62,7 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Scoring
             _userRepo.Setup(u => u.GetRoleAsync(actorId)).ReturnsAsync("ProductOwner");
             var input = new UpsertScoringConfigInput { RiskCategoryId = Guid.NewGuid(), MaxMitigationFactor = 0.5m, Reason = "test", ActorUserId = actorId };
 
-            await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.UpsertConfigAsync(input));
+            await Assert.ThrowsAsync<ValidationException>(() => _sut.UpsertConfigAsync(input));
             _repo.Verify(r => r.UpsertConfigAsync(It.IsAny<UpsertScoringConfigInput>()), Times.Never);
         }
 
@@ -73,7 +74,7 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Scoring
         {
             var input = new UpsertScoringConfigInput { RiskCategoryId = Guid.NewGuid(), MaxMitigationFactor = factor, Reason = "test", ActorUserId = Guid.NewGuid() };
 
-            await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.UpsertConfigAsync(input));
+            await Assert.ThrowsAsync<ValidationException>(() => _sut.UpsertConfigAsync(input));
             _repo.Verify(r => r.UpsertConfigAsync(It.IsAny<UpsertScoringConfigInput>()), Times.Never);
         }
 
@@ -101,7 +102,7 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Scoring
             var scoreId = Guid.NewGuid();
             _repo.Setup(r => r.CalculateAndSaveAsync(input)).ReturnsAsync((scoreId, 0m, 0.5m));
 
-            await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.CalculateAsync(input));
+            await Assert.ThrowsAsync<ValidationException>(() => _sut.CalculateAsync(input));
         }
 
         [Fact]
@@ -124,7 +125,7 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Scoring
         {
             var input = new OverrideRiskScoreInput { AssessmentId = Guid.NewGuid(), RiskCategoryId = Guid.NewGuid(), NewResidualRating = 0, Reason = "analyst judgement" };
 
-            await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.OverrideAsync(input));
+            await Assert.ThrowsAsync<ValidationException>(() => _sut.OverrideAsync(input));
             _repo.Verify(r => r.OverrideAsync(It.IsAny<OverrideRiskScoreInput>()), Times.Never);
         }
 
@@ -133,7 +134,7 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Scoring
         {
             var input = new OverrideRiskScoreInput { AssessmentId = Guid.NewGuid(), RiskCategoryId = Guid.NewGuid(), NewResidualRating = 2, Reason = "   " };
 
-            await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.OverrideAsync(input));
+            await Assert.ThrowsAsync<ValidationException>(() => _sut.OverrideAsync(input));
             _repo.Verify(r => r.OverrideAsync(It.IsAny<OverrideRiskScoreInput>()), Times.Never);
         }
 

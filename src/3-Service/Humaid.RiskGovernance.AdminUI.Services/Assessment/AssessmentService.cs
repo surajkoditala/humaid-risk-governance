@@ -8,6 +8,7 @@ namespace Humaid.RiskGovernance.AdminUI.Services.Assessment
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.Users;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.Assessment;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Assessment;
+    using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Core;
 
     /// <summary>US-6.3: finalization is blocked (with a specific, listed reason) until every
     /// mapped category has both a reviewed/edited narrative and at least one policy reliance
@@ -96,7 +97,7 @@ namespace Humaid.RiskGovernance.AdminUI.Services.Assessment
             var actorRole = await _userRepo.GetRoleAsync(actorUserId);
             if (actorRole is not ("Analyst" or "Admin"))
             {
-                throw new InvalidOperationException("Only an FCRM Analyst may finalize an assessment.");
+                throw new ValidationException("Only an FCRM Analyst may finalize an assessment.");
             }
 
             var readiness = await CheckReadinessAsync(assessmentId);
@@ -111,7 +112,7 @@ namespace Humaid.RiskGovernance.AdminUI.Services.Assessment
                     outstanding.Add($"No policy reviewed for: {string.Join(", ", readiness.CategoriesMissingPolicyReliance)}");
                 if (readiness.CategoriesMissingScore.Count > 0)
                     outstanding.Add($"No score calculated for: {string.Join(", ", readiness.CategoriesMissingScore)}");
-                throw new InvalidOperationException(string.Join(" ", outstanding));
+                throw new ValidationException(string.Join(" ", outstanding));
             }
             await _assessmentRepo.FinalizeAsync(assessmentId, actorUserId);
         }

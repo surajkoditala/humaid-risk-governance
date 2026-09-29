@@ -11,6 +11,7 @@ namespace Humaid.RiskGovernance.AdminUI.Services.Committee
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.DataIngestion;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Audit;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Committee;
+    using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Core;
     using Microsoft.Extensions.Logging;
 
     /// <summary>Epic 8. The committee decision resolution rule (quorum + conservative
@@ -59,15 +60,15 @@ namespace Humaid.RiskGovernance.AdminUI.Services.Committee
         public async Task<Guid> CastVoteAsync(CastCommitteeVoteInput input)
         {
             var assessment = await _assessmentRepo.GetByIdAsync(input.AssessmentId)
-                ?? throw new InvalidOperationException($"Assessment {input.AssessmentId} not found.");
+                ?? throw new ValidationException($"Assessment {input.AssessmentId} not found.");
             var changeRequest = await _changeRequestRepo.GetByIdAsync(assessment.ChangeRequestId)
-                ?? throw new InvalidOperationException($"Change request {assessment.ChangeRequestId} not found.");
+                ?? throw new ValidationException($"Change request {assessment.ChangeRequestId} not found.");
 
             // US-8.2 is scoped to items already in the committee's queue - voting on something not
             // yet routed (US-8.1) would record a vote nobody asked for.
             if (changeRequest.Status != "PendingCommittee")
             {
-                throw new InvalidOperationException(
+                throw new ValidationException(
                     $"Assessment {input.AssessmentId} is not in the committee queue (change request status: {changeRequest.Status}). Route it first.");
             }
 
@@ -79,18 +80,18 @@ namespace Humaid.RiskGovernance.AdminUI.Services.Committee
             var voterRole = await _userRepo.GetRoleAsync(input.CommitteeMemberUserId);
             if (voterRole != "CommitteeMember")
             {
-                throw new InvalidOperationException("Only a Risk Committee Member may cast a committee vote.");
+                throw new ValidationException("Only a Risk Committee Member may cast a committee vote.");
             }
 
             // DEF-030: the DB CHECK constraints (schema/011_committee.sql) are the backstop, but
             // validate here too so the caller gets a clean message without a round trip.
             if (input.Vote == "ApproveWithConditions" && string.IsNullOrWhiteSpace(input.ConditionsText))
             {
-                throw new InvalidOperationException("Approve-with-conditions requires conditions text.");
+                throw new ValidationException("Approve-with-conditions requires conditions text.");
             }
             if (input.Vote is "Reject" or "Defer" && string.IsNullOrWhiteSpace(input.Rationale))
             {
-                throw new InvalidOperationException($"{input.Vote} requires a rationale.");
+                throw new ValidationException($"{input.Vote} requires a rationale.");
             }
 
             var voteId = await _committeeRepo.CastVoteAsync(input);

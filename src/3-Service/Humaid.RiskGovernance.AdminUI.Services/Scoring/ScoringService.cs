@@ -4,6 +4,7 @@ namespace Humaid.RiskGovernance.AdminUI.Services.Scoring
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.Scoring;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.Users;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.Scoring;
+    using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Core;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Scoring;
 
     /// <summary>US-7.1/US-7.2. Deterministic - no LLM anywhere in this class.</summary>
@@ -24,10 +25,10 @@ namespace Humaid.RiskGovernance.AdminUI.Services.Scoring
         private async Task EnsureNotFinalizedAsync(Guid assessmentId)
         {
             var assessment = await _assessmentRepo.GetByIdAsync(assessmentId)
-                ?? throw new InvalidOperationException($"Assessment {assessmentId} not found.");
+                ?? throw new ValidationException($"Assessment {assessmentId} not found.");
             if (assessment.Status == "Finalized")
             {
-                throw new InvalidOperationException("This assessment is finalized and locked from further edits.");
+                throw new ValidationException("This assessment is finalized and locked from further edits.");
             }
         }
 
@@ -38,13 +39,13 @@ namespace Humaid.RiskGovernance.AdminUI.Services.Scoring
             var actorRole = await _userRepo.GetRoleAsync(input.ActorUserId);
             if (actorRole is not ("Analyst" or "Admin"))
             {
-                throw new InvalidOperationException("Only an FCRM Analyst may change scoring configuration.");
+                throw new ValidationException("Only an FCRM Analyst may change scoring configuration.");
             }
 
             // US-10.1 AC2: reject in C# too - defense in depth on top of the DB CHECK + RAISE.
             if (input.MaxMitigationFactor < 0 || input.MaxMitigationFactor >= 1.0m)
             {
-                throw new InvalidOperationException(
+                throw new ValidationException(
                     "max_mitigation_factor must be in [0, 1.0) - a value of 1.0 or more would let residual risk reach zero.");
             }
             return await _riskScoreRepo.UpsertConfigAsync(input);
@@ -58,7 +59,7 @@ namespace Humaid.RiskGovernance.AdminUI.Services.Scoring
             // Re-validate the DB's own mathematical guarantee here too (schema/010_scoring.sql).
             if (residual <= 0)
             {
-                throw new InvalidOperationException(
+                throw new ValidationException(
                     "Calculated residual risk was not greater than zero - this should be mathematically impossible; check scoring_config.");
             }
 
@@ -70,12 +71,12 @@ namespace Humaid.RiskGovernance.AdminUI.Services.Scoring
         {
             if (input.NewResidualRating <= 0)
             {
-                throw new InvalidOperationException(
+                throw new ValidationException(
                     "residual_rating must be greater than zero - controls mitigate risk, they never eliminate it.");
             }
             if (string.IsNullOrWhiteSpace(input.Reason))
             {
-                throw new InvalidOperationException("A reason is required to override a risk score.");
+                throw new ValidationException("A reason is required to override a risk score.");
             }
             await EnsureNotFinalizedAsync(input.AssessmentId);
             return await _riskScoreRepo.OverrideAsync(input);

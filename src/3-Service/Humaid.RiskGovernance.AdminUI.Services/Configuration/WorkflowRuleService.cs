@@ -4,6 +4,7 @@ namespace Humaid.RiskGovernance.AdminUI.Services.Configuration
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.Users;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.Configuration;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Configuration;
+    using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Core;
 
     public class WorkflowRuleService : IWorkflowRuleService
     {
@@ -25,14 +26,14 @@ namespace Humaid.RiskGovernance.AdminUI.Services.Configuration
             var actorRole = await _userRepo.GetRoleAsync(input.ActorUserId);
             if (actorRole is not ("Analyst" or "Admin"))
             {
-                throw new InvalidOperationException("Only an FCRM Analyst may change a workflow rule.");
+                throw new ValidationException("Only an FCRM Analyst may change a workflow rule.");
             }
 
             // US-10.2 AC2: reason mandatory - also enforced by func_upsertWorkflowRule, checked
             // here too so the API can return a clean 400 instead of a raw DB exception.
             if (string.IsNullOrWhiteSpace(input.Reason))
             {
-                throw new InvalidOperationException("A reason is required to change a workflow rule.");
+                throw new ValidationException("A reason is required to change a workflow rule.");
             }
             return await _workflowRuleRepo.UpsertAsync(input);
         }
