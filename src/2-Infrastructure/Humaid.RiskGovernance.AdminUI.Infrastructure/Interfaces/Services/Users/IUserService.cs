@@ -11,5 +11,18 @@ namespace Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.Users
         Task<AppUser?> GetByAuth0SubjectAsync(string auth0Subject);
 
         Task<AppUser?> GetByIdAsync(Guid id);
+
+        /// <summary>Admin user-management screen: every user, active or not.</summary>
+        Task<IReadOnlyList<AdminUserSummary>> GetAllForAdminAsync();
+
+        /// <summary>Reason and at-least-one-role are mandatory - enforced by func_createUser.</summary>
+        Task<Guid> CreateUserAsync(CreateUserInput input);
+
+        /// <summary>Replaces the user's entire role set - enforced by func_setUserRoles.</summary>
+        Task SetUserRolesAsync(SetUserRolesInput input);
+
+        Task SetUserActiveAsync(SetUserActiveInput input);
+
+        Task SetUserAuth0SubjectAsync(SetUserAuth0SubjectInput input);
     }
 }

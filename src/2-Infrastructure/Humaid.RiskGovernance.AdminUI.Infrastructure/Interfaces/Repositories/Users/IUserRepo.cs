@@ -17,5 +17,16 @@ namespace Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.U
         /// A membership check, not "the" role, since a user can hold more than one
         /// (app_user_role, Epic 11 follow-up).</summary>
         Task<bool> HasRoleAsync(Guid userId, string role);
+
+        /// <summary>Admin user-management screen: every user, active or not.</summary>
+        Task<IReadOnlyList<AdminUserSummary>> GetAllForAdminAsync();
+
+        Task<Guid> CreateAsync(CreateUserInput input);
+
+        Task SetRolesAsync(SetUserRolesInput input);
+
+        Task SetActiveAsync(SetUserActiveInput input);
+
+        Task SetAuth0SubjectAsync(SetUserAuth0SubjectInput input);
     }
 }

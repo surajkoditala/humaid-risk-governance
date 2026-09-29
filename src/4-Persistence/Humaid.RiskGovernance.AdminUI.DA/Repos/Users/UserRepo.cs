@@ -40,5 +40,40 @@ namespace Humaid.RiskGovernance.AdminUI.DA.Repos.Users
             return await conn.QuerySingleAsync<bool>(
                 "SELECT func_userHasRole(@userId, @role)", new { userId, role });
         }
+
+        public async Task<IReadOnlyList<AdminUserSummary>> GetAllForAdminAsync()
+        {
+            await using var conn = await _connectionFactory.OpenAsync();
+            var rows = await conn.QueryAsync<AdminUserSummary>("SELECT * FROM func_getAllUsersForAdmin()");
+            return rows.AsList();
+        }
+
+        public async Task<Guid> CreateAsync(CreateUserInput input)
+        {
+            await using var conn = await _connectionFactory.OpenAsync();
+            return await conn.QuerySingleAsync<Guid>(
+                "SELECT func_createUser(@Email, @DisplayName, @Roles, @Reason, @ActorUserId)", input);
+        }
+
+        public async Task SetRolesAsync(SetUserRolesInput input)
+        {
+            await using var conn = await _connectionFactory.OpenAsync();
+            await conn.ExecuteAsync(
+                "SELECT func_setUserRoles(@UserId, @Roles, @Reason, @ActorUserId)", input);
+        }
+
+        public async Task SetActiveAsync(SetUserActiveInput input)
+        {
+            await using var conn = await _connectionFactory.OpenAsync();
+            await conn.ExecuteAsync(
+                "SELECT func_setUserActive(@UserId, @IsActive, @Reason, @ActorUserId)", input);
+        }
+
+        public async Task SetAuth0SubjectAsync(SetUserAuth0SubjectInput input)
+        {
+            await using var conn = await _connectionFactory.OpenAsync();
+            await conn.ExecuteAsync(
+                "SELECT func_setUserAuth0Subject(@UserId, @Auth0Subject, @Reason, @ActorUserId)", input);
+        }
     }
 }

@@ -82,7 +82,8 @@ CREATE TABLE change_request_type_category_map (
 
 CREATE TABLE app_user (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    auth0_subject TEXT NOT NULL UNIQUE, -- Auth0 'sub' claim (synthetic 'seed|...' values for seeded dev users)
+    auth0_subject TEXT UNIQUE, -- Auth0 'sub' claim; null until an Admin-created user's real login is
+                                -- linked (func_setUserAuth0Subject) - synthetic 'seed|...' values for seeded dev users
     email TEXT NOT NULL,
     display_name TEXT NOT NULL,
     is_active BOOLEAN NOT NULL DEFAULT true,
@@ -1431,6 +1432,44 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- ---- functions/users/func_createUser.sql ----
+-- Admin user-management screen: creates an app_user row and its initial role grant(s) in one
+-- transaction, so a user is never left with zero roles between the two inserts. auth0_subject
+-- starts null - this person hasn't logged in yet (func_setUserAuth0Subject links it later).
+CREATE OR REPLACE FUNCTION func_createUser(
+    p_email TEXT,
+    p_display_name TEXT,
+    p_roles TEXT[],
+    p_reason TEXT,
+    p_actor_user_id UUID
+) RETURNS UUID AS $$
+DECLARE
+    v_id UUID := gen_random_uuid();
+    v_role TEXT;
+BEGIN
+    IF p_reason IS NULL OR btrim(p_reason) = '' THEN
+        RAISE EXCEPTION 'A reason is required to create a user';
+    END IF;
+    IF p_roles IS NULL OR array_length(p_roles, 1) IS NULL THEN
+        RAISE EXCEPTION 'A user must be created with at least one role';
+    END IF;
+
+    INSERT INTO app_user (id, auth0_subject, email, display_name)
+    VALUES (v_id, NULL, p_email, p_display_name);
+
+    FOREACH v_role IN ARRAY p_roles LOOP
+        INSERT INTO app_user_role (user_id, role, granted_by_user_id, reason)
+        VALUES (v_id, v_role, p_actor_user_id, p_reason);
+    END LOOP;
+
+    INSERT INTO audit_event (entity_type, entity_id, action, actor_user_id, actor_label, after_value, reason)
+    VALUES ('AppUser', v_id, 'Created', p_actor_user_id, 'human',
+            jsonb_build_object('email', p_email, 'displayName', p_display_name, 'roles', p_roles), p_reason);
+
+    RETURN v_id;
+END;
+$$ LANGUAGE plpgsql;
+
 -- ---- functions/users/func_getAllUsers.sql ----
 -- Dev-only convenience: lets the frontend simulate "acting as" a given seeded user/role since
 -- there's no real Auth0 login wired up yet (see DevBypassAuthHandler.cs). Not meant to survive
@@ -1446,6 +1485,26 @@ RETURNS TABLE (id UUID, display_name TEXT, email TEXT, roles TEXT[]) AS $$
     JOIN app_user_role ur ON ur.user_id = u.id
     WHERE u.is_active = true
     GROUP BY u.id, u.display_name, u.email
+    ORDER BY u.display_name;
+$$ LANGUAGE sql STABLE;
+
+-- ---- functions/users/func_getAllUsersForAdmin.sql ----
+-- Admin user-management screen: every user, active or not, with every role and the raw
+-- auth0_subject (null if that person has never logged in yet) - unlike func_getAllUsers/
+-- func_getUserById/func_getUserByAuth0Subject, which exist to resolve a caller's own identity and
+-- so deliberately exclude anyone inactive or roleless.
+CREATE OR REPLACE FUNCTION func_getAllUsersForAdmin()
+RETURNS TABLE (
+    id UUID, auth0_subject TEXT, email TEXT, display_name TEXT,
+    roles TEXT[], is_active BOOLEAN, created_at TIMESTAMPTZ
+) AS $$
+    SELECT
+        u.id, u.auth0_subject, u.email, u.display_name,
+        coalesce(array_agg(ur.role ORDER BY ur.role) FILTER (WHERE ur.role IS NOT NULL), '{}'),
+        u.is_active, u.created_at
+    FROM app_user u
+    LEFT JOIN app_user_role ur ON ur.user_id = u.id
+    GROUP BY u.id, u.auth0_subject, u.email, u.display_name, u.is_active, u.created_at
     ORDER BY u.display_name;
 $$ LANGUAGE sql STABLE;
 
@@ -1478,6 +1537,105 @@ RETURNS TABLE (id UUID, display_name TEXT, email TEXT, roles TEXT[]) AS $$
       AND u.is_active = true
     GROUP BY u.id, u.display_name, u.email;
 $$ LANGUAGE sql STABLE;
+
+-- ---- functions/users/func_setUserActive.sql ----
+-- Admin user-management screen: deactivate/reactivate. A deactivated user's role grants stay in
+-- app_user_role untouched - is_active is what every identity-resolution function already filters
+-- on (func_getUserById/func_getUserByAuth0Subject), so reactivating restores exactly the same
+-- roles without re-granting them.
+CREATE OR REPLACE FUNCTION func_setUserActive(
+    p_user_id UUID,
+    p_is_active BOOLEAN,
+    p_reason TEXT,
+    p_actor_user_id UUID
+) RETURNS VOID AS $$
+DECLARE
+    v_before BOOLEAN;
+BEGIN
+    IF p_reason IS NULL OR btrim(p_reason) = '' THEN
+        RAISE EXCEPTION 'A reason is required to deactivate or reactivate a user';
+    END IF;
+
+    SELECT is_active INTO v_before FROM app_user WHERE id = p_user_id;
+    IF v_before IS NULL THEN
+        RAISE EXCEPTION 'User % not found', p_user_id;
+    END IF;
+
+    UPDATE app_user SET is_active = p_is_active WHERE id = p_user_id;
+
+    INSERT INTO audit_event (entity_type, entity_id, action, actor_user_id, actor_label, before_value, after_value, reason)
+    VALUES ('AppUser', p_user_id, CASE WHEN p_is_active THEN 'Reactivated' ELSE 'Deactivated' END,
+            p_actor_user_id, 'human', jsonb_build_object('isActive', v_before), jsonb_build_object('isActive', p_is_active), p_reason);
+END;
+$$ LANGUAGE plpgsql;
+
+-- ---- functions/users/func_setUserAuth0Subject.sql ----
+-- Admin user-management screen: links (or re-links) a real Auth0 login to a user row - the UI
+-- form for what auth0-setup.md's step 4 previously required a raw SQL UPDATE for. app_user's own
+-- UNIQUE constraint on auth0_subject rejects linking the same real login to two different rows.
+CREATE OR REPLACE FUNCTION func_setUserAuth0Subject(
+    p_user_id UUID,
+    p_auth0_subject TEXT,
+    p_reason TEXT,
+    p_actor_user_id UUID
+) RETURNS VOID AS $$
+DECLARE
+    v_before TEXT;
+BEGIN
+    IF p_reason IS NULL OR btrim(p_reason) = '' THEN
+        RAISE EXCEPTION 'A reason is required to link an Auth0 login';
+    END IF;
+    IF p_auth0_subject IS NULL OR btrim(p_auth0_subject) = '' THEN
+        RAISE EXCEPTION 'An Auth0 subject is required';
+    END IF;
+
+    SELECT auth0_subject INTO v_before FROM app_user WHERE id = p_user_id;
+
+    UPDATE app_user SET auth0_subject = p_auth0_subject WHERE id = p_user_id;
+
+    INSERT INTO audit_event (entity_type, entity_id, action, actor_user_id, actor_label, before_value, after_value, reason)
+    VALUES ('AppUser', p_user_id, 'Auth0SubjectLinked', p_actor_user_id, 'human',
+            jsonb_build_object('auth0Subject', v_before), jsonb_build_object('auth0Subject', p_auth0_subject), p_reason);
+END;
+$$ LANGUAGE plpgsql;
+
+-- ---- functions/users/func_setUserRoles.sql ----
+-- Admin user-management screen: replaces a user's entire role set in one call (the UI presents
+-- a fixed multi-select, not one grant/revoke click at a time) - removes whichever roles are no
+-- longer selected, adds whichever are newly selected, and audits the before/after set together so
+-- the change reads as one edit rather than N separate grant/revoke rows.
+CREATE OR REPLACE FUNCTION func_setUserRoles(
+    p_user_id UUID,
+    p_roles TEXT[],
+    p_reason TEXT,
+    p_actor_user_id UUID
+) RETURNS VOID AS $$
+DECLARE
+    v_before TEXT[];
+    v_role TEXT;
+BEGIN
+    IF p_reason IS NULL OR btrim(p_reason) = '' THEN
+        RAISE EXCEPTION 'A reason is required to change a user''s roles';
+    END IF;
+    IF p_roles IS NULL OR array_length(p_roles, 1) IS NULL THEN
+        RAISE EXCEPTION 'A user must hold at least one role';
+    END IF;
+
+    SELECT array_agg(role ORDER BY role) INTO v_before FROM app_user_role WHERE user_id = p_user_id;
+
+    DELETE FROM app_user_role WHERE user_id = p_user_id AND role NOT IN (SELECT unnest(p_roles));
+
+    FOREACH v_role IN ARRAY p_roles LOOP
+        INSERT INTO app_user_role (user_id, role, granted_by_user_id, reason)
+        VALUES (p_user_id, v_role, p_actor_user_id, p_reason)
+        ON CONFLICT (user_id, role) DO NOTHING;
+    END LOOP;
+
+    INSERT INTO audit_event (entity_type, entity_id, action, actor_user_id, actor_label, before_value, after_value, reason)
+    VALUES ('AppUser', p_user_id, 'RolesChanged', p_actor_user_id, 'human',
+            jsonb_build_object('roles', v_before), jsonb_build_object('roles', p_roles), p_reason);
+END;
+$$ LANGUAGE plpgsql;
 
 -- ---- functions/users/func_userHasRole.sql ----
 -- DEF-002: lets a service validate that an actor id the caller supplied actually holds the role
@@ -1512,10 +1670,11 @@ INSERT INTO app_user (auth0_subject, email, display_name) VALUES
     ('seed|committee-1', 'committee1@example.bank', 'Jordan Blake'),
     ('seed|committee-2', 'committee2@example.bank', 'Riley Voss'),
     ('seed|admin-1', 'admin1@example.bank', 'Taylor Finch'),
-    -- Team lead's own dev identity - holds every role so local testing/demoing can exercise the
-    -- full nav (union of all roles' screens) without switching "acting as" users. See Epic 11
-    -- follow-up in docs/governance/user-roles-and-screens.md.
-    ('seed|francis-1', 'mikodaray@gmail.com', 'Francis Daray')
+    -- Synthetic, deliberately not any real teammate - holds every role so local testing/demoing
+    -- can exercise the full nav (union of all roles' screens) without switching "acting as" users.
+    -- A real person's own login gets its own app_user row instead, linked via the Admin user-
+    -- management screen's "Link Auth0" action once they've signed in - never this seed row.
+    ('seed|full-access-1', 'qa-full-access@example.bank', 'QA Full Access')
 ON CONFLICT (auth0_subject) DO NOTHING;
 
 INSERT INTO app_user_role (user_id, role, reason)
@@ -1529,10 +1688,10 @@ JOIN LATERAL (
         ('seed|committee-1', 'CommitteeMember'),
         ('seed|committee-2', 'CommitteeMember'),
         ('seed|admin-1', 'Admin'),
-        ('seed|francis-1', 'ProductOwner'),
-        ('seed|francis-1', 'Analyst'),
-        ('seed|francis-1', 'CommitteeMember'),
-        ('seed|francis-1', 'Admin')
+        ('seed|full-access-1', 'ProductOwner'),
+        ('seed|full-access-1', 'Analyst'),
+        ('seed|full-access-1', 'CommitteeMember'),
+        ('seed|full-access-1', 'Admin')
 ) AS r(auth0_subject, role) ON r.auth0_subject = u.auth0_subject
 ON CONFLICT (user_id, role) DO NOTHING;
 

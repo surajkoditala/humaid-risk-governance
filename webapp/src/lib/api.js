@@ -50,7 +50,16 @@ const api = (path) => `${API_BASE_URL}/api/${path}`
 export const Endpoints = {
   // all(): the dev "acting as" directory (AccessPolicies.UserDirectory - open in dev, Admin-only
   // otherwise). me(): the caller's own resolved identity - what a real Auth0 login reads instead.
-  users: { all: () => api('User'), me: () => api('User/Me') },
+  // admin*: the Admin user-management screen - every user regardless of active status.
+  users: {
+    all: () => api('User'),
+    me: () => api('User/Me'),
+    adminAll: () => api('User/Admin'),
+    adminCreate: () => api('User/Admin'),
+    adminSetRoles: (userId) => api(`User/Admin/${userId}/Roles`),
+    adminSetActive: (userId) => api(`User/Admin/${userId}/Active`),
+    adminSetAuth0Subject: (userId) => api(`User/Admin/${userId}/Auth0Subject`),
+  },
 
   changeRequests: {
     submit: () => api('ChangeRequest/Submit'),

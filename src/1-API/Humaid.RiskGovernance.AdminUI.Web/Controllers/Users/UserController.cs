@@ -45,5 +45,94 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.Users
                     ? OperationResult<AppUser>.Forbidden("No active user is associated with this account.")
                     : OperationResult<AppUser>.Success(user);
             }, "Failed to fetch the current user.");
+
+        /// <summary>Admin user-management screen: list/add/edit-roles/deactivate app_user rows,
+        /// every change audited (func_createUser/func_setUserRoles/func_setUserActive/
+        /// func_setUserAuth0Subject) the same way workflow_rule/scoring_config changes are.</summary>
+        [HttpGet("Admin")]
+        [Authorize(Roles = AppRoles.Admin)]
+        public Task<IActionResult> GetAllForAdmin() =>
+            ExecuteAsync(async () =>
+            {
+                var users = await _userService.GetAllForAdminAsync();
+                return OperationResult<IReadOnlyList<AdminUserSummary>>.Success(users);
+            }, "Failed to fetch users.");
+
+        [HttpPost("Admin")]
+        [Authorize(Roles = AppRoles.Admin)]
+        public Task<IActionResult> CreateUser([FromBody] CreateUserInput input) =>
+            ExecuteAsync(async () =>
+            {
+                if (RequireSelf<Guid>(input.ActorUserId) is { } forbidden) return forbidden;
+
+                try
+                {
+                    var id = await _userService.CreateUserAsync(input);
+                    return OperationResult<Guid>.Success(id);
+                }
+                catch (ValidationException ex)
+                {
+                    return OperationResult<Guid>.BadRequest(ex.Message);
+                }
+            }, "Failed to create user.");
+
+        [HttpPost("Admin/{userId:guid}/Roles")]
+        [Authorize(Roles = AppRoles.Admin)]
+        public Task<IActionResult> SetUserRoles(Guid userId, [FromBody] SetUserRolesInput input) =>
+            ExecuteAsync(async () =>
+            {
+                if (RequireSelf<object>(input.ActorUserId) is { } forbidden) return forbidden;
+
+                input.UserId = userId;
+                try
+                {
+                    await _userService.SetUserRolesAsync(input);
+                    return OperationResult<object>.Success(new { });
+                }
+                catch (ValidationException ex)
+                {
+                    return OperationResult<object>.BadRequest(ex.Message);
+                }
+            }, "Failed to change user roles.");
+
+        [HttpPost("Admin/{userId:guid}/Active")]
+        [Authorize(Roles = AppRoles.Admin)]
+        public Task<IActionResult> SetUserActive(Guid userId, [FromBody] SetUserActiveInput input) =>
+            ExecuteAsync(async () =>
+            {
+                if (RequireSelf<object>(input.ActorUserId) is { } forbidden) return forbidden;
+
+                input.UserId = userId;
+                try
+                {
+                    await _userService.SetUserActiveAsync(input);
+                    return OperationResult<object>.Success(new { });
+                }
+                catch (ValidationException ex)
+                {
+                    return OperationResult<object>.BadRequest(ex.Message);
+                }
+            }, "Failed to change user active status.");
+
+        /// <summary>Links a real login to a user row - the UI form for what auth0-setup.md's step 4
+        /// previously required a raw SQL UPDATE for.</summary>
+        [HttpPost("Admin/{userId:guid}/Auth0Subject")]
+        [Authorize(Roles = AppRoles.Admin)]
+        public Task<IActionResult> SetUserAuth0Subject(Guid userId, [FromBody] SetUserAuth0SubjectInput input) =>
+            ExecuteAsync(async () =>
+            {
+                if (RequireSelf<object>(input.ActorUserId) is { } forbidden) return forbidden;
+
+                input.UserId = userId;
+                try
+                {
+                    await _userService.SetUserAuth0SubjectAsync(input);
+                    return OperationResult<object>.Success(new { });
+                }
+                catch (ValidationException ex)
+                {
+                    return OperationResult<object>.BadRequest(ex.Message);
+                }
+            }, "Failed to link Auth0 subject.");
     }
 }

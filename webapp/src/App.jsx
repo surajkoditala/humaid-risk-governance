@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useAuth0 } from '@auth0/auth0-react'
-import { ClipboardList, Gavel, LayoutList, Menu, ShieldCheck, Sliders, X } from 'lucide-react'
+import { ClipboardList, Gavel, LayoutList, Menu, ShieldCheck, Sliders, Users, X } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -11,6 +11,7 @@ import MyRequests from './pages/MyRequests.jsx'
 import AnalystInbox from './pages/AnalystInbox.jsx'
 import CommitteeQueue from './pages/CommitteeQueue.jsx'
 import Configuration from './pages/Configuration.jsx'
+import AdminUsers from './pages/AdminUsers.jsx'
 
 const NAV_ITEMS = [
   { key: 'intake', label: 'Submit Request', icon: ClipboardList, roles: ['ProductOwner'] },
@@ -18,6 +19,7 @@ const NAV_ITEMS = [
   { key: 'assessments', label: 'Assessments', icon: ShieldCheck, roles: ['Analyst'] },
   { key: 'committee', label: 'Committee Queue', icon: Gavel, roles: ['CommitteeMember'] },
   { key: 'configuration', label: 'Configuration', icon: Sliders, roles: ['Admin'] },
+  { key: 'users', label: 'Users', icon: Users, roles: ['Admin'] },
 ]
 
 function initialsOf(name) {
@@ -85,6 +87,7 @@ export default function App() {
     assessments: <AnalystInbox />,
     committee: <CommitteeQueue />,
     configuration: <Configuration />,
+    users: <AdminUsers />,
   }
 
   return (

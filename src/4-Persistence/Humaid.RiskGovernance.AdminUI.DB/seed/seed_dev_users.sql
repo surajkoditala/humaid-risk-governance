@@ -7,10 +7,11 @@ INSERT INTO app_user (auth0_subject, email, display_name) VALUES
     ('seed|committee-1', 'committee1@example.bank', 'Jordan Blake'),
     ('seed|committee-2', 'committee2@example.bank', 'Riley Voss'),
     ('seed|admin-1', 'admin1@example.bank', 'Taylor Finch'),
-    -- Team lead's own dev identity - holds every role so local testing/demoing can exercise the
-    -- full nav (union of all roles' screens) without switching "acting as" users. See Epic 11
-    -- follow-up in docs/governance/user-roles-and-screens.md.
-    ('seed|francis-1', 'mikodaray@gmail.com', 'Francis Daray')
+    -- Synthetic, deliberately not any real teammate - holds every role so local testing/demoing
+    -- can exercise the full nav (union of all roles' screens) without switching "acting as" users.
+    -- A real person's own login gets its own app_user row instead, linked via the Admin user-
+    -- management screen's "Link Auth0" action once they've signed in - never this seed row.
+    ('seed|full-access-1', 'qa-full-access@example.bank', 'QA Full Access')
 ON CONFLICT (auth0_subject) DO NOTHING;
 
 INSERT INTO app_user_role (user_id, role, reason)
@@ -24,9 +25,9 @@ JOIN LATERAL (
         ('seed|committee-1', 'CommitteeMember'),
         ('seed|committee-2', 'CommitteeMember'),
         ('seed|admin-1', 'Admin'),
-        ('seed|francis-1', 'ProductOwner'),
-        ('seed|francis-1', 'Analyst'),
-        ('seed|francis-1', 'CommitteeMember'),
-        ('seed|francis-1', 'Admin')
+        ('seed|full-access-1', 'ProductOwner'),
+        ('seed|full-access-1', 'Analyst'),
+        ('seed|full-access-1', 'CommitteeMember'),
+        ('seed|full-access-1', 'Admin')
 ) AS r(auth0_subject, role) ON r.auth0_subject = u.auth0_subject
 ON CONFLICT (user_id, role) DO NOTHING;

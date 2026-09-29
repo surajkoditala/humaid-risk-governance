@@ -3,7 +3,8 @@
 
 CREATE TABLE app_user (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    auth0_subject TEXT NOT NULL UNIQUE, -- Auth0 'sub' claim (synthetic 'seed|...' values for seeded dev users)
+    auth0_subject TEXT UNIQUE, -- Auth0 'sub' claim; null until an Admin-created user's real login is
+                                -- linked (func_setUserAuth0Subject) - synthetic 'seed|...' values for seeded dev users
     email TEXT NOT NULL,
     display_name TEXT NOT NULL,
     is_active BOOLEAN NOT NULL DEFAULT true,
