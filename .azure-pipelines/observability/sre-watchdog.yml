@@ -40,6 +40,7 @@ steps:
 
   - task: AzureCLI@2
     displayName: 'Query Log Analytics for watchdog signals'
+    timeoutInMinutes: 3
     inputs:
       azureSubscription: 'azure-cloud'
       scriptType: bash
