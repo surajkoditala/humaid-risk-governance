@@ -36,5 +36,8 @@ CREATE TABLE assessment_policy_reliance (
     decision TEXT NOT NULL CHECK (decision IN ('ReliedUpon','NotRelevant')),
     decided_by_user_id UUID NOT NULL REFERENCES app_user(id),
     decided_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    UNIQUE (assessment_id, policy_chunk_id)
+    -- DEF-011: the same passage can legitimately be relied upon under more than one mapped
+    -- category - risk_category_id must be part of the key or the second category's decision
+    -- overwrites the first's (func_recordPolicyReliance.sql's ON CONFLICT target matches this).
+    UNIQUE (assessment_id, risk_category_id, policy_chunk_id)
 );
