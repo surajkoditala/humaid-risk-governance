@@ -9,10 +9,15 @@ actually crossed).
 For each of the four signals, decide a status:
 - "critical": failed_request_burst or unhandled_exceptions has any rows --
   requests are actively failing right now.
-- "warning": failure_rate_trend or exception_count_trend has rows but the
+- "warning": failure_rate_trend or exception_count_trend has a row that
+  reflects a genuine, non-trivial value (a meaningfully non-zero failed
+  percentage or exception count, with a real numeric anomaly score) and the
   matching hard-threshold signal is still "ok" -- climbing before the
   breach, not a breach yet.
-- "ok": the signal has no rows.
+- "ok": the signal has no rows, OR its only rows are effectively zero-value
+  (e.g. a 0% failure rate, a zero exception count) or carry no usable
+  anomaly score -- this is noise from too little telemetry history to build
+  a real baseline, not a trend worth flagging.
 
 ## Output
 One entry per signal in `conditions`, always all four, even when "ok". `app`

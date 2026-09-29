@@ -88,6 +88,13 @@ FAILURE_TREND=$(run_query "failure_rate_trend" '
   | extend (anomalies, score, baseline) = series_decompose_anomalies(FailedPct, 1.5)
   | mv-expand TimeGenerated to typeof(datetime), FailedPct to typeof(double), anomalies to typeof(double), score to typeof(double)
   | where anomalies != 0
+  // series_decompose_anomalies needs real history to build a baseline against
+  // -- with only a few hours of telemetry (fresh workspace), it flags
+  // degenerate points with a 0% failure rate and no real score (isnotnull
+  // catches these -- az CLI stringifies the Kusto null as "None", not JSON
+  // null, so this check happens before that serialization, not after).
+  // Neither is an actual signal worth an AI-narrated GitHub issue.
+  | where isnotnull(score) and FailedPct > 0
   | project AppRoleName, TimeGenerated, FailedPct, score')
 
 EXCEPTION_TREND=$(run_query "exception_count_trend" '
@@ -97,6 +104,7 @@ EXCEPTION_TREND=$(run_query "exception_count_trend" '
   | extend (anomalies, score, baseline) = series_decompose_anomalies(ExceptionCount, 1.5)
   | mv-expand TimeGenerated to typeof(datetime), ExceptionCount to typeof(long), anomalies to typeof(double), score to typeof(double)
   | where anomalies != 0
+  | where isnotnull(score) and ExceptionCount > 0
   | project AppRoleName, TimeGenerated, ExceptionCount, score')
 
 jq -n --argjson a "$FAILED_BURST" --argjson b "$EXCEPTION_BURST" --argjson c "$FAILURE_TREND" --argjson d "$EXCEPTION_TREND" \
