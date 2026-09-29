@@ -56,6 +56,17 @@ namespace Humaid.RiskGovernance.AdminUI.AI
                 }
             }
             _httpClient.DefaultRequestHeaders.Add("anthropic-version", "2023-06-01");
+
+            // An Organization-scoped API key (as opposed to one scoped to a specific workspace)
+            // isn't implicitly tied to a workspace, even when the org has only one - Anthropic
+            // rejects every request from one with 400 "must include the anthropic-workspace-id
+            // header" until this is set. A workspace-scoped key needs no header at all, so this
+            // stays optional rather than required.
+            var workspaceId = configuration["ANTHROPIC_WORKSPACE_ID"];
+            if (!string.IsNullOrWhiteSpace(workspaceId))
+            {
+                _httpClient.DefaultRequestHeaders.Add("anthropic-workspace-id", workspaceId);
+            }
         }
 
         public async Task<string> CompleteAsync(string systemPrompt, string userPrompt, CancellationToken cancellationToken = default)
