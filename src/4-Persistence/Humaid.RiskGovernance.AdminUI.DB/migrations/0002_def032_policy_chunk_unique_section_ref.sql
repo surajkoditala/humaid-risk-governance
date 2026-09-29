@@ -15,35 +15,45 @@ BEGIN
 
     RAISE NOTICE 'Deduping % policy_chunk group(s) with a repeated (policy_document_id, section_ref)', v_dupe_groups;
 
-    -- Repoint any analyst reliance decision from a duplicate chunk (about to be removed) onto the
-    -- surviving (lowest id) chunk in its group, unless that assessment/category already has a
-    -- decision recorded against the surviving chunk - in which case that decision stands and the
-    -- duplicate's is simply dropped, never silently merged.
-    WITH ranked AS (
+    -- AI review on PR #60: an earlier version of this repoint used a NOT EXISTS guard evaluated
+    -- once per row - if one assessment had reliance decisions on two different duplicate chunks in
+    -- the same group (and none yet on the surviving chunk), the guard passed for both rows and a
+    -- single UPDATE tried to point both at keep_id, violating the (assessment_id, policy_chunk_id)
+    -- constraint that's still active until migration 0003 runs, and halting startup.
+    --
+    -- Ranking instead: every reliance row on any chunk in a duplicate group - the surviving chunk
+    -- included, in case it already has its own decision - competes for one survivor per
+    -- (assessment_id, keep_id), newest decision wins (matches func_recordPolicyReliance's own ON
+    -- CONFLICT DO UPDATE semantics). Losers are deleted before the winner is ever repointed, so at
+    -- most one row can hold (assessment_id, keep_id) at a time - no window where two can collide.
+    WITH ranked_chunks AS (
+        SELECT id, policy_document_id, section_ref,
+               first_value(id) OVER (PARTITION BY policy_document_id, section_ref ORDER BY id) AS keep_id,
+               count(*) OVER (PARTITION BY policy_document_id, section_ref) AS group_size
+        FROM policy_chunk
+    ),
+    affected_reliance AS (
+        SELECT apr.id, rc.keep_id,
+               row_number() OVER (PARTITION BY apr.assessment_id, rc.keep_id ORDER BY apr.decided_at DESC, apr.id DESC) AS rn
+        FROM assessment_policy_reliance apr
+        JOIN ranked_chunks rc ON rc.id = apr.policy_chunk_id
+        WHERE rc.group_size > 1
+    )
+    DELETE FROM assessment_policy_reliance apr
+    USING affected_reliance ar
+    WHERE apr.id = ar.id AND ar.rn > 1;
+
+    -- Exactly one reliance row per (assessment_id, keep_id) survives the delete above - safe to
+    -- repoint unconditionally now, no collision possible.
+    WITH ranked_chunks AS (
         SELECT id, policy_document_id, section_ref,
                first_value(id) OVER (PARTITION BY policy_document_id, section_ref ORDER BY id) AS keep_id
         FROM policy_chunk
     )
     UPDATE assessment_policy_reliance apr
-    SET policy_chunk_id = r.keep_id
-    FROM ranked r
-    WHERE apr.policy_chunk_id = r.id
-      AND r.id <> r.keep_id
-      AND NOT EXISTS (
-          SELECT 1 FROM assessment_policy_reliance apr2
-          WHERE apr2.assessment_id = apr.assessment_id
-            AND apr2.policy_chunk_id = r.keep_id
-            AND apr2.id <> apr.id
-      );
-
-    WITH ranked AS (
-        SELECT id, policy_document_id, section_ref,
-               first_value(id) OVER (PARTITION BY policy_document_id, section_ref ORDER BY id) AS keep_id
-        FROM policy_chunk
-    )
-    DELETE FROM assessment_policy_reliance apr
-    USING ranked r
-    WHERE apr.policy_chunk_id = r.id AND r.id <> r.keep_id;
+    SET policy_chunk_id = rc.keep_id
+    FROM ranked_chunks rc
+    WHERE apr.policy_chunk_id = rc.id AND rc.id <> rc.keep_id;
 
     WITH ranked AS (
         SELECT id, policy_document_id, section_ref,

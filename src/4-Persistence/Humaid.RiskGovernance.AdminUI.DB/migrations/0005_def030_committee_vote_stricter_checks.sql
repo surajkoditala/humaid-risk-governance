@@ -19,8 +19,12 @@ BEGIN
     END IF;
 END $$;
 
--- Drop both original CHECK constraints (whatever Postgres auto-named them) and replace with the
--- named, stricter pair - matches schema/011_committee.sql for a fresh deploy.
+-- Drop only the two original CHECK constraints this migration replaces (whatever Postgres
+-- auto-named them) - matched by the columns they reference, not "everything not named like my
+-- two new ones". committee_vote also has its own vote-value CHECK (vote IN ('Approve', ...)),
+-- unrelated to DEF-030 - AI review on PR #60 caught an earlier version of this migration that
+-- matched by exclusion and silently dropped that constraint too, on any already-provisioned
+-- database, without ever re-adding it.
 DO $$
 DECLARE
     r RECORD;
@@ -28,6 +32,7 @@ BEGIN
     FOR r IN
         SELECT conname FROM pg_constraint
         WHERE conrelid = 'committee_vote'::regclass AND contype = 'c'
+          AND (pg_get_constraintdef(oid) LIKE '%conditions_text%' OR pg_get_constraintdef(oid) LIKE '%rationale%')
           AND conname NOT IN ('committee_vote_conditions_required', 'committee_vote_rationale_required')
     LOOP
         EXECUTE format('ALTER TABLE committee_vote DROP CONSTRAINT %I', r.conname);
