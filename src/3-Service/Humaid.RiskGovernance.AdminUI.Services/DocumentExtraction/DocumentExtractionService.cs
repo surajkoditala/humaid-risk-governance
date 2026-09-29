@@ -25,7 +25,13 @@ namespace Humaid.RiskGovernance.AdminUI.Services.DocumentExtraction
             // DEF-020: the webapp had been sending attachment.fileName as "documentText" - the
             // attachment's actual extracted text was never in the client's hands to send. Load it
             // here, server-side, by attachmentId instead of trusting whatever the caller supplies.
-            var documentText = await _changeRequestRepo.GetAttachmentTextAsync(attachmentId);
+            //
+            // AI review on PR #60: attachmentId alone let a caller pair one change request's id
+            // with another request's attachment, extracting and saving that other request's text
+            // onto this one. func_getAttachmentText now requires both ids to match, so a mismatch
+            // falls into the same "not available" error a caller can't distinguish from a missing
+            // attachment.
+            var documentText = await _changeRequestRepo.GetAttachmentTextAsync(changeRequestId, attachmentId);
             if (string.IsNullOrWhiteSpace(documentText))
                 throw new InvalidOperationException("No extracted text is available for this attachment yet.");
 

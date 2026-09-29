@@ -209,7 +209,12 @@ CREATE TABLE assessment_policy_reliance (
     -- DEF-011: the same passage can legitimately be relied upon under more than one mapped
     -- category - risk_category_id must be part of the key or the second category's decision
     -- overwrites the first's (func_recordPolicyReliance.sql's ON CONFLICT target matches this).
-    UNIQUE (assessment_id, risk_category_id, policy_chunk_id)
+    -- NULLS NOT DISTINCT (AI review on PR #60): risk_category_id is nullable (the Policy tab's
+    -- "Any category" search has no category to send), and Postgres treats every NULL as distinct
+    -- in a plain UNIQUE constraint by default - without this, recording reliance on the same
+    -- chunk twice with no category selected never hits ON CONFLICT and just accumulates
+    -- duplicates, the exact bug this migration is fixing for the non-null case.
+    UNIQUE NULLS NOT DISTINCT (assessment_id, risk_category_id, policy_chunk_id)
 );
 
 -- ---- schema/008_document_extraction.sql ----
@@ -692,9 +697,15 @@ $$ LANGUAGE sql STABLE;
 -- DEF-020: extraction must run on the attachment's own server-extracted text, not whatever the
 -- client happened to pass as documentText (the webapp was sending the file NAME). This lets the
 -- extraction service load the text itself by attachmentId.
-CREATE OR REPLACE FUNCTION func_getAttachmentText(p_attachment_id UUID)
+--
+-- AI review on PR #60: attachmentId alone let a caller pair one change request's id with another
+-- request's attachmentId and extract (and save) that other request's document text under its own
+-- record. p_change_request_id must match too - a mismatch returns NULL, same as "no text yet",
+-- rather than revealing whether the attachment exists under a different request.
+CREATE OR REPLACE FUNCTION func_getAttachmentText(p_change_request_id UUID, p_attachment_id UUID)
 RETURNS TEXT AS $$
-    SELECT extracted_text FROM change_request_attachment WHERE id = p_attachment_id;
+    SELECT extracted_text FROM change_request_attachment
+    WHERE id = p_attachment_id AND change_request_id = p_change_request_id;
 $$ LANGUAGE sql STABLE;
 
 -- ---- functions/change_requests/func_getAttachments.sql ----

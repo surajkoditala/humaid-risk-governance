@@ -88,11 +88,11 @@ namespace Humaid.RiskGovernance.AdminUI.DA.Repos.ChangeRequests
             return rows.AsList();
         }
 
-        public async Task<string?> GetAttachmentTextAsync(Guid attachmentId)
+        public async Task<string?> GetAttachmentTextAsync(Guid changeRequestId, Guid attachmentId)
         {
             await using var conn = await _connectionFactory.OpenAsync();
             return await conn.QuerySingleOrDefaultAsync<string?>(
-                "SELECT func_getAttachmentText(@attachmentId)", new { attachmentId });
+                "SELECT func_getAttachmentText(@changeRequestId, @attachmentId)", new { changeRequestId, attachmentId });
         }
 
         public async Task<Guid> RequestClarificationAsync(Guid changeRequestId, Guid requestedByUserId, string question)

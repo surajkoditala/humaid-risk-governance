@@ -39,5 +39,10 @@ CREATE TABLE assessment_policy_reliance (
     -- DEF-011: the same passage can legitimately be relied upon under more than one mapped
     -- category - risk_category_id must be part of the key or the second category's decision
     -- overwrites the first's (func_recordPolicyReliance.sql's ON CONFLICT target matches this).
-    UNIQUE (assessment_id, risk_category_id, policy_chunk_id)
+    -- NULLS NOT DISTINCT (AI review on PR #60): risk_category_id is nullable (the Policy tab's
+    -- "Any category" search has no category to send), and Postgres treats every NULL as distinct
+    -- in a plain UNIQUE constraint by default - without this, recording reliance on the same
+    -- chunk twice with no category selected never hits ON CONFLICT and just accumulates
+    -- duplicates, the exact bug this migration is fixing for the non-null case.
+    UNIQUE NULLS NOT DISTINCT (assessment_id, risk_category_id, policy_chunk_id)
 );

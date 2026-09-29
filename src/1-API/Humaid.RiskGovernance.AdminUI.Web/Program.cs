@@ -335,6 +335,19 @@ app.UseStaticFiles();
 
 // DEF-017: standard hardening headers - none of these were present on any response, an API-only
 // server in particular has no reason to ever be framed, sniffed, or leak the referring URL.
+//
+// AI review on PR #60: "default-src 'self'" alone makes connect-src fall back to 'self' too,
+// which blocks the SPA's own calls to Auth0's domain (silent token renewal, login) once a real
+// Auth0 tenant is configured - the dev bypass path never calls Auth0, so this went unnoticed
+// locally. Built once at startup, not per-request, since neither input changes at runtime.
+var contentSecurityPolicy = string.IsNullOrWhiteSpace(auth0Domain)
+    ? "default-src 'self'; frame-ancestors 'none'"
+    : $"default-src 'self'; frame-ancestors 'none'; connect-src 'self' https://{auth0Domain}";
+if (app.Environment.IsDevelopment())
+{
+    // Swagger UI (Development only, see UseSwaggerUI above) renders with inline scripts/styles.
+    contentSecurityPolicy += "; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'";
+}
 app.Use(async (context, next) =>
 {
     var headers = context.Response.Headers;
@@ -344,7 +357,7 @@ app.Use(async (context, next) =>
     // 'self' (not 'none') - app.UseStaticFiles() above serves the webapp's own production build
     // from this same origin in the single-container deployment shape, and it needs to load its
     // own same-origin JS/CSS.
-    headers["Content-Security-Policy"] = "default-src 'self'; frame-ancestors 'none'";
+    headers["Content-Security-Policy"] = contentSecurityPolicy;
     if (context.Request.IsHttps)
     {
         headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains";
