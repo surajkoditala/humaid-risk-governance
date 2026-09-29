@@ -20,16 +20,25 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.DocumentExtraction
             _documentExtractionService = documentExtractionService;
         }
 
-        public record ExtractRequest(Guid ChangeRequestId, Guid AttachmentId, string ChangeType, string DocumentText);
+        public record ExtractRequest(Guid ChangeRequestId, Guid AttachmentId, string ChangeType);
 
-        /// <summary>US-4.1: real Claude call over the attachment's (already-extracted) plain text.</summary>
+        /// <summary>US-4.1: real Claude call over the attachment's own (already-extracted) plain
+        /// text, loaded server-side by AttachmentId - DEF-020: the client no longer supplies the
+        /// document text itself.</summary>
         [HttpPost("Extract")]
         public Task<IActionResult> Extract([FromBody] ExtractRequest request) =>
             ExecuteAsync(async () =>
             {
-                var fields = await _documentExtractionService.ExtractAsync(
-                    request.ChangeRequestId, request.AttachmentId, request.ChangeType, request.DocumentText);
-                return OperationResult<IReadOnlyList<ExtractedField>>.Success(fields);
+                try
+                {
+                    var fields = await _documentExtractionService.ExtractAsync(
+                        request.ChangeRequestId, request.AttachmentId, request.ChangeType);
+                    return OperationResult<IReadOnlyList<ExtractedField>>.Success(fields);
+                }
+                catch (ValidationException ex)
+                {
+                    return OperationResult<IReadOnlyList<ExtractedField>>.BadRequest(ex.Message);
+                }
             }, "Failed to extract document fields.");
 
         public record CorrectRequest(CorrectExtractedFieldInput Input, bool IsMaterialChange);
@@ -44,7 +53,7 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.DocumentExtraction
                     var id = await _documentExtractionService.CorrectAsync(request.Input, request.IsMaterialChange);
                     return OperationResult<Guid>.Success(id);
                 }
-                catch (InvalidOperationException ex)
+                catch (ValidationException ex)
                 {
                     return OperationResult<Guid>.BadRequest(ex.Message);
                 }

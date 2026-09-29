@@ -5,11 +5,13 @@ namespace Humaid.RiskGovernance.AdminUI.Services.Committee
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.ChangeRequests;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.Committee;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.Configuration;
+    using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.Users;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.Audit;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.Committee;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.DataIngestion;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Audit;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Committee;
+    using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Core;
     using Microsoft.Extensions.Logging;
 
     /// <summary>Epic 8. The committee decision resolution rule (quorum + conservative
@@ -26,6 +28,7 @@ namespace Humaid.RiskGovernance.AdminUI.Services.Committee
         private readonly IDataIngestionService _dataIngestionService;
         private readonly IMockSystemsClient _mockSystemsClient;
         private readonly IAuditService _auditService;
+        private readonly IUserRepo _userRepo;
         private readonly ILogger<CommitteeService> _logger;
 
         public CommitteeService(
@@ -36,6 +39,7 @@ namespace Humaid.RiskGovernance.AdminUI.Services.Committee
             IDataIngestionService dataIngestionService,
             IMockSystemsClient mockSystemsClient,
             IAuditService auditService,
+            IUserRepo userRepo,
             ILogger<CommitteeService> logger)
         {
             _committeeRepo = committeeRepo;
@@ -45,6 +49,7 @@ namespace Humaid.RiskGovernance.AdminUI.Services.Committee
             _dataIngestionService = dataIngestionService;
             _mockSystemsClient = mockSystemsClient;
             _auditService = auditService;
+            _userRepo = userRepo;
             _logger = logger;
         }
 
@@ -55,16 +60,38 @@ namespace Humaid.RiskGovernance.AdminUI.Services.Committee
         public async Task<Guid> CastVoteAsync(CastCommitteeVoteInput input)
         {
             var assessment = await _assessmentRepo.GetByIdAsync(input.AssessmentId)
-                ?? throw new InvalidOperationException($"Assessment {input.AssessmentId} not found.");
+                ?? throw new ValidationException($"Assessment {input.AssessmentId} not found.");
             var changeRequest = await _changeRequestRepo.GetByIdAsync(assessment.ChangeRequestId)
-                ?? throw new InvalidOperationException($"Change request {assessment.ChangeRequestId} not found.");
+                ?? throw new ValidationException($"Change request {assessment.ChangeRequestId} not found.");
 
             // US-8.2 is scoped to items already in the committee's queue - voting on something not
             // yet routed (US-8.1) would record a vote nobody asked for.
             if (changeRequest.Status != "PendingCommittee")
             {
-                throw new InvalidOperationException(
+                throw new ValidationException(
                     $"Assessment {input.AssessmentId} is not in the committee queue (change request status: {changeRequest.Status}). Route it first.");
+            }
+
+            // DEF-002: the caller-supplied CommitteeMemberUserId was never checked against the
+            // actor's actual role, so a Product Owner's id was accepted and counted toward quorum.
+            // This doesn't replace deriving identity from a validated token (see DevBypassAuthHandler.cs,
+            // DEF-010) - it closes the concrete exploit: even a forged id must belong to a real
+            // CommitteeMember, or the vote is refused.
+            var voterRole = await _userRepo.GetRoleAsync(input.CommitteeMemberUserId);
+            if (voterRole != "CommitteeMember")
+            {
+                throw new ValidationException("Only a Risk Committee Member may cast a committee vote.");
+            }
+
+            // DEF-030: the DB CHECK constraints (schema/011_committee.sql) are the backstop, but
+            // validate here too so the caller gets a clean message without a round trip.
+            if (input.Vote == "ApproveWithConditions" && string.IsNullOrWhiteSpace(input.ConditionsText))
+            {
+                throw new ValidationException("Approve-with-conditions requires conditions text.");
+            }
+            if (input.Vote is "Reject" or "Defer" && string.IsNullOrWhiteSpace(input.Rationale))
+            {
+                throw new ValidationException($"{input.Vote} requires a rationale.");
             }
 
             var voteId = await _committeeRepo.CastVoteAsync(input);

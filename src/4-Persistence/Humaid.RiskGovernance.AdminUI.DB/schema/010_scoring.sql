@@ -12,12 +12,16 @@ CREATE TABLE control (
     risk_category_id UUID REFERENCES risk_category(id),
     name TEXT NOT NULL,
     description TEXT,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (risk_category_id, name)
 );
 
 -- Versioned: a config change is a new row, never an in-place update to a live one (US-10.1) - so
 -- an assessment created before the change keeps scoring against the config that was active when
--- it started (assessment.scoring_config_version_id, wired up below).
+-- it started. DEF-016: config is per risk_category (up to 4 active rows at once), which a single
+-- assessment-level FK can't pin across every category at once - func_calculateAndSaveRiskScore
+-- instead selects, per category, the most recent row with created_at <= assessment.created_at,
+-- which is equivalent ("the version in force when this assessment started") without that column.
 CREATE TABLE scoring_config (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     risk_category_id UUID NOT NULL REFERENCES risk_category(id),
@@ -27,10 +31,6 @@ CREATE TABLE scoring_config (
     reason TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-
-ALTER TABLE assessment
-    ADD CONSTRAINT fk_assessment_scoring_config_version
-    FOREIGN KEY (scoring_config_version_id) REFERENCES scoring_config(id);
 
 CREATE TABLE assessment_risk_score (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

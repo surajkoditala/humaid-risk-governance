@@ -45,7 +45,9 @@ export default function AnalystInbox() {
                 <TableRow key={r.id}>
                   <TableCell className="font-medium">{r.requestNumber}</TableCell>
                   <TableCell>{r.changeType}</TableCell>
-                  <TableCell>{r.title}</TableCell>
+                  <TableCell className="max-w-md whitespace-normal break-words" title={r.title}>
+                    {r.title}
+                  </TableCell>
                   <TableCell>
                     <Badge variant="secondary">{r.status}</Badge>
                   </TableCell>

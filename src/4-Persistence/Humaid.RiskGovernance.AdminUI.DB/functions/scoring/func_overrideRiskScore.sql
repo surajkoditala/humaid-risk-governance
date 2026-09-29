@@ -21,8 +21,10 @@ BEGIN
     SELECT to_jsonb(s) INTO v_before FROM assessment_risk_score s
         WHERE assessment_id = p_assessment_id AND risk_category_id = p_risk_category_id;
 
+    -- DEF-014: scored_by stayed 'System' after an override - the row IS the analyst's judgment
+    -- now, and the UI/audit trail should say so, not attribute it to the original calculation.
     UPDATE assessment_risk_score
-    SET residual_rating = p_new_residual_rating, is_override = true, override_reason = p_reason
+    SET residual_rating = p_new_residual_rating, is_override = true, override_reason = p_reason, scored_by = 'Analyst'
     WHERE assessment_id = p_assessment_id AND risk_category_id = p_risk_category_id
     RETURNING id INTO v_id;
 

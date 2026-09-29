@@ -145,7 +145,6 @@ CREATE TABLE assessment (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     change_request_id UUID NOT NULL UNIQUE REFERENCES change_request(id),
     status TEXT NOT NULL DEFAULT 'Draft' CHECK (status IN ('Draft','Finalized')),
-    scoring_config_version_id UUID, -- FK added in 010_scoring.sql, once scoring_config exists (avoids a forward reference here)
     finalized_by_user_id UUID REFERENCES app_user(id),
     finalized_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -191,7 +190,11 @@ CREATE TABLE policy_chunk (
     section_ref TEXT NOT NULL,
     chunk_text TEXT NOT NULL,
     search_vector TSVECTOR GENERATED ALWAYS AS (to_tsvector('english', chunk_text)) STORED,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    -- Found duplicated 2-3x over in the deployed dev DB (DEF-032 investigation) - seed_policy_corpus.sql
+    -- had no conflict target, so re-running it (harmless for every other seed file) silently
+    -- cluttered search results with identical passages instead of adding coverage.
+    UNIQUE (policy_document_id, section_ref)
 );
 CREATE INDEX idx_policy_chunk_search_vector ON policy_chunk USING GIN (search_vector);
 
@@ -203,7 +206,15 @@ CREATE TABLE assessment_policy_reliance (
     decision TEXT NOT NULL CHECK (decision IN ('ReliedUpon','NotRelevant')),
     decided_by_user_id UUID NOT NULL REFERENCES app_user(id),
     decided_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    UNIQUE (assessment_id, policy_chunk_id)
+    -- DEF-011: the same passage can legitimately be relied upon under more than one mapped
+    -- category - risk_category_id must be part of the key or the second category's decision
+    -- overwrites the first's (func_recordPolicyReliance.sql's ON CONFLICT target matches this).
+    -- NULLS NOT DISTINCT (AI review on PR #60): risk_category_id is nullable (the Policy tab's
+    -- "Any category" search has no category to send), and Postgres treats every NULL as distinct
+    -- in a plain UNIQUE constraint by default - without this, recording reliance on the same
+    -- chunk twice with no category selected never hits ON CONFLICT and just accumulates
+    -- duplicates, the exact bug this migration is fixing for the non-null case.
+    UNIQUE NULLS NOT DISTINCT (assessment_id, risk_category_id, policy_chunk_id)
 );
 
 -- ---- schema/008_document_extraction.sql ----
@@ -256,12 +267,16 @@ CREATE TABLE control (
     risk_category_id UUID REFERENCES risk_category(id),
     name TEXT NOT NULL,
     description TEXT,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (risk_category_id, name)
 );
 
 -- Versioned: a config change is a new row, never an in-place update to a live one (US-10.1) - so
 -- an assessment created before the change keeps scoring against the config that was active when
--- it started (assessment.scoring_config_version_id, wired up below).
+-- it started. DEF-016: config is per risk_category (up to 4 active rows at once), which a single
+-- assessment-level FK can't pin across every category at once - func_calculateAndSaveRiskScore
+-- instead selects, per category, the most recent row with created_at <= assessment.created_at,
+-- which is equivalent ("the version in force when this assessment started") without that column.
 CREATE TABLE scoring_config (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     risk_category_id UUID NOT NULL REFERENCES risk_category(id),
@@ -271,10 +286,6 @@ CREATE TABLE scoring_config (
     reason TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-
-ALTER TABLE assessment
-    ADD CONSTRAINT fk_assessment_scoring_config_version
-    FOREIGN KEY (scoring_config_version_id) REFERENCES scoring_config(id);
 
 CREATE TABLE assessment_risk_score (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -307,8 +318,10 @@ CREATE TABLE committee_vote (
     rationale TEXT,
     voted_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE (assessment_id, committee_member_user_id),
-    CHECK (vote <> 'ApproveWithConditions' OR conditions_text IS NOT NULL),
-    CHECK (vote NOT IN ('Reject','Defer') OR rationale IS NOT NULL)
+    -- DEF-030: IS NOT NULL let a blank string / whitespace-only value through - a trimmed
+    -- length check closes that.
+    CHECK (vote <> 'ApproveWithConditions' OR (conditions_text IS NOT NULL AND length(trim(conditions_text)) > 0)),
+    CHECK (vote NOT IN ('Reject','Defer') OR (rationale IS NOT NULL AND length(trim(rationale)) > 0))
 );
 
 CREATE TABLE committee_decision (
@@ -403,8 +416,20 @@ CREATE OR REPLACE FUNCTION func_finalizeAssessment(
 ) RETURNS VOID AS $$
 DECLARE
     v_change_request_id UUID;
+    v_active_category_count INT;
 BEGIN
     SELECT change_request_id INTO v_change_request_id FROM assessment WHERE id = p_assessment_id;
+
+    -- DEF-001: a DB-level backstop for the worst case of the readiness gate passing vacuously -
+    -- zero mapped categories. The full readiness checks (narrative reviewed, policy relied upon,
+    -- score calculated per category) run in AssessmentService.CheckReadinessAsync before this is
+    -- called; this does not re-implement all of them, only the cheapest, highest-value one.
+    SELECT count(*) INTO v_active_category_count
+    FROM assessment_category_mapping WHERE assessment_id = p_assessment_id AND is_active;
+
+    IF v_active_category_count = 0 THEN
+        RAISE EXCEPTION 'Cannot finalize an assessment with no mapped risk categories.';
+    END IF;
 
     UPDATE assessment SET status = 'Finalized', finalized_by_user_id = p_actor_user_id, finalized_at = now()
     WHERE id = p_assessment_id;
@@ -616,7 +641,11 @@ BEGIN
     VALUES (v_id, p_change_request_id, p_file_name, p_content_type, p_storage_path, p_extracted_text, v_version, p_uploaded_by_user_id);
 
     IF p_supersedes_attachment_id IS NOT NULL THEN
-        UPDATE change_request_attachment SET superseded_by_attachment_id = v_id WHERE id = p_supersedes_attachment_id;
+        -- DEF-008: "id" alone is ambiguous here - it matches both this function's "id" OUT
+        -- parameter (from RETURNS TABLE) and the table's own id column, and PL/pgSQL raises
+        -- "column reference is ambiguous" rather than picking one. Table-qualifying resolves it.
+        UPDATE change_request_attachment SET superseded_by_attachment_id = v_id
+            WHERE change_request_attachment.id = p_supersedes_attachment_id;
     END IF;
 
     INSERT INTO audit_event (change_request_id, entity_type, entity_id, action, actor_user_id, actor_label, after_value)
@@ -664,6 +693,21 @@ RETURNS TABLE (
     ORDER BY c.submitted_at DESC;
 $$ LANGUAGE sql STABLE;
 
+-- ---- functions/change_requests/func_getAttachmentText.sql ----
+-- DEF-020: extraction must run on the attachment's own server-extracted text, not whatever the
+-- client happened to pass as documentText (the webapp was sending the file NAME). This lets the
+-- extraction service load the text itself by attachmentId.
+--
+-- AI review on PR #60: attachmentId alone let a caller pair one change request's id with another
+-- request's attachmentId and extract (and save) that other request's document text under its own
+-- record. p_change_request_id must match too - a mismatch returns NULL, same as "no text yet",
+-- rather than revealing whether the attachment exists under a different request.
+CREATE OR REPLACE FUNCTION func_getAttachmentText(p_change_request_id UUID, p_attachment_id UUID)
+RETURNS TEXT AS $$
+    SELECT extracted_text FROM change_request_attachment
+    WHERE id = p_attachment_id AND change_request_id = p_change_request_id;
+$$ LANGUAGE sql STABLE;
+
 -- ---- functions/change_requests/func_getAttachments.sql ----
 CREATE OR REPLACE FUNCTION func_getAttachments(p_change_request_id UUID)
 RETURNS TABLE (id UUID, file_name TEXT, content_type TEXT, storage_path TEXT, version_number INT, uploaded_at TIMESTAMPTZ) AS $$
@@ -690,14 +734,21 @@ $$ LANGUAGE sql STABLE;
 
 -- ---- functions/change_requests/func_getChangeRequestsForUser.sql ----
 -- US-1.3: "all my requests with current status and days elapsed since submission."
+-- DEF-022: status alone only ever says "Decisioned" - the Product Owner never saw the actual
+-- outcome or its conditions (US-8.3 AC3). The committee's resolution lives in committee_decision,
+-- not on change_request itself (see func_recordCommitteeDecision.sql), so it's left-joined in here
+-- rather than the requester's list making one extra round trip per row.
 CREATE OR REPLACE FUNCTION func_getChangeRequestsForUser(p_user_id UUID)
 RETURNS TABLE (
     id UUID, request_number TEXT, change_type TEXT, title TEXT, status TEXT,
-    submitted_at TIMESTAMPTZ, days_elapsed INT
+    submitted_at TIMESTAMPTZ, days_elapsed INT, decision_resolution TEXT, decision_conditions_text TEXT
 ) AS $$
     SELECT c.id, c.request_number, c.change_type, c.title, c.status, c.submitted_at,
-           EXTRACT(DAY FROM now() - c.submitted_at)::INT AS days_elapsed
+           EXTRACT(DAY FROM now() - c.submitted_at)::INT AS days_elapsed,
+           d.resolution, d.conditions_text
     FROM change_request c
+    LEFT JOIN assessment a ON a.change_request_id = c.id
+    LEFT JOIN committee_decision d ON d.assessment_id = a.id
     WHERE c.submitted_by_user_id = p_user_id
     ORDER BY c.submitted_at DESC;
 $$ LANGUAGE sql STABLE;
@@ -760,11 +811,17 @@ DECLARE
 BEGIN
     SELECT change_request_id INTO v_change_request_id FROM assessment WHERE id = p_assessment_id;
 
+    -- DEF-003: a second vote by the same member used to silently overwrite the first (ON CONFLICT
+    -- DO UPDATE) - an accountable, individually-attributed vote (AC5) cannot be quietly replaced.
+    -- ON CONFLICT DO NOTHING plus a null-id check rejects the re-vote instead.
     INSERT INTO committee_vote (assessment_id, committee_member_user_id, vote, conditions_text, rationale)
     VALUES (p_assessment_id, p_committee_member_user_id, p_vote, p_conditions_text, p_rationale)
-    ON CONFLICT (assessment_id, committee_member_user_id) DO UPDATE SET
-        vote = EXCLUDED.vote, conditions_text = EXCLUDED.conditions_text, rationale = EXCLUDED.rationale, voted_at = now()
+    ON CONFLICT (assessment_id, committee_member_user_id) DO NOTHING
     RETURNING id INTO v_id;
+
+    IF v_id IS NULL THEN
+        RAISE EXCEPTION 'This committee member has already voted on this assessment; a cast vote cannot be changed.';
+    END IF;
 
     INSERT INTO audit_event (change_request_id, assessment_id, entity_type, entity_id, action, actor_user_id, actor_label, after_value)
     VALUES (v_change_request_id, p_assessment_id, 'CommitteeVote', v_id, 'Voted', p_committee_member_user_id, 'human',
@@ -1173,9 +1230,12 @@ CREATE OR REPLACE FUNCTION func_recordPolicyReliance(
 DECLARE
     v_id UUID;
 BEGIN
+    -- DEF-011: the same passage relied upon for a second category used to hit the old
+    -- (assessment_id, policy_chunk_id) conflict target and overwrite the first category's
+    -- decision. risk_category_id is now part of the key (schema/007_policy_corpus.sql).
     INSERT INTO assessment_policy_reliance (assessment_id, risk_category_id, policy_chunk_id, decision, decided_by_user_id)
     VALUES (p_assessment_id, p_risk_category_id, p_policy_chunk_id, p_decision, p_decided_by_user_id)
-    ON CONFLICT (assessment_id, policy_chunk_id)
+    ON CONFLICT (assessment_id, risk_category_id, policy_chunk_id)
         DO UPDATE SET decision = EXCLUDED.decision, decided_by_user_id = EXCLUDED.decided_by_user_id, decided_at = now()
     RETURNING id INTO v_id;
 
@@ -1226,11 +1286,21 @@ DECLARE
     v_mitigation_factor NUMERIC;
     v_residual NUMERIC;
 BEGIN
-    SELECT max_mitigation_factor INTO v_mitigation_factor
-    FROM scoring_config WHERE risk_category_id = p_risk_category_id AND is_active = true;
+    -- DEF-016: use the config that was active when THIS assessment started
+    -- (assessment.created_at), not whatever is active right now - US-10.1 AC1: "takes effect only
+    -- for assessments started after the change... existing in-flight assessments are unaffected."
+    -- scoring_config is versioned per category (func_upsertScoringConfig never updates a row in
+    -- place, only flips is_active and inserts a new one), so "the version in force at time T" is
+    -- simply the most recent row created at or before T.
+    SELECT sc.max_mitigation_factor INTO v_mitigation_factor
+    FROM scoring_config sc
+    JOIN assessment a ON a.id = p_assessment_id
+    WHERE sc.risk_category_id = p_risk_category_id AND sc.created_at <= a.created_at
+    ORDER BY sc.created_at DESC
+    LIMIT 1;
 
     IF v_mitigation_factor IS NULL THEN
-        RAISE EXCEPTION 'No active scoring configuration for risk category %', p_risk_category_id;
+        RAISE EXCEPTION 'No scoring configuration was active for risk category % when this assessment started', p_risk_category_id;
     END IF;
 
     v_residual := p_inherent_rating - (p_control_effectiveness * v_mitigation_factor);
@@ -1301,8 +1371,10 @@ BEGIN
     SELECT to_jsonb(s) INTO v_before FROM assessment_risk_score s
         WHERE assessment_id = p_assessment_id AND risk_category_id = p_risk_category_id;
 
+    -- DEF-014: scored_by stayed 'System' after an override - the row IS the analyst's judgment
+    -- now, and the UI/audit trail should say so, not attribute it to the original calculation.
     UPDATE assessment_risk_score
-    SET residual_rating = p_new_residual_rating, is_override = true, override_reason = p_reason
+    SET residual_rating = p_new_residual_rating, is_override = true, override_reason = p_reason, scored_by = 'Analyst'
     WHERE assessment_id = p_assessment_id AND risk_category_id = p_risk_category_id
     RETURNING id INTO v_id;
 
@@ -1358,6 +1430,16 @@ RETURNS TABLE (id UUID, display_name TEXT, email TEXT, role TEXT) AS $$
     FROM app_user
     WHERE is_active = true
     ORDER BY role, display_name;
+$$ LANGUAGE sql STABLE;
+
+-- ---- functions/users/func_getUserRole.sql ----
+-- DEF-002: lets a service validate that an actor id the caller supplied actually holds the role
+-- an action requires (e.g. CastVoteAsync requires CommitteeMember), instead of trusting the id at
+-- face value. Not a substitute for deriving identity from a validated token - see DevBypassAuthHandler.cs
+-- and DEF-010 for why that isn't wired up in this pass.
+CREATE OR REPLACE FUNCTION func_getUserRole(p_user_id UUID)
+RETURNS TEXT AS $$
+    SELECT role FROM app_user WHERE id = p_user_id AND is_active = true;
 $$ LANGUAGE sql STABLE;
 
 -- ============================== seed ==================================================
@@ -1419,8 +1501,11 @@ INSERT INTO change_request_type_category_map (change_type, risk_category_id, wei
     ('Product', '22222222-2222-2222-2222-222222222222', 'Secondary'),
     ('Feature', '22222222-2222-2222-2222-222222222221', 'Primary'),
     ('Process', '22222222-2222-2222-2222-222222222224', 'Primary'),
+    -- DEF-012: CLAUDE.md lists both categories for Vendor with no "(heaviest)" qualifier - unlike
+    -- the Geography/CustomerSegment rows below, which do call one out - so both are Primary here,
+    -- not left to the model's discretion which one to include.
     ('Vendor', '22222222-2222-2222-2222-222222222222', 'Primary'),
-    ('Vendor', '22222222-2222-2222-2222-222222222224', 'Secondary'),
+    ('Vendor', '22222222-2222-2222-2222-222222222224', 'Primary'),
     ('Geography', '22222222-2222-2222-2222-222222222223', 'Primary'),
     ('Geography', '22222222-2222-2222-2222-222222222221', 'Secondary'),
     ('CustomerSegment', '22222222-2222-2222-2222-222222222222', 'Primary')
@@ -1436,6 +1521,31 @@ SELECT rc.id, 0.85, u.id, 'Initial MVP default - see docs/architecture/architect
 FROM risk_category rc, app_user u
 WHERE u.auth0_subject = 'seed|admin-1'
   AND NOT EXISTS (SELECT 1 FROM scoring_config sc WHERE sc.risk_category_id = rc.id);
+
+-- ---- seed/seed_controls.sql ----
+-- DEF-013: the controls library was entirely empty (0 rows for every category), so
+-- Scoring/Controls/{riskCategoryId} always returned [] and the UI could never credit a control -
+-- US-7.1 AC3 ("trace which specific controls were credited") had nothing to trace. Run after
+-- seed_ffiec_framework.sql (references its risk_category ids).
+INSERT INTO control (risk_category_id, name, description) VALUES
+    ('22222222-2222-2222-2222-222222222221', 'Wire transfer transaction monitoring', 'Automated rule-based monitoring of outbound/inbound wire transfers for structuring and high-risk counterparties.'),
+    ('22222222-2222-2222-2222-222222222221', 'Trade finance dual review', 'Second-reviewer sign-off on trade finance instruments above a defined value threshold.'),
+    ('22222222-2222-2222-2222-222222222221', 'Prepaid access load limits', 'System-enforced daily/monthly load and reload limits on prepaid access products.'),
+    ('22222222-2222-2222-2222-222222222221', 'Correspondent banking due diligence', 'Periodic AML risk-rating review of correspondent banking relationships.'),
+
+    ('22222222-2222-2222-2222-222222222222', 'Enhanced due diligence for PEPs', 'Mandatory enhanced due diligence and senior-management sign-off before onboarding a politically exposed person.'),
+    ('22222222-2222-2222-2222-222222222222', 'Beneficial ownership verification', 'Verification of beneficial ownership to the 25% threshold for legal-entity customers at onboarding.'),
+    ('22222222-2222-2222-2222-222222222222', 'Cash-intensive business monitoring thresholds', 'Tiered transaction-monitoring thresholds calibrated to a cash-intensive business''s expected activity.'),
+    ('22222222-2222-2222-2222-222222222222', 'MSB registration verification', 'Verification of FinCEN MSB registration status prior to account opening.'),
+
+    ('22222222-2222-2222-2222-222222222223', 'OFAC sanctions screening', 'Real-time screening of parties and transactions against OFAC and other sanctions lists.'),
+    ('22222222-2222-2222-2222-222222222223', 'FATF high-risk jurisdiction escalation', 'Automatic escalation to FCRM review for activity involving a FATF high-risk or monitored jurisdiction.'),
+    ('22222222-2222-2222-2222-222222222223', 'Geographic risk scoring model', 'Country-level risk scoring feeding into customer and transaction risk ratings.'),
+
+    ('22222222-2222-2222-2222-222222222224', 'Non-face-to-face identity verification', 'Documentary and non-documentary identity verification for online/non-face-to-face account opening.'),
+    ('22222222-2222-2222-2222-222222222224', 'Third-party agent oversight program', 'Periodic audit and monitoring of third-party agents acting on the bank''s behalf.'),
+    ('22222222-2222-2222-2222-222222222224', 'Correspondent relationship due diligence', 'Due diligence on the delivery-channel risk of correspondent banking relationships.')
+ON CONFLICT (risk_category_id, name) DO NOTHING;
 
 -- ---- seed/seed_policy_corpus.sql ----
 -- A small, real-excerpt policy corpus so Epic 3's full-text search (func_searchPolicyChunks) has
@@ -1466,8 +1576,39 @@ INSERT INTO policy_chunk (policy_document_id, risk_category_id, section_ref, chu
      'Geographic risk considers a bank''s exposure to jurisdictions identified by FATF as having strategic AML/CFT deficiencies, countries subject to OFAC sanctions programs, and domestic High Intensity Financial Crime Areas (HIFCAs). Products, customers, and transactions tied to these locations warrant additional scrutiny.'),
     ('33333333-3333-3333-3333-333333333331', '22222222-2222-2222-2222-222222222224',
      'Risks Associated with Money Laundering and Terrorist Financing - Delivery Channels',
-     'Non-face-to-face account opening and transaction channels, including online and mobile banking, and reliance on third-party agents or correspondent relationships to deliver products, reduce a bank''s ability to verify customer identity and intent directly, and should be factored into the overall risk assessment of a proposed change.')
-;
+     'Non-face-to-face account opening and transaction channels, including online and mobile banking, and reliance on third-party agents or correspondent relationships to deliver products, reduce a bank''s ability to verify customer identity and intent directly, and should be factored into the overall risk assessment of a proposed change.'),
+
+    -- DEF-032: the corpus was too thin - a broad query returned only 5 passages and "wire
+    -- transfer" / "high-risk jurisdiction" returned nothing at all, despite both being core
+    -- FFIEC/FATF topics. These additional excerpts broaden coverage across all four categories.
+    ('33333333-3333-3333-3333-333333333331', '22222222-2222-2222-2222-222222222221',
+     'Risks Associated with Money Laundering and Terrorist Financing - Wire Transfers',
+     'Wire transfers permit the rapid movement of funds between banks domestically and internationally and are a common vehicle for laundering illicit proceeds. A bank should retain complete originator and beneficiary information on wire transfers, screen transfers against sanctions lists, and apply enhanced scrutiny to wire activity that is inconsistent with a customer''s stated business or expected transaction profile.'),
+    ('33333333-3333-3333-3333-333333333331', '22222222-2222-2222-2222-222222222221',
+     'Risks Associated with Money Laundering and Terrorist Financing - Automated Clearing House',
+     'Automated Clearing House (ACH) transactions, particularly third-party payment processor relationships, can be used to originate a high volume of low-dollar transactions that individually evade scrutiny. A bank offering ACH origination services should understand the nature of the underlying payments being processed on its behalf.'),
+    ('33333333-3333-3333-3333-333333333331', '22222222-2222-2222-2222-222222222221',
+     'Risks Associated with Money Laundering and Terrorist Financing - Private Banking',
+     'Private banking relationships often involve higher-net-worth customers, complex account structures, and a greater expectation of confidentiality, all of which can be exploited to obscure the source of funds. Enhanced due diligence, including identification of the source of wealth, is expected for private banking customers.'),
+    ('33333333-3333-3333-3333-333333333331', '22222222-2222-2222-2222-222222222222',
+     'Risks Associated with Money Laundering and Terrorist Financing - Sanctions Screening of Customers',
+     'A bank''s customer due diligence program should include screening of new and existing customers against OFAC''s Specially Designated Nationals list and other applicable sanctions lists at onboarding and on an ongoing basis, with a documented process for resolving potential matches before an account is opened or a transaction is processed.'),
+    ('33333333-3333-3333-3333-333333333331', '22222222-2222-2222-2222-222222222222',
+     'Risks Associated with Money Laundering and Terrorist Financing - Prepaid Access Customers',
+     'Prepaid access products sold or distributed to customers, including general-purpose reloadable cards, can be used to structure funds below reporting thresholds or move value with limited identity verification. A bank should apply customer due diligence proportionate to the funding, reload, and redemption features offered.'),
+    ('33333333-3333-3333-3333-333333333331', '22222222-2222-2222-2222-222222222223',
+     'Risks Associated with Money Laundering and Terrorist Financing - High-Risk Jurisdictions',
+     'A bank should identify customers, products, and transactions connected to a high-risk jurisdiction, including a country identified by FATF as having strategic AML/CFT deficiencies, before establishing or continuing the relationship, and apply enhanced due diligence commensurate with the jurisdiction''s risk profile.'),
+    ('33333333-3333-3333-3333-333333333331', '22222222-2222-2222-2222-222222222223',
+     'Risks Associated with Money Laundering and Terrorist Financing - OFAC Sanctioned Countries',
+     'Transactions or relationships involving a country subject to a comprehensive OFAC sanctions program are generally prohibited absent a specific license, and a bank should have controls in place to identify and block such activity before it settles.'),
+    ('33333333-3333-3333-3333-333333333331', '22222222-2222-2222-2222-222222222223',
+     'Risks Associated with Money Laundering and Terrorist Financing - Domestic High Intensity Financial Crime Areas',
+     'Domestic High Intensity Financial Crime Areas (HIFCAs) are geographic regions designated for concentrated law enforcement attention because of elevated money laundering activity; a bank with a significant footprint in a HIFCA should factor that geographic concentration into its overall risk assessment.'),
+    ('33333333-3333-3333-3333-333333333331', '22222222-2222-2222-2222-222222222224',
+     'Risks Associated with Money Laundering and Terrorist Financing - Third-Party Agents',
+     'A bank that relies on third-party agents to open accounts or process transactions on its behalf should conduct due diligence on the agent, monitor the agent''s activity, and periodically audit the agent''s compliance with the bank''s AML program, since the delivery channel itself does not reduce the bank''s own compliance obligations.')
+ON CONFLICT (policy_document_id, section_ref) DO NOTHING;
 
 -- ---- seed/seed_workflow_rules.sql ----
 -- Default workflow rules (Epic 10, US-10.2). Run after seed_dev_users.sql.

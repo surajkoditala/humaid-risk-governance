@@ -20,7 +20,11 @@ BEGIN
     VALUES (v_id, p_change_request_id, p_file_name, p_content_type, p_storage_path, p_extracted_text, v_version, p_uploaded_by_user_id);
 
     IF p_supersedes_attachment_id IS NOT NULL THEN
-        UPDATE change_request_attachment SET superseded_by_attachment_id = v_id WHERE id = p_supersedes_attachment_id;
+        -- DEF-008: "id" alone is ambiguous here - it matches both this function's "id" OUT
+        -- parameter (from RETURNS TABLE) and the table's own id column, and PL/pgSQL raises
+        -- "column reference is ambiguous" rather than picking one. Table-qualifying resolves it.
+        UPDATE change_request_attachment SET superseded_by_attachment_id = v_id
+            WHERE change_request_attachment.id = p_supersedes_attachment_id;
     END IF;
 
     INSERT INTO audit_event (change_request_id, entity_type, entity_id, action, actor_user_id, actor_label, after_value)

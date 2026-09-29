@@ -13,11 +13,21 @@ DECLARE
     v_mitigation_factor NUMERIC;
     v_residual NUMERIC;
 BEGIN
-    SELECT max_mitigation_factor INTO v_mitigation_factor
-    FROM scoring_config WHERE risk_category_id = p_risk_category_id AND is_active = true;
+    -- DEF-016: use the config that was active when THIS assessment started
+    -- (assessment.created_at), not whatever is active right now - US-10.1 AC1: "takes effect only
+    -- for assessments started after the change... existing in-flight assessments are unaffected."
+    -- scoring_config is versioned per category (func_upsertScoringConfig never updates a row in
+    -- place, only flips is_active and inserts a new one), so "the version in force at time T" is
+    -- simply the most recent row created at or before T.
+    SELECT sc.max_mitigation_factor INTO v_mitigation_factor
+    FROM scoring_config sc
+    JOIN assessment a ON a.id = p_assessment_id
+    WHERE sc.risk_category_id = p_risk_category_id AND sc.created_at <= a.created_at
+    ORDER BY sc.created_at DESC
+    LIMIT 1;
 
     IF v_mitigation_factor IS NULL THEN
-        RAISE EXCEPTION 'No active scoring configuration for risk category %', p_risk_category_id;
+        RAISE EXCEPTION 'No scoring configuration was active for risk category % when this assessment started', p_risk_category_id;
     END IF;
 
     v_residual := p_inherent_rating - (p_control_effectiveness * v_mitigation_factor);

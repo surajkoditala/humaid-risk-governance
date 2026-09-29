@@ -42,8 +42,11 @@ INSERT INTO change_request_type_category_map (change_type, risk_category_id, wei
     ('Product', '22222222-2222-2222-2222-222222222222', 'Secondary'),
     ('Feature', '22222222-2222-2222-2222-222222222221', 'Primary'),
     ('Process', '22222222-2222-2222-2222-222222222224', 'Primary'),
+    -- DEF-012: CLAUDE.md lists both categories for Vendor with no "(heaviest)" qualifier - unlike
+    -- the Geography/CustomerSegment rows below, which do call one out - so both are Primary here,
+    -- not left to the model's discretion which one to include.
     ('Vendor', '22222222-2222-2222-2222-222222222222', 'Primary'),
-    ('Vendor', '22222222-2222-2222-2222-222222222224', 'Secondary'),
+    ('Vendor', '22222222-2222-2222-2222-222222222224', 'Primary'),
     ('Geography', '22222222-2222-2222-2222-222222222223', 'Primary'),
     ('Geography', '22222222-2222-2222-2222-222222222221', 'Secondary'),
     ('CustomerSegment', '22222222-2222-2222-2222-222222222222', 'Primary')

@@ -94,6 +94,25 @@ namespace Humaid.RiskGovernance.AdminUI.AI
                     Rationale = proposal.Rationale ?? string.Empty,
                 });
             }
+
+            // DEF-012: the model's inclusion of the deterministic change-type -> category mapping
+            // from CLAUDE.md (e.g. Vendor onboarding -> Customers/Entities + Delivery Channels) was
+            // left entirely to the model's judgment, so a category with Weight="Primary" would
+            // sometimes not appear across otherwise-identical requests. Add back any Primary
+            // category the model's own response omitted - deterministically, not model-generated -
+            // so the baseline mapping is guaranteed regardless of what the model chose to include.
+            var proposedIds = result.Select(r => r.RiskCategoryId).ToHashSet();
+            foreach (var primary in defaults.Where(d => d.Weight == "Primary" && !proposedIds.Contains(d.RiskCategoryId)))
+            {
+                result.Add(new CategoryMappingProposal
+                {
+                    RiskCategoryId = primary.RiskCategoryId,
+                    CategoryCode = primary.Code,
+                    Citation = primary.CitationSection,
+                    Rationale = $"Deterministically required for a {changeType} change per the documented FFIEC change-type mapping.",
+                });
+            }
+
             return result;
         }
 

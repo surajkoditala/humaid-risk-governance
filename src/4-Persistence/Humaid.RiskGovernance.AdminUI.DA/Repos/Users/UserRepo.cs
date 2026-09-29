@@ -19,5 +19,11 @@ namespace Humaid.RiskGovernance.AdminUI.DA.Repos.Users
             var rows = await conn.QueryAsync<AppUser>("SELECT * FROM func_getAllUsers()");
             return rows.AsList();
         }
+
+        public async Task<string?> GetRoleAsync(Guid userId)
+        {
+            await using var conn = await _connectionFactory.OpenAsync();
+            return await conn.QuerySingleOrDefaultAsync<string?>("SELECT func_getUserRole(@userId)", new { userId });
+        }
     }
 }

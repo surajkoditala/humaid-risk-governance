@@ -27,15 +27,13 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.Committee
         public Task<IActionResult> Route([FromBody] RouteRequest request) =>
             ExecuteAsync(async () =>
             {
-                try
-                {
-                    await _committeeService.RouteToCommitteeAsync(request.AssessmentId, request.ActorUserId);
-                    return OperationResult<string>.Success("Routed");
-                }
-                catch (Exception ex) when (ex.Message.Contains("must be Finalized", StringComparison.OrdinalIgnoreCase))
-                {
-                    return OperationResult<string>.BadRequest(ex.Message);
-                }
+                // "must be Finalized" is func_routeToCommittee's own RAISE EXCEPTION - a
+                // PostgresException (RaiseException), not a C# exception - so BaseApiController's
+                // own Postgres handling already maps it to a clean 400. The catch this used to
+                // have here duplicated that by string-matching ex.Message, which is both redundant
+                // and fragile (AI review on PR #60 flagged the same anti-pattern elsewhere).
+                await _committeeService.RouteToCommitteeAsync(request.AssessmentId, request.ActorUserId);
+                return OperationResult<string>.Success("Routed");
             }, "Failed to route assessment to committee.");
 
         [HttpGet("Queue")]
@@ -62,7 +60,7 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.Committee
                     return OperationResult<Guid>.BadRequest(
                         "Approve-with-conditions requires conditions text; reject/defer require a rationale.");
                 }
-                catch (InvalidOperationException ex)
+                catch (ValidationException ex)
                 {
                     return OperationResult<Guid>.BadRequest(ex.Message);
                 }

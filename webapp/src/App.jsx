@@ -36,9 +36,16 @@ function DevUserSwitcher() {
 
   return (
     <Select value={currentUser?.id || ''} onValueChange={selectUser}>
-      <SelectTrigger className="w-40 sm:w-56" size="sm">
+      {/* DEF-025: a fixed w-40/w-56 clipped "Jordan Blake - CommitteeMember" mid-word with no
+          ellipsis or tooltip - exactly the role text that decides what the user can do. Let the
+          trigger grow to fit (within a cap) and fall back to a title tooltip past that. */}
+      <SelectTrigger className="w-auto max-w-[240px] min-w-40 sm:min-w-56" size="sm">
         <SelectValue placeholder="Acting as…">
-          {currentUser ? `${currentUser.displayName} — ${currentUser.role}` : 'Acting as…'}
+          {currentUser && (
+            <span className="truncate" title={`${currentUser.displayName} — ${currentUser.role}`}>
+              {currentUser.displayName} — {currentUser.role}
+            </span>
+          )}
         </SelectValue>
       </SelectTrigger>
       <SelectContent>

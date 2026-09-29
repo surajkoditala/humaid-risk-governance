@@ -18,8 +18,14 @@ namespace Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Assessment
     /// </summary>
     public class AssessmentReadiness
     {
-        public bool IsReady => OutstandingNarrativeSections.Count == 0 && CategoriesMissingPolicyReliance.Count == 0;
+        // DEF-001: an assessment with zero mapped categories used to pass vacuously - both lists
+        // below start (and stay) empty, so nothing looked outstanding. NoCategoriesMapped and
+        // CategoriesMissingScore close that: "nothing to review" is not the same as "reviewed."
+        public bool IsReady => !NoCategoriesMapped && OutstandingNarrativeSections.Count == 0
+            && CategoriesMissingPolicyReliance.Count == 0 && CategoriesMissingScore.Count == 0;
+        public bool NoCategoriesMapped { get; set; }
         public List<string> OutstandingNarrativeSections { get; set; } = [];
         public List<string> CategoriesMissingPolicyReliance { get; set; } = [];
+        public List<string> CategoriesMissingScore { get; set; } = [];
     }
 }

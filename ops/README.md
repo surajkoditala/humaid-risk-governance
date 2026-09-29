@@ -96,6 +96,7 @@ local dev to Azure, only where each value comes from.
 | `CORS_ALLOWED_ORIGINS` | `["http://localhost:3000"]` | the deployed webapp's origin |
 | `AI_PROVIDER` | `Anthropic` | `AzureFoundry` once the Foundry project exists |
 | `ANTHROPIC_API_KEY` / `ANTHROPIC_MODEL` | dev key, if using the Anthropic path | Key Vault reference, if still using the Anthropic path |
+| `ANTHROPIC_WORKSPACE_ID` | required only if the key above is Organization-scoped rather than workspace-scoped (Anthropic 400s every call otherwise) - console.anthropic.com → Settings → Workspaces → the workspace → Overview | same |
 | `FOUNDRY_PROJECT_ENDPOINT` / `FOUNDRY_API_KEY` / `FOUNDRY_MODEL_DEPLOYMENT` | unset until the Foundry project exists | the Foundry project's own endpoint/key/deployed model name |
 | `MOCK_SYSTEMS_BASE_URL` | `http://localhost:5220` | the Mock Systems Container App's internal URL |
 | `BLOB_STORAGE_CONNECTION_STRING` | Azurite's well-known local emulator key (not a secret) | Storage Account connection string (Key Vault) |

@@ -1,0 +1,18 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "workbench-api",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "src/1-API/Humaid.RiskGovernance.AdminUI.Web"],
+      "port": 5210,
+      "url": "http://localhost:5210"
+    },
+    {
+      "name": "webapp",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "webapp", "run", "dev"],
+      "port": 3000
+    }
+  ]
+}
