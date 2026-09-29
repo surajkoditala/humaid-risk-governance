@@ -52,20 +52,20 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.ChangeRequests
             }, "Failed to fetch change request.");
 
         [HttpGet("ForUser/{userId:guid}")]
-        public Task<IActionResult> GetForUser(Guid userId) =>
+        public Task<IActionResult> GetForUser(Guid userId, [FromQuery] GridQuery query) =>
             ExecuteAsync(async () =>
             {
-                var requests = await _changeRequestService.GetMyRequestsAsync(userId);
-                return OperationResult<IReadOnlyList<ChangeRequestSummary>>.Success(requests);
+                var requests = await _changeRequestService.GetMyRequestsAsync(userId, query);
+                return OperationResult<PagedResult<ChangeRequestSummary>>.Success(requests);
             }, "Failed to fetch change requests.");
 
         /// <summary>The analyst inbox - every change request, not scoped to one submitter.</summary>
         [HttpGet]
-        public Task<IActionResult> GetAll() =>
+        public Task<IActionResult> GetAll([FromQuery] GridQuery query) =>
             ExecuteAsync(async () =>
             {
-                var requests = await _changeRequestService.GetAllAsync();
-                return OperationResult<IReadOnlyList<ChangeRequestSummary>>.Success(requests);
+                var requests = await _changeRequestService.GetAllAsync(query);
+                return OperationResult<PagedResult<ChangeRequestSummary>>.Success(requests);
             }, "Failed to fetch change requests.");
 
         [HttpPost("AttachDocument")]

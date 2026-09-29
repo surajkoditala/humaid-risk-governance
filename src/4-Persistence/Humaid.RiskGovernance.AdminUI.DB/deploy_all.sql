@@ -681,16 +681,70 @@ $$ LANGUAGE plpgsql;
 
 -- ---- functions/change_requests/func_getAllChangeRequests.sql ----
 -- The analyst-facing inbox - "every submitted change request", not scoped to one submitter.
--- Mirrors func_getChangeRequestsForUser.sql minus the WHERE.
-CREATE OR REPLACE FUNCTION func_getAllChangeRequests()
+-- Mirrors func_getChangeRequestsForUser.sql minus the WHERE on submitted_by_user_id.
+--
+-- Grid standard (filters/sort/server-side paging): p_sort_by/p_sort_dir only ever select a
+-- column from the fixed v_column mapping below - the caller's values are never concatenated
+-- directly into SQL text, so building the ORDER BY dynamically here stays injection-safe.
+CREATE OR REPLACE FUNCTION func_getAllChangeRequests(
+    p_status TEXT DEFAULT NULL,
+    p_change_type TEXT DEFAULT NULL,
+    p_search TEXT DEFAULT NULL,
+    p_sort_by TEXT DEFAULT NULL,
+    p_sort_dir TEXT DEFAULT NULL,
+    p_page INT DEFAULT 1,
+    p_page_size INT DEFAULT 10
+)
 RETURNS TABLE (
     id UUID, request_number TEXT, change_type TEXT, title TEXT, status TEXT,
-    submitted_at TIMESTAMPTZ, days_elapsed INT
+    submitted_at TIMESTAMPTZ, days_elapsed INT, total_count BIGINT
 ) AS $$
-    SELECT c.id, c.request_number, c.change_type, c.title, c.status, c.submitted_at,
-           EXTRACT(DAY FROM now() - c.submitted_at)::INT AS days_elapsed
-    FROM change_request c
-    ORDER BY c.submitted_at DESC;
+DECLARE
+    v_column TEXT := CASE p_sort_by
+        WHEN 'requestNumber' THEN 'c.request_number'
+        WHEN 'changeType' THEN 'c.change_type'
+        WHEN 'title' THEN 'c.title'
+        WHEN 'status' THEN 'c.status'
+        WHEN 'daysElapsed' THEN 'c.submitted_at'
+        ELSE 'c.submitted_at'
+    END;
+    -- days_elapsed counts down as submitted_at counts up, so "largest days elapsed first" is
+    -- submitted_at ASC, not DESC - flip the direction for that one column only.
+    v_direction TEXT := CASE
+        WHEN p_sort_by = 'daysElapsed' THEN (CASE WHEN lower(p_sort_dir) = 'asc' THEN 'DESC' ELSE 'ASC' END)
+        ELSE (CASE WHEN lower(p_sort_dir) = 'desc' THEN 'DESC' ELSE 'ASC' END)
+    END;
+    v_page INT := GREATEST(COALESCE(p_page, 1), 1);
+    v_page_size INT := LEAST(GREATEST(COALESCE(p_page_size, 10), 1), 200);
+BEGIN
+    -- No sort picked yet (first load) - keep this function's original default: newest first.
+    IF p_sort_by IS NULL THEN
+        v_column := 'c.submitted_at';
+        v_direction := 'DESC';
+    END IF;
+
+    RETURN QUERY EXECUTE format(
+        'SELECT c.id, c.request_number, c.change_type, c.title, c.status, c.submitted_at,
+                EXTRACT(DAY FROM now() - c.submitted_at)::INT AS days_elapsed,
+                COUNT(*) OVER()::BIGINT AS total_count
+         FROM change_request c
+         WHERE ($1::TEXT IS NULL OR c.status = $1)
+           AND ($2::TEXT IS NULL OR c.change_type = $2)
+           AND ($3::TEXT IS NULL OR c.title ILIKE ''%%'' || $3 || ''%%'' OR c.request_number ILIKE ''%%'' || $3 || ''%%'')
+         ORDER BY %s %s NULLS LAST, c.id
+         LIMIT $4 OFFSET $5',
+        v_column, v_direction
+    ) USING p_status, p_change_type, p_search, v_page_size, (v_page - 1) * v_page_size;
+END;
+$$ LANGUAGE plpgsql STABLE;
+
+-- ---- functions/change_requests/func_getAttachments.sql ----
+CREATE OR REPLACE FUNCTION func_getAttachments(p_change_request_id UUID)
+RETURNS TABLE (id UUID, file_name TEXT, content_type TEXT, storage_path TEXT, version_number INT, uploaded_at TIMESTAMPTZ) AS $$
+    SELECT a.id, a.file_name, a.content_type, a.storage_path, a.version_number, a.uploaded_at
+    FROM change_request_attachment a
+    WHERE a.change_request_id = p_change_request_id AND a.superseded_by_attachment_id IS NULL
+    ORDER BY a.uploaded_at;
 $$ LANGUAGE sql STABLE;
 
 -- ---- functions/change_requests/func_getAttachmentText.sql ----
@@ -706,15 +760,6 @@ CREATE OR REPLACE FUNCTION func_getAttachmentText(p_change_request_id UUID, p_at
 RETURNS TEXT AS $$
     SELECT extracted_text FROM change_request_attachment
     WHERE id = p_attachment_id AND change_request_id = p_change_request_id;
-$$ LANGUAGE sql STABLE;
-
--- ---- functions/change_requests/func_getAttachments.sql ----
-CREATE OR REPLACE FUNCTION func_getAttachments(p_change_request_id UUID)
-RETURNS TABLE (id UUID, file_name TEXT, content_type TEXT, storage_path TEXT, version_number INT, uploaded_at TIMESTAMPTZ) AS $$
-    SELECT a.id, a.file_name, a.content_type, a.storage_path, a.version_number, a.uploaded_at
-    FROM change_request_attachment a
-    WHERE a.change_request_id = p_change_request_id AND a.superseded_by_attachment_id IS NULL
-    ORDER BY a.uploaded_at;
 $$ LANGUAGE sql STABLE;
 
 -- ---- functions/change_requests/func_getChangeRequestById.sql ----
@@ -738,20 +783,67 @@ $$ LANGUAGE sql STABLE;
 -- outcome or its conditions (US-8.3 AC3). The committee's resolution lives in committee_decision,
 -- not on change_request itself (see func_recordCommitteeDecision.sql), so it's left-joined in here
 -- rather than the requester's list making one extra round trip per row.
-CREATE OR REPLACE FUNCTION func_getChangeRequestsForUser(p_user_id UUID)
+--
+-- Grid standard (filters/sort/server-side paging): p_sort_by/p_sort_dir only ever select a
+-- column from the fixed v_column mapping below - the caller's values are never concatenated
+-- directly into SQL text, so building the ORDER BY dynamically here stays injection-safe.
+CREATE OR REPLACE FUNCTION func_getChangeRequestsForUser(
+    p_user_id UUID,
+    p_status TEXT DEFAULT NULL,
+    p_change_type TEXT DEFAULT NULL,
+    p_search TEXT DEFAULT NULL,
+    p_sort_by TEXT DEFAULT NULL,
+    p_sort_dir TEXT DEFAULT NULL,
+    p_page INT DEFAULT 1,
+    p_page_size INT DEFAULT 10
+)
 RETURNS TABLE (
     id UUID, request_number TEXT, change_type TEXT, title TEXT, status TEXT,
-    submitted_at TIMESTAMPTZ, days_elapsed INT, decision_resolution TEXT, decision_conditions_text TEXT
+    submitted_at TIMESTAMPTZ, days_elapsed INT, decision_resolution TEXT, decision_conditions_text TEXT,
+    total_count BIGINT
 ) AS $$
-    SELECT c.id, c.request_number, c.change_type, c.title, c.status, c.submitted_at,
-           EXTRACT(DAY FROM now() - c.submitted_at)::INT AS days_elapsed,
-           d.resolution, d.conditions_text
-    FROM change_request c
-    LEFT JOIN assessment a ON a.change_request_id = c.id
-    LEFT JOIN committee_decision d ON d.assessment_id = a.id
-    WHERE c.submitted_by_user_id = p_user_id
-    ORDER BY c.submitted_at DESC;
-$$ LANGUAGE sql STABLE;
+DECLARE
+    v_column TEXT := CASE p_sort_by
+        WHEN 'requestNumber' THEN 'c.request_number'
+        WHEN 'changeType' THEN 'c.change_type'
+        WHEN 'title' THEN 'c.title'
+        WHEN 'status' THEN 'c.status'
+        WHEN 'daysElapsed' THEN 'c.submitted_at'
+        ELSE 'c.submitted_at'
+    END;
+    -- days_elapsed counts down as submitted_at counts up, so "largest days elapsed first" is
+    -- submitted_at ASC, not DESC - flip the direction for that one column only.
+    v_direction TEXT := CASE
+        WHEN p_sort_by = 'daysElapsed' THEN (CASE WHEN lower(p_sort_dir) = 'asc' THEN 'DESC' ELSE 'ASC' END)
+        ELSE (CASE WHEN lower(p_sort_dir) = 'desc' THEN 'DESC' ELSE 'ASC' END)
+    END;
+    v_page INT := GREATEST(COALESCE(p_page, 1), 1);
+    v_page_size INT := LEAST(GREATEST(COALESCE(p_page_size, 10), 1), 200);
+BEGIN
+    -- No sort picked yet (first load) - keep this function's original default: newest first.
+    IF p_sort_by IS NULL THEN
+        v_column := 'c.submitted_at';
+        v_direction := 'DESC';
+    END IF;
+
+    RETURN QUERY EXECUTE format(
+        'SELECT c.id, c.request_number, c.change_type, c.title, c.status, c.submitted_at,
+                EXTRACT(DAY FROM now() - c.submitted_at)::INT AS days_elapsed,
+                d.resolution, d.conditions_text,
+                COUNT(*) OVER()::BIGINT AS total_count
+         FROM change_request c
+         LEFT JOIN assessment a ON a.change_request_id = c.id
+         LEFT JOIN committee_decision d ON d.assessment_id = a.id
+         WHERE c.submitted_by_user_id = $1
+           AND ($2::TEXT IS NULL OR c.status = $2)
+           AND ($3::TEXT IS NULL OR c.change_type = $3)
+           AND ($4::TEXT IS NULL OR c.title ILIKE ''%%'' || $4 || ''%%'' OR c.request_number ILIKE ''%%'' || $4 || ''%%'')
+         ORDER BY %s %s NULLS LAST, c.id
+         LIMIT $5 OFFSET $6',
+        v_column, v_direction
+    ) USING p_user_id, p_status, p_change_type, p_search, v_page_size, (v_page - 1) * v_page_size;
+END;
+$$ LANGUAGE plpgsql STABLE;
 
 -- ---- functions/change_requests/func_requestClarification.sql ----
 CREATE OR REPLACE FUNCTION func_requestClarification(
@@ -842,17 +934,55 @@ $$ LANGUAGE sql STABLE;
 
 -- ---- functions/committee/func_getCommitteeQueue.sql ----
 -- US-8.1 AC1: everything currently sitting in the committee's decision queue.
-CREATE OR REPLACE FUNCTION func_getCommitteeQueue()
+--
+-- Grid standard (filters/sort/server-side paging): p_sort_by/p_sort_dir only ever select a
+-- column from the fixed v_column mapping below - the caller's values are never concatenated
+-- directly into SQL text, so building the ORDER BY dynamically here stays injection-safe. No
+-- status filter - this queue is always WHERE status = 'PendingCommittee' by definition.
+CREATE OR REPLACE FUNCTION func_getCommitteeQueue(
+    p_change_type TEXT DEFAULT NULL,
+    p_search TEXT DEFAULT NULL,
+    p_sort_by TEXT DEFAULT NULL,
+    p_sort_dir TEXT DEFAULT NULL,
+    p_page INT DEFAULT 1,
+    p_page_size INT DEFAULT 10
+)
 RETURNS TABLE (
     assessment_id UUID, change_request_id UUID, request_number TEXT,
-    change_type TEXT, title TEXT, routed_at TIMESTAMPTZ
+    change_type TEXT, title TEXT, routed_at TIMESTAMPTZ, total_count BIGINT
 ) AS $$
-    SELECT a.id, c.id, c.request_number, c.change_type, c.title, a.finalized_at
-    FROM change_request c
-    JOIN assessment a ON a.change_request_id = c.id
-    WHERE c.status = 'PendingCommittee'
-    ORDER BY a.finalized_at;
-$$ LANGUAGE sql STABLE;
+DECLARE
+    v_column TEXT := CASE p_sort_by
+        WHEN 'requestNumber' THEN 'c.request_number'
+        WHEN 'changeType' THEN 'c.change_type'
+        WHEN 'title' THEN 'c.title'
+        WHEN 'routedAt' THEN 'a.finalized_at'
+        ELSE 'a.finalized_at'
+    END;
+    v_direction TEXT := CASE WHEN lower(p_sort_dir) = 'desc' THEN 'DESC' ELSE 'ASC' END;
+    v_page INT := GREATEST(COALESCE(p_page, 1), 1);
+    v_page_size INT := LEAST(GREATEST(COALESCE(p_page_size, 10), 1), 200);
+BEGIN
+    -- No sort picked yet (first load) - keep this function's original default: oldest-routed first.
+    IF p_sort_by IS NULL THEN
+        v_column := 'a.finalized_at';
+        v_direction := 'ASC';
+    END IF;
+
+    RETURN QUERY EXECUTE format(
+        'SELECT a.id, c.id, c.request_number, c.change_type, c.title, a.finalized_at,
+                COUNT(*) OVER()::BIGINT AS total_count
+         FROM change_request c
+         JOIN assessment a ON a.change_request_id = c.id
+         WHERE c.status = ''PendingCommittee''
+           AND ($1::TEXT IS NULL OR c.change_type = $1)
+           AND ($2::TEXT IS NULL OR c.title ILIKE ''%%'' || $2 || ''%%'' OR c.request_number ILIKE ''%%'' || $2 || ''%%'')
+         ORDER BY %s %s NULLS LAST, c.id
+         LIMIT $3 OFFSET $4',
+        v_column, v_direction
+    ) USING p_change_type, p_search, v_page_size, (v_page - 1) * v_page_size;
+END;
+$$ LANGUAGE plpgsql STABLE;
 
 -- ---- functions/committee/func_getCommitteeVotes.sql ----
 CREATE OR REPLACE FUNCTION func_getCommitteeVotes(p_assessment_id UUID)
