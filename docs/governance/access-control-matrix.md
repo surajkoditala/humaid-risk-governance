@@ -8,20 +8,27 @@ cannot silently drift from what's enforced.
 
 ## Four roles, not three
 
-`app_user.role` (`schema/003_users.sql`) and the webapp's own nav (`App.jsx`) already had a fourth
-role, **Admin**, before this epic started — it owns platform configuration (Epic 10) in the
-existing UI, separate from Product Owner, FCRM Analyst, and Risk Committee Member. Epic 11 kept
-that split rather than folding Admin into Analyst: the person who tunes scoring thresholds and
-workflow rules should not be the same person who scores an assessment or votes on it. `AppRoles`
-(`Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Users`) is the source of truth for role names.
+The webapp's own nav (`App.jsx`) already had a fourth role, **Admin**, before this epic started —
+it owns platform configuration (Epic 10) in the existing UI, separate from Product Owner, FCRM
+Analyst, and Risk Committee Member. Epic 11 kept that split rather than folding Admin into Analyst:
+the person who tunes scoring thresholds and workflow rules should not be the same person who scores
+an assessment or votes on it. `AppRoles` (`Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Users`)
+is the source of truth for role names.
+
+**A user can hold more than one role** (Epic 11 follow-up — see
+`docs/governance/user-roles-and-screens.md`). Role membership lives in `app_user_role`
+(`schema/003_users.sql`), a join table rather than a single `app_user.role` column, so each grant
+gets its own actor and reason, audited the same way `workflow_rule`/`scoring_config` already are.
 
 ## How a role is established
 
 - **Real login (Auth0):** `AppUserClaimsTransformation` resolves the validated token's `sub` claim
-  to an `app_user` row via `func_getUserByAuth0Subject` and adds that row's `id`/`role` as claims —
-  discarding any role claim already on the incoming identity first. A caller with no matching,
-  active `app_user` row stays authenticated but gets no role, so every role-protected action
-  refuses them with 403.
+  to an `app_user` row via `func_getUserByAuth0Subject` and adds that row's `id` and every
+  `app_user_role` grant as claims — discarding any role claim already on the incoming identity
+  first. `[Authorize(Roles = "X,Y")]` OR-matches across however many role claims a caller carries,
+  so a multi-role caller satisfies any action open to any one of their roles. A caller with no
+  matching, active `app_user` row (or no role grants at all) stays authenticated but gets no role,
+  so every role-protected action refuses them with 403.
 - **Local dev (no Auth0 tenant):** `DevBypassAuthHandler` reads the `X-Dev-User-Id` header the
   webapp's "acting as" switcher sets (`webapp/src/auth/devUserId.js` / `DevUserContext.jsx`); the
   same claims transformation resolves that id via `func_getUserById`, so the exact same role checks

@@ -11,8 +11,9 @@ import { Endpoints, apiFetch } from '../lib/api.js'
 //   setDevUserId call - never let the two drift apart, or a request goes out "acting as" someone
 //   the screen isn't showing.
 // - Real Auth0 tenant: there is no switcher - GET /api/User/Me resolves the actual logged-in
-//   person's role from their app_user row (UserController.cs), and `users` is just that one person
-//   (DevUserSwitcher in App.jsx renders it as a read-only "who you are" display, not a picker).
+//   person's roles from their app_user_role grants (UserController.cs), and `users` is just that
+//   one person (DevUserSwitcher in App.jsx renders it as a read-only "who you are" display, not a
+//   picker) - a person holding several roles simply sees the union of every role's screens.
 const DevUserContext = createContext(null)
 
 const STORAGE_KEY = 'devUserId'
@@ -41,7 +42,7 @@ export function DevUserProvider({ children }) {
         }
       })
       // Real Auth0, no active app_user row yet (login not provisioned - see auth0-setup.md step 4):
-      // stays signed in with no role, same as the backend's own "authenticated but no role" case.
+      // stays signed in with no roles, same as the backend's own "authenticated but no role" case.
       .catch(() => setUsers([]))
       .finally(() => setLoading(false))
     // eslint-disable-next-line react-hooks/exhaustive-deps

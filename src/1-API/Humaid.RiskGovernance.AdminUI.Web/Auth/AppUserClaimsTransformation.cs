@@ -6,14 +6,15 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Auth
 
     /// <summary>
     /// Epic 11 - turns "this request carries a valid Auth0 access token" into "this request is user X
-    /// holding role Y". Runs after authentication on every request: it looks the caller's Auth0
-    /// subject up in <c>app_user</c> and adds that row's id and role as claims.
+    /// holding roles Y". Runs after authentication on every request: it looks the caller's Auth0
+    /// subject up in <c>app_user</c> and adds that row's id and every <c>app_user_role</c> grant as
+    /// claims.
     /// <para>
-    /// The database row is the only source of the role. Any role claim already on the incoming
+    /// The database rows are the only source of role. Any role claim already on the incoming
     /// identity (from a token, a proxy, anything) is discarded first, so a role can be granted or
-    /// revoked only by changing <c>app_user</c> - and does take effect on the very next request.
-    /// A caller with no active <c>app_user</c> row stays authenticated but gets no role, so every
-    /// role-protected endpoint refuses them with 403.
+    /// revoked only by changing <c>app_user_role</c> - and does take effect on the very next request.
+    /// A caller with no active <c>app_user</c> row, or no role grants at all, stays authenticated but
+    /// gets no role, so every role-protected endpoint refuses them with 403.
     /// </para>
     /// </summary>
     public class AppUserClaimsTransformation : IClaimsTransformation
@@ -54,7 +55,8 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Auth
 
             var appIdentity = new ClaimsIdentity();
             appIdentity.AddClaim(new Claim(AppClaimTypes.UserId, user.Id.ToString()));
-            appIdentity.AddClaim(new Claim(ClaimTypes.Role, user.Role));
+            foreach (var role in user.Roles)
+                appIdentity.AddClaim(new Claim(ClaimTypes.Role, role));
             appIdentity.AddClaim(new Claim(ClaimTypes.Name, user.DisplayName));
             clone.AddIdentity(appIdentity);
             return clone;

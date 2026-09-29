@@ -85,9 +85,21 @@ CREATE TABLE app_user (
     auth0_subject TEXT NOT NULL UNIQUE, -- Auth0 'sub' claim (synthetic 'seed|...' values for seeded dev users)
     email TEXT NOT NULL,
     display_name TEXT NOT NULL,
-    role TEXT NOT NULL CHECK (role IN ('ProductOwner','Analyst','CommitteeMember','Admin')),
     is_active BOOLEAN NOT NULL DEFAULT true,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Epic 11 follow-up: a user can hold more than one role, so role membership is a join table, not a
+-- single app_user.role column - each grant gets its own actor and reason, audited the same way
+-- workflow_rule/scoring_config already are (schema/010_scoring.sql, schema/012_configuration.sql),
+-- rather than being an opaque diff of an array column. See docs/governance/user-roles-and-screens.md.
+CREATE TABLE app_user_role (
+    user_id UUID NOT NULL REFERENCES app_user(id),
+    role TEXT NOT NULL CHECK (role IN ('ProductOwner','Analyst','CommitteeMember','Admin')),
+    granted_by_user_id UUID REFERENCES app_user(id), -- null for a seed/system grant, same convention as audit_event.actor_user_id
+    reason TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (user_id, role)
 );
 
 -- ---- schema/004_change_requests.sql ----
@@ -1352,37 +1364,47 @@ $$ LANGUAGE plpgsql;
 -- there's no real Auth0 login wired up yet (see DevBypassAuthHandler.cs). Not meant to survive
 -- real auth being wired in - a real deployment derives identity from the access token, not a
 -- public user-listing endpoint.
+--
+-- A user with no role grants at all is excluded (inner join) - same "not provisioned" treatment as
+-- func_getUserByAuth0Subject/func_getUserById below.
 CREATE OR REPLACE FUNCTION func_getAllUsers()
-RETURNS TABLE (id UUID, display_name TEXT, email TEXT, role TEXT) AS $$
-    SELECT id, display_name, email, role
-    FROM app_user
-    WHERE is_active = true
-    ORDER BY role, display_name;
+RETURNS TABLE (id UUID, display_name TEXT, email TEXT, roles TEXT[]) AS $$
+    SELECT u.id, u.display_name, u.email, array_agg(ur.role ORDER BY ur.role)
+    FROM app_user u
+    JOIN app_user_role ur ON ur.user_id = u.id
+    WHERE u.is_active = true
+    GROUP BY u.id, u.display_name, u.email
+    ORDER BY u.display_name;
 $$ LANGUAGE sql STABLE;
 
 -- ---- functions/users/func_getUserByAuth0Subject.sql ----
 -- Epic 11: resolves the caller's app_user from the Auth0 'sub' claim of the validated access
--- token. The app_user row is the single source of truth for the caller's role and identity, so
--- a role change or deactivation takes effect on the caller's next request - no token refresh.
--- Inactive users resolve to nothing (treated as not provisioned).
+-- token. The app_user_role rows are the single source of truth for the caller's roles, so a role
+-- grant/revoke takes effect on the caller's next request - no token refresh. Inactive users, and
+-- users with no role grants at all, resolve to nothing (treated as not provisioned).
 CREATE OR REPLACE FUNCTION func_getUserByAuth0Subject(p_auth0_subject TEXT)
-RETURNS TABLE (id UUID, display_name TEXT, email TEXT, role TEXT) AS $$
-    SELECT id, display_name, email, role
-    FROM app_user
-    WHERE auth0_subject = p_auth0_subject
-      AND is_active = true;
+RETURNS TABLE (id UUID, display_name TEXT, email TEXT, roles TEXT[]) AS $$
+    SELECT u.id, u.display_name, u.email, array_agg(ur.role ORDER BY ur.role)
+    FROM app_user u
+    JOIN app_user_role ur ON ur.user_id = u.id
+    WHERE u.auth0_subject = p_auth0_subject
+      AND u.is_active = true
+    GROUP BY u.id, u.display_name, u.email;
 $$ LANGUAGE sql STABLE;
 
 -- ---- functions/users/func_getUserById.sql ----
 -- Epic 11: resolves an app_user by its own id. Used only by the local-development "acting as"
 -- identity (DevBypassAuthHandler), where the caller names a seeded user directly instead of
--- presenting an Auth0 token. Inactive users resolve to nothing.
+-- presenting an Auth0 token. Inactive users, and users with no role grants at all, resolve to
+-- nothing.
 CREATE OR REPLACE FUNCTION func_getUserById(p_id UUID)
-RETURNS TABLE (id UUID, display_name TEXT, email TEXT, role TEXT) AS $$
-    SELECT id, display_name, email, role
-    FROM app_user
-    WHERE id = p_id
-      AND is_active = true;
+RETURNS TABLE (id UUID, display_name TEXT, email TEXT, roles TEXT[]) AS $$
+    SELECT u.id, u.display_name, u.email, array_agg(ur.role ORDER BY ur.role)
+    FROM app_user u
+    JOIN app_user_role ur ON ur.user_id = u.id
+    WHERE u.id = p_id
+      AND u.is_active = true
+    GROUP BY u.id, u.display_name, u.email;
 $$ LANGUAGE sql STABLE;
 
 -- ============================== seed ==================================================
@@ -1390,14 +1412,36 @@ $$ LANGUAGE sql STABLE;
 -- ---- seed/seed_dev_users.sql ----
 -- Synthetic users for local dev (100% synthetic per the hackathon's own constraint - never
 -- connects to a real system or real identities).
-INSERT INTO app_user (auth0_subject, email, display_name, role) VALUES
-    ('seed|product-owner-1', 'po1@example.bank', 'Priya Owens', 'ProductOwner'),
-    ('seed|analyst-1', 'analyst1@example.bank', 'Amara Chen', 'Analyst'),
-    ('seed|analyst-2', 'analyst2@example.bank', 'Sam Okafor', 'Analyst'),
-    ('seed|committee-1', 'committee1@example.bank', 'Jordan Blake', 'CommitteeMember'),
-    ('seed|committee-2', 'committee2@example.bank', 'Riley Voss', 'CommitteeMember'),
-    ('seed|admin-1', 'admin1@example.bank', 'Taylor Finch', 'Admin')
+INSERT INTO app_user (auth0_subject, email, display_name) VALUES
+    ('seed|product-owner-1', 'po1@example.bank', 'Priya Owens'),
+    ('seed|analyst-1', 'analyst1@example.bank', 'Amara Chen'),
+    ('seed|analyst-2', 'analyst2@example.bank', 'Sam Okafor'),
+    ('seed|committee-1', 'committee1@example.bank', 'Jordan Blake'),
+    ('seed|committee-2', 'committee2@example.bank', 'Riley Voss'),
+    ('seed|admin-1', 'admin1@example.bank', 'Taylor Finch'),
+    -- Team lead's own dev identity - holds every role so local testing/demoing can exercise the
+    -- full nav (union of all roles' screens) without switching "acting as" users. See Epic 11
+    -- follow-up in docs/governance/user-roles-and-screens.md.
+    ('seed|francis-1', 'mikodaray@gmail.com', 'Francis Daray')
 ON CONFLICT (auth0_subject) DO NOTHING;
+
+INSERT INTO app_user_role (user_id, role, reason)
+SELECT u.id, r.role, 'Initial seed grant'
+FROM app_user u
+JOIN LATERAL (
+    VALUES
+        ('seed|product-owner-1', 'ProductOwner'),
+        ('seed|analyst-1', 'Analyst'),
+        ('seed|analyst-2', 'Analyst'),
+        ('seed|committee-1', 'CommitteeMember'),
+        ('seed|committee-2', 'CommitteeMember'),
+        ('seed|admin-1', 'Admin'),
+        ('seed|francis-1', 'ProductOwner'),
+        ('seed|francis-1', 'Analyst'),
+        ('seed|francis-1', 'CommitteeMember'),
+        ('seed|francis-1', 'Admin')
+) AS r(auth0_subject, role) ON r.auth0_subject = u.auth0_subject
+ON CONFLICT (user_id, role) DO NOTHING;
 
 -- ---- seed/seed_ffiec_framework.sql ----
 -- The FFIEC BSA/AML risk framework from CLAUDE.md - run after seed_dev_users.sql (scoring_config

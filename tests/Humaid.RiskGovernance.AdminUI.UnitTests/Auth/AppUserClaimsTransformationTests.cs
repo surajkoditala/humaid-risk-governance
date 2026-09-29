@@ -32,14 +32,38 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Auth
         {
             var userId = Guid.NewGuid();
             _userService.Setup(s => s.GetByAuth0SubjectAsync("auth0|abc123"))
-                .ReturnsAsync(new AppUser { Id = userId, Role = AppRoles.Analyst, DisplayName = "Amara Chen" });
+                .ReturnsAsync(new AppUser { Id = userId, Roles = [AppRoles.Analyst], DisplayName = "Amara Chen" });
 
             var principal = Authenticated(new Claim(ClaimTypes.NameIdentifier, "auth0|abc123"));
             var result = await _sut.TransformAsync(principal);
 
             Assert.Equal(userId, result.GetAppUserId());
-            Assert.Equal(AppRoles.Analyst, result.GetAppRole());
+            Assert.Equal([AppRoles.Analyst], result.GetAppRoles());
             Assert.True(result.IsInRole(AppRoles.Analyst));
+        }
+
+        [Fact]
+        public async Task ResolvesEveryRoleGrantForAUserHoldingSeveral()
+        {
+            // Epic 11 follow-up: app_user_role, not a single app_user.role column - a caller can
+            // hold more than one role, and every one of them must land as its own claim so
+            // [Authorize(Roles = "X,Y")]'s built-in OR-matching sees all of them.
+            var userId = Guid.NewGuid();
+            _userService.Setup(s => s.GetByAuth0SubjectAsync("auth0|multi"))
+                .ReturnsAsync(new AppUser
+                {
+                    Id = userId,
+                    Roles = [AppRoles.ProductOwner, AppRoles.Analyst, AppRoles.CommitteeMember, AppRoles.Admin],
+                    DisplayName = "Francis Daray",
+                });
+
+            var principal = Authenticated(new Claim(ClaimTypes.NameIdentifier, "auth0|multi"));
+            var result = await _sut.TransformAsync(principal);
+
+            Assert.Equal(userId, result.GetAppUserId());
+            Assert.Equal(4, result.GetAppRoles().Count);
+            foreach (var role in AppRoles.All)
+                Assert.True(result.IsInRole(role));
         }
 
         [Fact]
@@ -52,7 +76,7 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Auth
 
             Assert.True(result.Identity!.IsAuthenticated);
             Assert.Null(result.GetAppUserId());
-            Assert.Null(result.GetAppRole());
+            Assert.Empty(result.GetAppRoles());
             Assert.False(result.IsInRole(AppRoles.Admin));
         }
 
@@ -61,7 +85,7 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Auth
         {
             var userId = Guid.NewGuid();
             _userService.Setup(s => s.GetByIdAsync(userId))
-                .ReturnsAsync(new AppUser { Id = userId, Role = AppRoles.CommitteeMember, DisplayName = "Jordan Blake" });
+                .ReturnsAsync(new AppUser { Id = userId, Roles = [AppRoles.CommitteeMember], DisplayName = "Jordan Blake" });
 
             // DevBypassAuthHandler always sets NameIdentifier to "system-dev" - the dev user id claim
             // must take priority over it, or "acting as" would never resolve a role locally.
@@ -72,7 +96,7 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Auth
             var result = await _sut.TransformAsync(principal);
 
             Assert.Equal(userId, result.GetAppUserId());
-            Assert.Equal(AppRoles.CommitteeMember, result.GetAppRole());
+            Assert.Equal([AppRoles.CommitteeMember], result.GetAppRoles());
             _userService.Verify(s => s.GetByAuth0SubjectAsync(It.IsAny<string>()), Times.Never);
         }
 
@@ -81,9 +105,9 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Auth
         {
             // A role claim from anywhere other than app_user (a forged/replayed token, a
             // misconfigured upstream proxy) must never survive the transformation - the database
-            // row is the only source of truth for the role.
+            // rows are the only source of truth for role.
             _userService.Setup(s => s.GetByAuth0SubjectAsync("auth0|abc123"))
-                .ReturnsAsync(new AppUser { Id = Guid.NewGuid(), Role = AppRoles.Analyst, DisplayName = "Amara Chen" });
+                .ReturnsAsync(new AppUser { Id = Guid.NewGuid(), Roles = [AppRoles.Analyst], DisplayName = "Amara Chen" });
 
             var principal = Authenticated(
                 new Claim(ClaimTypes.NameIdentifier, "auth0|abc123"),

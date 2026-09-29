@@ -1,5 +1,7 @@
 namespace Humaid.RiskGovernance.AdminUI.Web.Auth
 {
+    using System.Collections.Generic;
+    using System.Linq;
     using System.Security.Claims;
 
     /// <summary>
@@ -25,8 +27,9 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Auth
         public static Guid? GetAppUserId(this ClaimsPrincipal principal) =>
             Guid.TryParse(principal.FindFirst(AppClaimTypes.UserId)?.Value, out var id) ? id : null;
 
-        /// <summary>The caller's role (an <c>AppRoles</c> value), or null when not provisioned.</summary>
-        public static string? GetAppRole(this ClaimsPrincipal principal) =>
-            principal.FindFirst(ClaimTypes.Role)?.Value;
+        /// <summary>Every role the caller holds (each an <c>AppRoles</c> value) - empty when not
+        /// provisioned. A caller can hold more than one (Epic 11 follow-up).</summary>
+        public static IReadOnlyList<string> GetAppRoles(this ClaimsPrincipal principal) =>
+            principal.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList();
     }
 }

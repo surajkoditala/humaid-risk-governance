@@ -38,13 +38,13 @@ function DevUserSwitcher() {
     <Select value={currentUser?.id || ''} onValueChange={selectUser}>
       <SelectTrigger className="w-40 sm:w-56" size="sm">
         <SelectValue placeholder="Acting as…">
-          {currentUser ? `${currentUser.displayName} — ${currentUser.role}` : 'Acting as…'}
+          {currentUser ? `${currentUser.displayName} — ${currentUser.roles.join(', ')}` : 'Acting as…'}
         </SelectValue>
       </SelectTrigger>
       <SelectContent>
         {users.map((u) => (
           <SelectItem key={u.id} value={u.id}>
-            {u.displayName} — {u.role}
+            {u.displayName} — {u.roles.join(', ')}
           </SelectItem>
         ))}
       </SelectContent>
@@ -58,7 +58,9 @@ export default function App() {
   const [screen, setScreen] = useState(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
-  const visibleNavItems = NAV_ITEMS.filter((item) => !currentUser || item.roles.includes(currentUser.role))
+  const visibleNavItems = NAV_ITEMS.filter(
+    (item) => !currentUser || item.roles.some((r) => currentUser.roles.includes(r)),
+  )
   const activeScreen = screen && visibleNavItems.some((i) => i.key === screen) ? screen : visibleNavItems[0]?.key
 
   const signOut = () => {
