@@ -16,16 +16,22 @@ set -euo pipefail
 OUT="$BUILD_ARTIFACTSTAGINGDIRECTORY"
 RG="${SRE_RESOURCE_GROUP:?SRE_RESOURCE_GROUP not set}"
 
-WORKSPACE_ID=$(az monitor log-analytics workspace list -g "$RG" --query "[0].customerId" -o tsv)
+# Never wait on an interactive extension-install prompt on a fresh hosted
+# agent -- fail fast instead, so a missing extension can't hang the step.
+az config set extension.use_dynamic_install=yes_without_prompt --only-show-errors > /dev/null
+
+WORKSPACE_ID=$(timeout 30 az monitor log-analytics workspace list -g "$RG" --query "[0].customerId" -o tsv) || WORKSPACE_ID=""
 if [ -z "$WORKSPACE_ID" ]; then
-  echo "##vso[task.logissue type=warning]No Log Analytics workspace found in $RG -- skipping watchdog run."
+  echo "##vso[task.logissue type=warning]No Log Analytics workspace found in $RG (or the call timed out) -- skipping watchdog run."
   echo '{"signals": []}' > "$OUT/watchdog-signals.json"
   exit 0
 fi
 
 run_query() {
   local name="$1" kql="$2" rows
-  rows=$(az monitor log-analytics query --workspace "$WORKSPACE_ID" --analytics-query "$kql" -o json 2>/dev/null) || rows="[]"
+  # 30s cap per query: one slow/throttled call must not eat the whole step's
+  # 3-minute budget and block the other three signals from being collected.
+  rows=$(timeout 30 az monitor log-analytics query --workspace "$WORKSPACE_ID" --analytics-query "$kql" -o json 2>/dev/null) || rows="[]"
   jq -c --arg name "$name" --argjson rows "${rows:-[]}" '{name: $name, rows: $rows}'
 }
 
