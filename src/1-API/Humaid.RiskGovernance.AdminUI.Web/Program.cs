@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Humaid.RiskGovernance.AdminUI.AI;
 using Humaid.RiskGovernance.AdminUI.DA;
+using Humaid.RiskGovernance.AdminUI.DA.Migrations;
 using Humaid.RiskGovernance.AdminUI.DA.Repos.Assessment;
 using Humaid.RiskGovernance.AdminUI.DA.Repos.Audit;
 using Humaid.RiskGovernance.AdminUI.DA.Repos.CategoryMapping;
@@ -73,6 +74,9 @@ Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;
 QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// DEF-017: don't disclose the server implementation in every response.
+builder.WebHost.ConfigureKestrel(o => o.AddServerHeader = false);
 
 // Key Vault as a config source - added last (after CreateBuilder's own appsettings.json /
 // appsettings.{Environment}.json / env var providers), so it wins for any key it holds: the
@@ -317,6 +321,19 @@ builder.Services.AddScoped<IUserService, UserService>();
 
 var app = builder.Build();
 
+// US-12.1 / DEF-007: apply schema/functions/seed data before this process starts accepting
+// traffic - the DB folder was never copied into the image and nothing bootstrapped it, so a
+// fresh deploy previously started cleanly and 500'd on every request. Uncaught here on purpose:
+// a migration failure must halt startup, not let the host come up against an incomplete schema
+// (AC3). See Humaid.RiskGovernance.AdminUI.DB/README.md's "Automated migrations" section and
+// DbMigrationRunner.cs for the empty-database-vs-already-provisioned split.
+var dbFolderPath = ResolveDbFolderPath(app.Environment);
+var migrationRunner = new DbMigrationRunner(
+    app.Services.GetRequiredService<DapperConnectionFactory>(),
+    dbFolderPath,
+    app.Services.GetRequiredService<ILogger<DbMigrationRunner>>());
+await migrationRunner.RunAsync();
+
 // ---------------------------------------------------------------------------
 // HTTP pipeline
 // ---------------------------------------------------------------------------
@@ -343,6 +360,38 @@ if (app.Environment.IsDevelopment())
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
+// DEF-017: standard hardening headers - none of these were present on any response, an API-only
+// server in particular has no reason to ever be framed, sniffed, or leak the referring URL.
+//
+// AI review on PR #60: "default-src 'self'" alone makes connect-src fall back to 'self' too,
+// which blocks the SPA's own calls to Auth0's domain (silent token renewal, login) once a real
+// Auth0 tenant is configured - the dev bypass path never calls Auth0, so this went unnoticed
+// locally. Built once at startup, not per-request, since neither input changes at runtime.
+var contentSecurityPolicy = string.IsNullOrWhiteSpace(auth0Domain)
+    ? "default-src 'self'; frame-ancestors 'none'"
+    : $"default-src 'self'; frame-ancestors 'none'; connect-src 'self' https://{auth0Domain}";
+if (app.Environment.IsDevelopment())
+{
+    // Swagger UI (Development only, see UseSwaggerUI above) renders with inline scripts/styles.
+    contentSecurityPolicy += "; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'";
+}
+app.Use(async (context, next) =>
+{
+    var headers = context.Response.Headers;
+    headers["X-Content-Type-Options"] = "nosniff";
+    headers["X-Frame-Options"] = "DENY";
+    headers["Referrer-Policy"] = "no-referrer";
+    // 'self' (not 'none') - app.UseStaticFiles() above serves the webapp's own production build
+    // from this same origin in the single-container deployment shape, and it needs to load its
+    // own same-origin JS/CSS.
+    headers["Content-Security-Policy"] = contentSecurityPolicy;
+    if (context.Request.IsHttps)
+    {
+        headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains";
+    }
+    await next();
+});
+
 app.UseCors(WebappCorsPolicy);
 app.UseAuthentication();
 app.UseAuthorization();
@@ -350,3 +399,16 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+// The Dockerfile copies Humaid.RiskGovernance.AdminUI.DB to ./db next to the published DLLs, so
+// that's tried first; falling back to the sibling source folder makes this same code path apply
+// the schema automatically in local dev too (`dotnet run`), no manual psql step required.
+static string ResolveDbFolderPath(IHostEnvironment env)
+{
+    var containerPath = Path.Combine(env.ContentRootPath, "db");
+    if (Directory.Exists(containerPath))
+    {
+        return containerPath;
+    }
+    return Path.GetFullPath(Path.Combine(env.ContentRootPath, "..", "..", "4-Persistence", "Humaid.RiskGovernance.AdminUI.DB"));
+}

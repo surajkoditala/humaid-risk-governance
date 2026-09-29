@@ -37,8 +37,15 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.ChangeRequests
             {
                 if (RequireSelf<ChangeRequest>(input.SubmittedByUserId) is { } forbidden) return forbidden;
 
-                var created = await _changeRequestService.SubmitAsync(input);
-                return OperationResult<ChangeRequest>.Success(created);
+                try
+                {
+                    var created = await _changeRequestService.SubmitAsync(input);
+                    return OperationResult<ChangeRequest>.Success(created);
+                }
+                catch (ValidationException ex)
+                {
+                    return OperationResult<ChangeRequest>.BadRequest(ex.Message);
+                }
             }, "Failed to submit change request.");
 
         [HttpGet("{changeRequestId:guid}")]
@@ -84,8 +91,15 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.ChangeRequests
                 if (RequireSelf<object>(input.UploadedByUserId) is { } forbidden) return forbidden;
                 if (await OwnershipCheckAsync<object>(input.ChangeRequestId) is { } notOwner) return notOwner;
 
-                var (id, version) = await _changeRequestService.AttachDocumentAsync(input);
-                return OperationResult<object>.Success(new { id, version });
+                try
+                {
+                    var (id, version) = await _changeRequestService.AttachDocumentAsync(input);
+                    return OperationResult<object>.Success(new { id, version });
+                }
+                catch (ValidationException ex)
+                {
+                    return OperationResult<object>.BadRequest(ex.Message);
+                }
             }, "Failed to attach document.");
 
         /// <summary>Phase 3 Step 4 - a real uploaded file (multipart), not pasted text. Uploads to
@@ -100,10 +114,17 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.ChangeRequests
                 if (RequireSelf<object>(uploadedByUserId) is { } forbidden) return forbidden;
                 if (await OwnershipCheckAsync<object>(changeRequestId) is { } notOwner) return notOwner;
 
-                await using var stream = file.OpenReadStream();
-                var (id, version) = await _changeRequestService.AttachDocumentFileAsync(
-                    changeRequestId, file.FileName, file.ContentType, stream, uploadedByUserId, supersedesAttachmentId);
-                return OperationResult<object>.Success(new { id, version });
+                try
+                {
+                    await using var stream = file.OpenReadStream();
+                    var (id, version) = await _changeRequestService.AttachDocumentFileAsync(
+                        changeRequestId, file.FileName, file.ContentType, stream, uploadedByUserId, supersedesAttachmentId);
+                    return OperationResult<object>.Success(new { id, version });
+                }
+                catch (ValidationException ex)
+                {
+                    return OperationResult<object>.BadRequest(ex.Message);
+                }
             }, "Failed to attach document.");
 
         [HttpGet("{changeRequestId:guid}/Attachments")]

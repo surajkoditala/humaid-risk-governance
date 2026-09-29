@@ -47,9 +47,17 @@ export default function MyRequests() {
                 <TableRow key={r.id}>
                   <TableCell className="font-medium">{r.requestNumber}</TableCell>
                   <TableCell>{r.changeType}</TableCell>
-                  <TableCell>{r.title}</TableCell>
+                  <TableCell className="max-w-md whitespace-normal break-words" title={r.title}>
+                    {r.title}
+                  </TableCell>
                   <TableCell>
-                    <Badge variant={STATUS_VARIANT[r.status] || 'secondary'}>{r.status}</Badge>
+                    <Badge variant={STATUS_VARIANT[r.status] || 'secondary'}>
+                      {/* DEF-022: "Decisioned" alone told the requester nothing - show the actual outcome. */}
+                      {r.decisionResolution || r.status}
+                    </Badge>
+                    {r.decisionConditionsText && (
+                      <p className="mt-1 max-w-md text-xs text-muted-foreground">{r.decisionConditionsText}</p>
+                    )}
                   </TableCell>
                   <TableCell className="text-right">{r.daysElapsed}</TableCell>
                 </TableRow>

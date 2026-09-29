@@ -44,7 +44,7 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.Configuration
                     var id = await _workflowRuleService.UpsertAsync(input);
                     return OperationResult<Guid>.Success(id);
                 }
-                catch (InvalidOperationException ex)
+                catch (ValidationException ex)
                 {
                     return OperationResult<Guid>.BadRequest(ex.Message);
                 }

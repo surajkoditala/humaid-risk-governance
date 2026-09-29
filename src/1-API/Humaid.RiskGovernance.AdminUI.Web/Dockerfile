@@ -65,6 +65,11 @@ COPY src/2-Infrastructure/Humaid.RiskGovernance.AdminUI.Infrastructure/ src/2-In
 COPY src/3-Service/Humaid.RiskGovernance.AdminUI.Services/ src/3-Service/Humaid.RiskGovernance.AdminUI.Services/
 COPY src/3-Service/Humaid.RiskGovernance.AdminUI.AI/ src/3-Service/Humaid.RiskGovernance.AdminUI.AI/
 COPY src/4-Persistence/Humaid.RiskGovernance.AdminUI.DA/ src/4-Persistence/Humaid.RiskGovernance.AdminUI.DA/
+# DEF-007: this plain-SQL folder (schema/functions/migrations/seed, no .csproj) was never copied
+# into either service's image, so DbMigrationRunner had nothing to apply on a fresh deploy and
+# every request 500'd. Copied into the runtime stage below at ./db - see Program.cs's
+# ResolveDbFolderPath.
+COPY src/4-Persistence/Humaid.RiskGovernance.AdminUI.DB/ src/4-Persistence/Humaid.RiskGovernance.AdminUI.DB/
 
 RUN dotnet publish src/1-API/Humaid.RiskGovernance.AdminUI.Web/Humaid.RiskGovernance.AdminUI.Web.csproj \
     -c Release -o /app/publish --no-restore
@@ -73,6 +78,7 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 COPY --from=build /app/publish .
 COPY --from=webapp-build /webapp/dist ./wwwroot
+COPY --from=build /src/src/4-Persistence/Humaid.RiskGovernance.AdminUI.DB ./db
 
 ENV ASPNETCORE_URLS=http://+:8080
 EXPOSE 8080

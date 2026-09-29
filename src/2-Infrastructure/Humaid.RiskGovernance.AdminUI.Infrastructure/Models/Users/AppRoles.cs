@@ -2,7 +2,7 @@ namespace Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Users
 {
     /// <summary>
     /// Epic 11 - the role names an <see cref="AppUser"/> can hold. They must match the
-    /// <c>app_user.role</c> CHECK constraint (schema/003_users.sql). Every controller action
+    /// <c>app_user_role.role</c> CHECK constraint (schema/003_users.sql). Every controller action
     /// declares the roles allowed to call it with <c>[Authorize(Roles = ...)]</c> using these
     /// constants; the full action-by-role table is docs/governance/access-control-matrix.md and is
     /// pinned by AccessControlMatrixTests.

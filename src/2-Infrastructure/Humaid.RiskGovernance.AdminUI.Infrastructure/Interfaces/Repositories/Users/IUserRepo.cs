@@ -11,5 +11,11 @@ namespace Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.U
 
         /// <summary>Epic 11: the active user with this id, or null if none. Local-dev "acting as" only.</summary>
         Task<AppUser?> GetByIdAsync(Guid id);
+
+        /// <summary>DEF-002: role lookup used to validate a caller-supplied actor id actually
+        /// holds the role an action requires - false if the id doesn't resolve to an active user.
+        /// A membership check, not "the" role, since a user can hold more than one
+        /// (app_user_role, Epic 11 follow-up).</summary>
+        Task<bool> HasRoleAsync(Guid userId, string role);
     }
 }

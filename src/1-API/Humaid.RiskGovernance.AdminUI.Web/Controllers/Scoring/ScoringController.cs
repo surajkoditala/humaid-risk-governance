@@ -36,7 +36,7 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.Scoring
                     var id = await _scoringService.UpsertConfigAsync(input);
                     return OperationResult<Guid>.Success(id);
                 }
-                catch (InvalidOperationException ex)
+                catch (ValidationException ex)
                 {
                     return OperationResult<Guid>.BadRequest(ex.Message);
                 }
@@ -48,8 +48,15 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.Scoring
         public Task<IActionResult> Calculate([FromBody] CalculateRiskScoreInput input) =>
             ExecuteAsync(async () =>
             {
-                var score = await _scoringService.CalculateAsync(input);
-                return OperationResult<RiskScore>.Success(score);
+                try
+                {
+                    var score = await _scoringService.CalculateAsync(input);
+                    return OperationResult<RiskScore>.Success(score);
+                }
+                catch (ValidationException ex)
+                {
+                    return OperationResult<RiskScore>.BadRequest(ex.Message);
+                }
             }, "Failed to calculate risk score.");
 
         /// <summary>US-7.2: reason mandatory; rejects any value &lt;= 0.</summary>
@@ -65,7 +72,7 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.Scoring
                     var id = await _scoringService.OverrideAsync(input);
                     return OperationResult<Guid>.Success(id);
                 }
-                catch (InvalidOperationException ex)
+                catch (ValidationException ex)
                 {
                     return OperationResult<Guid>.BadRequest(ex.Message);
                 }

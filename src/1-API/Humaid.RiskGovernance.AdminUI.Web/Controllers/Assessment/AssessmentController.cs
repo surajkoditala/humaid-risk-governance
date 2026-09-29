@@ -59,7 +59,7 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.Assessment
                     await _assessmentService.FinalizeAsync(assessmentId, body.ActorUserId);
                     return OperationResult<string>.Success("Finalized");
                 }
-                catch (InvalidOperationException ex)
+                catch (ValidationException ex)
                 {
                     // US-6.3 AC1: lists what's outstanding rather than a generic failure.
                     return OperationResult<string>.BadRequest(ex.Message);

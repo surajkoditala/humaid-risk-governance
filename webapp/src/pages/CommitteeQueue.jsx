@@ -17,6 +17,12 @@ function VotePanel({ item, onBack }) {
   const [bump, setBump] = useState(0)
   const { data: votes } = useFetch(Endpoints.committee.votes(item.assessmentId), [bump])
   const { data: decision } = useFetch(Endpoints.committee.decision(item.assessmentId), [bump])
+  // DEF-021: the panel used to show only the title, vote form and vote list - no narrative,
+  // scores, cited policy or override history, so a member had to vote blind (US-8.2 AC1).
+  const { data: mapping } = useFetch(Endpoints.categoryMapping.get(item.assessmentId), [bump])
+  const { data: sections } = useFetch(Endpoints.narrative.sections(item.assessmentId), [bump])
+  const { data: scores } = useFetch(Endpoints.scoring.scores(item.assessmentId), [bump])
+  const { data: reliance } = useFetch(Endpoints.policyResearch.reliance(item.assessmentId), [bump])
   const [vote, setVote] = useState('')
   const [text, setText] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -68,6 +74,38 @@ function VotePanel({ item, onBack }) {
           <CardDescription>US-8.2 — every member's vote is recorded individually, never anonymized.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="space-y-3 rounded-md border p-3">
+            <p className="text-sm font-medium">Assessment (read-only)</p>
+            {(mapping || []).filter((m) => m.isActive).map((m) => {
+              const section = (sections || []).find((s) => s.riskCategoryId === m.riskCategoryId)
+              const score = (scores || []).find((s) => s.riskCategoryId === m.riskCategoryId)
+              const relied = (reliance || []).filter(
+                (r) => r.decision === 'ReliedUpon' && (r.riskCategoryId === null || r.riskCategoryId === m.riskCategoryId),
+              )
+              return (
+                <div key={m.riskCategoryId} className="space-y-1 border-t pt-2 first:border-t-0 first:pt-0">
+                  <p className="text-sm font-medium">{m.categoryName}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {m.source === 'AiProposed' ? `AI proposed — ${m.aiCitation || m.citationSection}` : 'Analyst added'}
+                  </p>
+                  <p className="text-sm">{section?.narrativeText || 'No narrative drafted.'}</p>
+                  {score && (
+                    <p className="text-xs text-muted-foreground">
+                      Inherent {score.inherentRating} · Residual {score.residualRating}
+                      {score.isOverride && ' · Analyst override'}
+                    </p>
+                  )}
+                  {relied.length > 0 && (
+                    <p className="text-xs text-muted-foreground">Policy relied upon: {relied.map((r) => r.sectionRef).join('; ')}</p>
+                  )}
+                </div>
+              )
+            })}
+            {(!mapping || mapping.filter((m) => m.isActive).length === 0) && (
+              <p className="text-sm text-muted-foreground">No categories mapped.</p>
+            )}
+          </div>
+
           {decision ? (
             <div className="rounded-md border border-emerald-300 bg-emerald-50 p-3 text-sm">
               <p className="font-medium">Resolved: {decision.resolution}</p>
@@ -152,7 +190,9 @@ export default function CommitteeQueue() {
                 <TableRow key={q.assessmentId}>
                   <TableCell className="font-medium">{q.requestNumber}</TableCell>
                   <TableCell>{q.changeType}</TableCell>
-                  <TableCell>{q.title}</TableCell>
+                  <TableCell className="max-w-md whitespace-normal break-words" title={q.title}>
+                    {q.title}
+                  </TableCell>
                   <TableCell>
                     <Button size="sm" onClick={() => setSelected(q)}>
                       Review

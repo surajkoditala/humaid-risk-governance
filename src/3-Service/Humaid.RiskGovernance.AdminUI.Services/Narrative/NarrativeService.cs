@@ -9,6 +9,7 @@ namespace Humaid.RiskGovernance.AdminUI.Services.Narrative
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.PolicyResearch;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.Narrative;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Ai;
+    using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Core;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Narrative;
     using System.Text.Json;
 
@@ -43,16 +44,28 @@ namespace Humaid.RiskGovernance.AdminUI.Services.Narrative
             _aiClient = aiClient;
         }
 
+        // DEF-007: a Finalized assessment must lock - narrative, score and category writes were
+        // all still accepted after Finalize (and even after Committee routing), so nothing the
+        // committee reviews was actually guaranteed to match what was finalized. US-6.3 AC2.
+        private static void EnsureNotFinalized(Infrastructure.Models.Assessment.Assessment assessment)
+        {
+            if (assessment.Status == "Finalized")
+            {
+                throw new ValidationException("This assessment is finalized and locked from further edits.");
+            }
+        }
+
         public async Task<NarrativeSection> DraftAsync(Guid assessmentId, Guid riskCategoryId, string? regenerationFeedback = null)
         {
             var assessment = await _assessmentRepo.GetByIdAsync(assessmentId)
-                ?? throw new InvalidOperationException($"Assessment {assessmentId} not found.");
+                ?? throw new ValidationException($"Assessment {assessmentId} not found.");
+            EnsureNotFinalized(assessment);
             var changeRequest = await _changeRequestRepo.GetByIdAsync(assessment.ChangeRequestId)
-                ?? throw new InvalidOperationException($"Change request {assessment.ChangeRequestId} not found.");
+                ?? throw new ValidationException($"Change request {assessment.ChangeRequestId} not found.");
 
             var mapping = await _categoryMappingRepo.GetMappingAsync(assessmentId);
             var category = mapping.FirstOrDefault(m => m.RiskCategoryId == riskCategoryId && m.IsActive)
-                ?? throw new InvalidOperationException($"Risk category {riskCategoryId} is not an active mapped category for this assessment.");
+                ?? throw new ValidationException($"Risk category {riskCategoryId} is not an active mapped category for this assessment.");
 
             var reliance = await _policyResearchRepo.GetRelianceAsync(assessmentId);
             var reliedUponExcerpts = reliance
@@ -86,10 +99,21 @@ namespace Humaid.RiskGovernance.AdminUI.Services.Narrative
             return sections.First(s => s.RiskCategoryId == riskCategoryId);
         }
 
-        public Task<Guid> ReviewAsync(Guid assessmentId, Guid riskCategoryId, Guid actorUserId) =>
-            _narrativeSectionRepo.ReviewAsync(assessmentId, riskCategoryId, actorUserId);
+        public async Task<Guid> ReviewAsync(Guid assessmentId, Guid riskCategoryId, Guid actorUserId)
+        {
+            var assessment = await _assessmentRepo.GetByIdAsync(assessmentId)
+                ?? throw new ValidationException($"Assessment {assessmentId} not found.");
+            EnsureNotFinalized(assessment);
+            return await _narrativeSectionRepo.ReviewAsync(assessmentId, riskCategoryId, actorUserId);
+        }
 
-        public Task<Guid> EditAsync(EditNarrativeSectionInput input) => _narrativeSectionRepo.EditAsync(input);
+        public async Task<Guid> EditAsync(EditNarrativeSectionInput input)
+        {
+            var assessment = await _assessmentRepo.GetByIdAsync(input.AssessmentId)
+                ?? throw new ValidationException($"Assessment {input.AssessmentId} not found.");
+            EnsureNotFinalized(assessment);
+            return await _narrativeSectionRepo.EditAsync(input);
+        }
 
         public Task<IReadOnlyList<NarrativeSection>> GetSectionsAsync(Guid assessmentId) =>
             _narrativeSectionRepo.GetSectionsAsync(assessmentId);
