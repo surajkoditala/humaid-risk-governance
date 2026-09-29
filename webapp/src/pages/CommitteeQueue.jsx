@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
+import ClampedText from '../components/ClampedText.jsx'
 import { useDevUser } from '../auth/DevUserContext.jsx'
 import { Endpoints, apiFetch } from '../lib/api.js'
 import { useFetch } from '../lib/useFetch.js'
@@ -176,7 +177,13 @@ export default function CommitteeQueue() {
         {loading && <p className="text-sm text-muted-foreground">Loading…</p>}
         {!loading && (!queue || queue.length === 0) && <p className="text-sm text-muted-foreground">Nothing in the queue right now.</p>}
         {queue?.length > 0 && (
-          <Table>
+          <Table className="table-fixed">
+            <colgroup>
+              <col className="w-28" />
+              <col className="w-24" />
+              <col />
+              <col className="w-24" />
+            </colgroup>
             <TableHeader>
               <TableRow>
                 <TableHead>Request #</TableHead>
@@ -188,10 +195,10 @@ export default function CommitteeQueue() {
             <TableBody>
               {queue.map((q) => (
                 <TableRow key={q.assessmentId}>
-                  <TableCell className="font-medium">{q.requestNumber}</TableCell>
-                  <TableCell>{q.changeType}</TableCell>
-                  <TableCell className="max-w-md whitespace-normal break-words" title={q.title}>
-                    {q.title}
+                  <TableCell className="whitespace-normal break-words font-medium">{q.requestNumber}</TableCell>
+                  <TableCell className="whitespace-normal break-words">{q.changeType}</TableCell>
+                  <TableCell>
+                    <ClampedText text={q.title} />
                   </TableCell>
                   <TableCell>
                     <Button size="sm" onClick={() => setSelected(q)}>
