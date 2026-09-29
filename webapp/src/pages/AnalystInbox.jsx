@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import ClampedText from '../components/ClampedText.jsx'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -29,7 +30,15 @@ export default function AnalystInbox() {
           <p className="text-sm text-muted-foreground">No change requests submitted yet.</p>
         )}
         {requests?.length > 0 && (
-          <Table>
+          <Table className="table-fixed">
+            <colgroup>
+              <col className="w-28" />
+              <col className="w-24" />
+              <col />
+              <col className="w-32" />
+              <col className="w-24" />
+              <col className="w-20" />
+            </colgroup>
             <TableHeader>
               <TableRow>
                 <TableHead>Request #</TableHead>
@@ -43,10 +52,10 @@ export default function AnalystInbox() {
             <TableBody>
               {requests.map((r) => (
                 <TableRow key={r.id}>
-                  <TableCell className="font-medium">{r.requestNumber}</TableCell>
-                  <TableCell>{r.changeType}</TableCell>
-                  <TableCell className="max-w-md whitespace-normal break-words" title={r.title}>
-                    {r.title}
+                  <TableCell className="whitespace-normal break-words font-medium">{r.requestNumber}</TableCell>
+                  <TableCell className="whitespace-normal break-words">{r.changeType}</TableCell>
+                  <TableCell>
+                    <ClampedText text={r.title} />
                   </TableCell>
                   <TableCell>
                     <Badge variant="secondary">{r.status}</Badge>

@@ -1,6 +1,7 @@
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import ClampedText from '../components/ClampedText.jsx'
 import { useDevUser } from '../auth/DevUserContext.jsx'
 import { Endpoints } from '../lib/api.js'
 import { useFetch } from '../lib/useFetch.js'
@@ -32,7 +33,14 @@ export default function MyRequests() {
           <p className="text-sm text-muted-foreground">No requests submitted yet.</p>
         )}
         {requests?.length > 0 && (
-          <Table>
+          <Table className="table-fixed">
+            <colgroup>
+              <col className="w-28" />
+              <col className="w-24" />
+              <col />
+              <col className="w-40" />
+              <col className="w-28" />
+            </colgroup>
             <TableHeader>
               <TableRow>
                 <TableHead>Request #</TableHead>
@@ -45,10 +53,10 @@ export default function MyRequests() {
             <TableBody>
               {requests.map((r) => (
                 <TableRow key={r.id}>
-                  <TableCell className="font-medium">{r.requestNumber}</TableCell>
-                  <TableCell>{r.changeType}</TableCell>
-                  <TableCell className="max-w-md whitespace-normal break-words" title={r.title}>
-                    {r.title}
+                  <TableCell className="whitespace-normal break-words font-medium">{r.requestNumber}</TableCell>
+                  <TableCell className="whitespace-normal break-words">{r.changeType}</TableCell>
+                  <TableCell>
+                    <ClampedText text={r.title} />
                   </TableCell>
                   <TableCell>
                     <Badge variant={STATUS_VARIANT[r.status] || 'secondary'}>
@@ -56,7 +64,9 @@ export default function MyRequests() {
                       {r.decisionResolution || r.status}
                     </Badge>
                     {r.decisionConditionsText && (
-                      <p className="mt-1 max-w-md text-xs text-muted-foreground">{r.decisionConditionsText}</p>
+                      <p className="mt-1 whitespace-normal break-words text-xs text-muted-foreground">
+                        {r.decisionConditionsText}
+                      </p>
                     )}
                   </TableCell>
                   <TableCell className="text-right">{r.daysElapsed}</TableCell>
