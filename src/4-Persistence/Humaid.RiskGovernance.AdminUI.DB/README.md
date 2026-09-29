@@ -5,6 +5,35 @@ method in `4-Persistence/Humaid.RiskGovernance.AdminUI.DA` calls a named functio
 Dapper; nothing issues ad-hoc SQL. See `docs/architecture/architecture-mapping.md` for why this is
 a folder of scripts rather than an EF Core migration project.
 
+## Automated migrations (US-12.1 / DEF-007)
+
+The manual steps below still work and are the quickest path for a throwaway local database, but
+`Humaid.RiskGovernance.AdminUI.Web` no longer needs them: `DbMigrationRunner`
+(`4-Persistence/Humaid.RiskGovernance.AdminUI.DA/Migrations/DbMigrationRunner.cs`) applies this
+folder automatically, once, before the host starts accepting requests (see `Program.cs`).
+
+- **Empty database** (no application tables yet) — runs `deploy_all.sql` once, exactly as the
+  manual steps below do.
+- **Already-provisioned database** — applies whichever `migrations/*.sql` files it hasn't seen yet
+  (tracked by filename in a `schema_migrations` table, one transaction per file, halts and reports
+  the failing file rather than continuing past it), then always re-applies every file under
+  `functions/` and `seed/` — both are idempotent by construction (`CREATE OR REPLACE FUNCTION`,
+  `INSERT ... ON CONFLICT DO NOTHING`), so a function fix or a new seed row reaches an
+  already-provisioned database without its own numbered migration file.
+
+`migrations/` only needs a new file when a **structural** change (a dropped/renamed column, a
+changed constraint, a one-off data correction) has to reach a database that was already deployed
+before that change existed — a schema file's `CREATE TABLE` already covers a brand-new database, so
+don't duplicate the same change there too. Number files sequentially (`000N_defXXX_description.sql`
+or `000N_short-description.sql`), keep each one forward-only (no down-migration), and guard any
+destructive step (a `DELETE`, a stricter `CHECK`) with a row-count check that `RAISE EXCEPTION`s
+instead of silently discarding data it wasn't expecting to find.
+
+A container's post-deploy check (US-12.1 AC4) is logged on every startup rather than left as a
+query someone has to remember to run: `DbMigrationRunner` logs the `func_*` routine count and a
+couple of key seed-table row counts (`risk_category`, `app_user`) after applying everything above -
+see the deployed environment's own logs/Application Insights trace for the current numbers.
+
 ## Apply against local Postgres — one shot
 
 `deploy_all.sql` is every schema, function, and seed file concatenated in apply order, wrapped in
@@ -75,6 +104,9 @@ SELECT * FROM audit_event LIMIT 1;    -- then try UPDATE/DELETE on it - both mus
   (Postgres functions are already atomic per call — no explicit `BEGIN/COMMIT` needed).
 - `seed/` — synthetic data only: dev users, the FFIEC framework/categories, a short policy corpus.
   Run once against an empty database, in the order listed above.
+- `migrations/` — forward-only deltas for a database that was already deployed before a structural
+  change landed; applied automatically, see "Automated migrations" above. Empty until the first
+  structural change after a database exists somewhere other than a throwaway local instance.
 - `deploy_all.sql` — generated single-file concatenation of all three, for a one-command setup.
   Source of truth is still `schema/`, `functions/`, `seed/`; regenerate with
   `./generate_deploy_all.sh` after editing any of them.

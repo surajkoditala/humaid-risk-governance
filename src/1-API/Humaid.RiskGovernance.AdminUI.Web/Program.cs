@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Humaid.RiskGovernance.AdminUI.AI;
 using Humaid.RiskGovernance.AdminUI.DA;
+using Humaid.RiskGovernance.AdminUI.DA.Migrations;
 using Humaid.RiskGovernance.AdminUI.DA.Repos.Assessment;
 using Humaid.RiskGovernance.AdminUI.DA.Repos.Audit;
 using Humaid.RiskGovernance.AdminUI.DA.Repos.CategoryMapping;
@@ -293,6 +294,19 @@ builder.Services.AddScoped<IUserService, UserService>();
 
 var app = builder.Build();
 
+// US-12.1 / DEF-007: apply schema/functions/seed data before this process starts accepting
+// traffic - the DB folder was never copied into the image and nothing bootstrapped it, so a
+// fresh deploy previously started cleanly and 500'd on every request. Uncaught here on purpose:
+// a migration failure must halt startup, not let the host come up against an incomplete schema
+// (AC3). See Humaid.RiskGovernance.AdminUI.DB/README.md's "Automated migrations" section and
+// DbMigrationRunner.cs for the empty-database-vs-already-provisioned split.
+var dbFolderPath = ResolveDbFolderPath(app.Environment);
+var migrationRunner = new DbMigrationRunner(
+    app.Services.GetRequiredService<DapperConnectionFactory>(),
+    dbFolderPath,
+    app.Services.GetRequiredService<ILogger<DbMigrationRunner>>());
+await migrationRunner.RunAsync();
+
 // ---------------------------------------------------------------------------
 // HTTP pipeline
 // ---------------------------------------------------------------------------
@@ -345,3 +359,16 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+// The Dockerfile copies Humaid.RiskGovernance.AdminUI.DB to ./db next to the published DLLs, so
+// that's tried first; falling back to the sibling source folder makes this same code path apply
+// the schema automatically in local dev too (`dotnet run`), no manual psql step required.
+static string ResolveDbFolderPath(IHostEnvironment env)
+{
+    var containerPath = Path.Combine(env.ContentRootPath, "db");
+    if (Directory.Exists(containerPath))
+    {
+        return containerPath;
+    }
+    return Path.GetFullPath(Path.Combine(env.ContentRootPath, "..", "..", "4-Persistence", "Humaid.RiskGovernance.AdminUI.DB"));
+}
