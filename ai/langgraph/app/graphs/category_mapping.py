@@ -54,8 +54,16 @@ def _propose(state: _State) -> _State:
         ]
     )
 
+    content = response.content
+    if isinstance(content, list):
+        content = "".join(b.get("text", "") if isinstance(b, dict) else str(b) for b in content)
+    content = content.strip()
+    if content.startswith("```"):
+        content = content.split("\n", 1)[1] if "\n" in content else ""
+        content = content.rsplit("```", 1)[0].strip()
+
     try:
-        parsed = json.loads(response.content)
+        parsed = json.loads(content)
         proposed = [
             ProposedCategory(category_id=p["category_id"], rationale=p.get("rationale", ""))
             for p in parsed.get("proposals", [])

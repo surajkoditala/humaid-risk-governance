@@ -34,7 +34,18 @@ def get_chat_model() -> BaseChatModel:
         model = os.getenv("ANTHROPIC_MODEL", "")
         if not model:
             raise RuntimeError("ANTHROPIC_MODEL must be set when LLM_PROVIDER=anthropic.")
-        return ChatAnthropic(model=model, api_key=api_key)
+        kwargs: dict = {}
+        # Mirrors ClaudeApiClient.cs: an Organization-scoped key needs the workspace header;
+        # a workspace-scoped key needs none, so it stays optional.
+        workspace_id = os.getenv("ANTHROPIC_WORKSPACE_ID", "")
+        if workspace_id:
+            kwargs["default_headers"] = {"anthropic-workspace-id": workspace_id}
+        # Claude Code OAuth tokens (sk-ant-oat...) authenticate via Bearer, not x-api-key.
+        if api_key.startswith("sk-ant-oat"):
+            headers = kwargs.setdefault("default_headers", {})
+            headers["Authorization"] = f"Bearer {api_key}"
+            headers["x-api-key"] = ""
+        return ChatAnthropic(model=model, api_key=api_key, **kwargs)
 
     raise RuntimeError(
         f"Unsupported LLM_PROVIDER '{provider}'. Supported values: anthropic, gemini."
