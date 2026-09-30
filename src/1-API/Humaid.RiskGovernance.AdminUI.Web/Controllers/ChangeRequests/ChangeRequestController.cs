@@ -64,23 +64,23 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.ChangeRequests
 
         [HttpGet("ForUser/{userId:guid}")]
         [Authorize(Roles = AppRoles.ProductOwner)]
-        public Task<IActionResult> GetForUser(Guid userId) =>
+        public Task<IActionResult> GetForUser(Guid userId, [FromQuery] GridQuery query) =>
             ExecuteAsync(async () =>
             {
-                if (RequireSelf<IReadOnlyList<ChangeRequestSummary>>(userId) is { } forbidden) return forbidden;
+                if (RequireSelf<PagedResult<ChangeRequestSummary>>(userId) is { } forbidden) return forbidden;
 
-                var requests = await _changeRequestService.GetMyRequestsAsync(userId);
-                return OperationResult<IReadOnlyList<ChangeRequestSummary>>.Success(requests);
+                var requests = await _changeRequestService.GetMyRequestsAsync(userId, query);
+                return OperationResult<PagedResult<ChangeRequestSummary>>.Success(requests);
             }, "Failed to fetch change requests.");
 
         /// <summary>The analyst inbox - every change request, not scoped to one submitter.</summary>
         [HttpGet]
         [Authorize(Roles = AppRoles.Analyst)]
-        public Task<IActionResult> GetAll() =>
+        public Task<IActionResult> GetAll([FromQuery] GridQuery query) =>
             ExecuteAsync(async () =>
             {
-                var requests = await _changeRequestService.GetAllAsync();
-                return OperationResult<IReadOnlyList<ChangeRequestSummary>>.Success(requests);
+                var requests = await _changeRequestService.GetAllAsync(query);
+                return OperationResult<PagedResult<ChangeRequestSummary>>.Success(requests);
             }, "Failed to fetch change requests.");
 
         [HttpPost("AttachDocument")]

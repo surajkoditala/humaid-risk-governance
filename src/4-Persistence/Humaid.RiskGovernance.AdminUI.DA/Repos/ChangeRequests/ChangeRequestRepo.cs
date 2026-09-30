@@ -3,6 +3,7 @@ namespace Humaid.RiskGovernance.AdminUI.DA.Repos.ChangeRequests
     using Dapper;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.ChangeRequests;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.ChangeRequests;
+    using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Core;
 
     /// <summary>Every method here calls one stored function - see
     /// Humaid.RiskGovernance.AdminUI.DB/functions/change_requests/.</summary>
@@ -37,19 +38,39 @@ namespace Humaid.RiskGovernance.AdminUI.DA.Repos.ChangeRequests
                 "SELECT * FROM func_getChangeRequestById(@changeRequestId)", new { changeRequestId });
         }
 
-        public async Task<IReadOnlyList<ChangeRequestSummary>> GetForUserAsync(Guid userId)
+        public async Task<PagedResult<ChangeRequestSummary>> GetForUserAsync(Guid userId, GridQuery query)
         {
             await using var conn = await _connectionFactory.OpenAsync();
-            var rows = await conn.QueryAsync<ChangeRequestSummary>(
-                "SELECT * FROM func_getChangeRequestsForUser(@userId)", new { userId });
-            return rows.AsList();
+            var rows = (await conn.QueryAsync<ChangeRequestSummaryRow>(
+                @"SELECT * FROM func_getChangeRequestsForUser(
+                    @userId, @Status, @ChangeType, @Search, @SortBy, @SortDir, @Page, @PageSize)",
+                new { userId, query.Status, query.ChangeType, query.Search, query.SortBy, query.SortDir, query.Page, query.PageSize })).AsList();
+            return ToPagedResult(rows, query);
         }
 
-        public async Task<IReadOnlyList<ChangeRequestSummary>> GetAllAsync()
+        public async Task<PagedResult<ChangeRequestSummary>> GetAllAsync(GridQuery query)
         {
             await using var conn = await _connectionFactory.OpenAsync();
-            var rows = await conn.QueryAsync<ChangeRequestSummary>("SELECT * FROM func_getAllChangeRequests()");
-            return rows.AsList();
+            var rows = (await conn.QueryAsync<ChangeRequestSummaryRow>(
+                "SELECT * FROM func_getAllChangeRequests(@Status, @ChangeType, @Search, @SortBy, @SortDir, @Page, @PageSize)",
+                new { query.Status, query.ChangeType, query.Search, query.SortBy, query.SortDir, query.Page, query.PageSize })).AsList();
+            return ToPagedResult(rows, query);
+        }
+
+        private static PagedResult<ChangeRequestSummary> ToPagedResult(IReadOnlyList<ChangeRequestSummaryRow> rows, GridQuery query) =>
+            new()
+            {
+                Items = rows,
+                TotalCount = rows.Count > 0 ? (int)rows[0].TotalCount : 0,
+                Page = query.Page,
+                PageSize = query.PageSize,
+            };
+
+        /// <summary>Widens ChangeRequestSummary with the window-function total_count column the
+        /// paged func_get* functions return alongside every row.</summary>
+        private class ChangeRequestSummaryRow : ChangeRequestSummary
+        {
+            public long TotalCount { get; set; }
         }
 
         public async Task UpdateStatusAsync(Guid changeRequestId, string newStatus, Guid? actorUserId)

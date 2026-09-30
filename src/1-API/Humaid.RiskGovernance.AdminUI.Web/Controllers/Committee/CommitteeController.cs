@@ -42,11 +42,11 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.Committee
 
         [HttpGet("Queue")]
         [Authorize(Roles = AppRoles.CommitteeMember)]
-        public Task<IActionResult> GetQueue() =>
+        public Task<IActionResult> GetQueue([FromQuery] GridQuery query) =>
             ExecuteAsync(async () =>
             {
-                var queue = await _committeeService.GetQueueAsync();
-                return OperationResult<IReadOnlyList<CommitteeQueueItem>>.Success(queue);
+                var queue = await _committeeService.GetQueueAsync(query);
+                return OperationResult<PagedResult<CommitteeQueueItem>>.Success(queue);
             }, "Failed to fetch committee queue.");
 
         /// <summary>US-8.2: approve-with-conditions/reject/defer text requirements are enforced by

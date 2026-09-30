@@ -47,6 +47,21 @@ export async function apiFetch(url, { method = 'GET', body } = {}) {
 
 const api = (path) => `${API_BASE_URL}/api/${path}`
 
+/**
+ * Turns a grid query ({page, pageSize, sortBy, sortDir, status, changeType, search}) into a query
+ * string, dropping empty/blank values so the backend's GridQuery defaults apply. Shared by every
+ * grid endpoint (Assessments inbox, My Requests, Committee Queue) so they all encode paging/
+ * sorting/filtering the same way.
+ */
+function toQueryString(query = {}) {
+  const params = new URLSearchParams()
+  Object.entries(query).forEach(([key, value]) => {
+    if (value !== null && value !== undefined && value !== '') params.set(key, value)
+  })
+  const qs = params.toString()
+  return qs ? `?${qs}` : ''
+}
+
 export const Endpoints = {
   // all(): the dev "acting as" directory (AccessPolicies.UserDirectory - open in dev, Admin-only
   // otherwise). me(): the caller's own resolved identity - what a real Auth0 login reads instead.
@@ -64,8 +79,8 @@ export const Endpoints = {
   changeRequests: {
     submit: () => api('ChangeRequest/Submit'),
     byId: (id) => api(`ChangeRequest/${id}`),
-    forUser: (userId) => api(`ChangeRequest/ForUser/${userId}`),
-    all: () => api('ChangeRequest'),
+    forUser: (userId, query) => api(`ChangeRequest/ForUser/${userId}${toQueryString(query)}`),
+    all: (query) => api(`ChangeRequest${toQueryString(query)}`),
     attachDocument: () => api('ChangeRequest/AttachDocument'),
     attachDocumentFile: () => api('ChangeRequest/AttachDocumentFile'),
     attachments: (id) => api(`ChangeRequest/${id}/Attachments`),
@@ -127,7 +142,7 @@ export const Endpoints = {
 
   committee: {
     route: () => api('Committee/Route'),
-    queue: () => api('Committee/Queue'),
+    queue: (query) => api(`Committee/Queue${toQueryString(query)}`),
     vote: () => api('Committee/Vote'),
     votes: (assessmentId) => api(`Committee/${assessmentId}/Votes`),
     decision: (assessmentId) => api(`Committee/${assessmentId}/Decision`),
