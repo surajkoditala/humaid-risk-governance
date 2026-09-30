@@ -160,9 +160,9 @@ namespace Humaid.RiskGovernance.AdminUI.Services.ChangeRequests
 
         public Task<ChangeRequest?> GetByIdAsync(Guid changeRequestId) => _changeRequestRepo.GetByIdAsync(changeRequestId);
 
-        public Task<IReadOnlyList<ChangeRequestSummary>> GetMyRequestsAsync(Guid userId) => _changeRequestRepo.GetForUserAsync(userId);
+        public Task<PagedResult<ChangeRequestSummary>> GetMyRequestsAsync(Guid userId, GridQuery query) => _changeRequestRepo.GetForUserAsync(userId, query);
 
-        public Task<IReadOnlyList<ChangeRequestSummary>> GetAllAsync() => _changeRequestRepo.GetAllAsync();
+        public Task<PagedResult<ChangeRequestSummary>> GetAllAsync(GridQuery query) => _changeRequestRepo.GetAllAsync(query);
 
         public Task<(Guid Id, int VersionNumber)> AttachDocumentAsync(AttachDocumentInput input)
         {

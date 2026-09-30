@@ -8,9 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { useDevUser } from '../auth/DevUserContext.jsx'
 import { Endpoints, apiFetch } from '../lib/api.js'
+import { CHANGE_TYPES } from '../lib/constants.js'
 import { useFetch } from '../lib/useFetch.js'
-
-const CHANGE_TYPES = ['Product', 'Feature', 'Process', 'Vendor', 'Geography', 'CustomerSegment']
 
 // DEF-024: Vendor and Geography need their own mandatory, structured fields - not the one generic
 // free-text box every change type shared before. Keyed by the typeSpecificFieldsJson field name so
@@ -46,10 +45,13 @@ export default function Intake() {
 
   const typeSpecificSchema = TYPE_SPECIFIC_FIELD_SCHEMA[changeType] || null
 
-  const { data: myRequests, refetch: refetchMyRequests } = useFetch(
-    currentUser ? Endpoints.changeRequests.forUser(currentUser.id) : null,
+  // This dropdown just needs "everything I can attach a document to", not a paginated grid - ask
+  // for a page big enough that nothing gets silently left off the list.
+  const { data: myRequestsPage, refetch: refetchMyRequests } = useFetch(
+    currentUser ? Endpoints.changeRequests.forUser(currentUser.id, { pageSize: 200 }) : null,
     [currentUser?.id],
   )
+  const myRequests = myRequestsPage?.items
 
   const linkedEntityKind = LINKED_ENTITY_BY_CHANGE_TYPE[changeType] || null
   const { data: mockCustomers } = useFetch(linkedEntityKind === 'customer' ? Endpoints.dataIngestion.mockCustomers() : null, [linkedEntityKind])

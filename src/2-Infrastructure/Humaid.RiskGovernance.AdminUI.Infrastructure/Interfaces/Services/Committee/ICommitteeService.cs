@@ -1,12 +1,13 @@
 namespace Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.Committee
 {
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Committee;
+    using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Core;
 
     public interface ICommitteeService
     {
         /// <summary>US-8.1: assessment must already be Finalized.</summary>
         Task RouteToCommitteeAsync(Guid assessmentId, Guid actorUserId);
-        Task<IReadOnlyList<CommitteeQueueItem>> GetQueueAsync();
+        Task<PagedResult<CommitteeQueueItem>> GetQueueAsync(GridQuery query);
 
         /// <summary>US-8.2. After casting, automatically resolves the decision once the configured
         /// quorum (workflow_rule "CommitteeQuorum") is met - see

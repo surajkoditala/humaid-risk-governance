@@ -1,13 +1,14 @@
 namespace Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.ChangeRequests
 {
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.ChangeRequests;
+    using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Core;
 
     public interface IChangeRequestService
     {
         Task<ChangeRequest> SubmitAsync(SubmitChangeRequestInput input);
         Task<ChangeRequest?> GetByIdAsync(Guid changeRequestId);
-        Task<IReadOnlyList<ChangeRequestSummary>> GetMyRequestsAsync(Guid userId);
-        Task<IReadOnlyList<ChangeRequestSummary>> GetAllAsync();
+        Task<PagedResult<ChangeRequestSummary>> GetMyRequestsAsync(Guid userId, GridQuery query);
+        Task<PagedResult<ChangeRequestSummary>> GetAllAsync(GridQuery query);
         Task<(Guid Id, int VersionNumber)> AttachDocumentAsync(AttachDocumentInput input);
 
         /// <summary>

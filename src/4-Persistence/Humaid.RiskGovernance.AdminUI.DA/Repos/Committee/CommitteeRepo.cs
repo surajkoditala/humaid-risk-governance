@@ -3,6 +3,7 @@ namespace Humaid.RiskGovernance.AdminUI.DA.Repos.Committee
     using Dapper;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.Committee;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Committee;
+    using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Core;
 
     public class CommitteeRepo : ICommitteeRepo
     {
@@ -19,11 +20,26 @@ namespace Humaid.RiskGovernance.AdminUI.DA.Repos.Committee
             await conn.ExecuteAsync("SELECT func_routeToCommittee(@assessmentId, @actorUserId)", new { assessmentId, actorUserId });
         }
 
-        public async Task<IReadOnlyList<CommitteeQueueItem>> GetQueueAsync()
+        public async Task<PagedResult<CommitteeQueueItem>> GetQueueAsync(GridQuery query)
         {
             await using var conn = await _connectionFactory.OpenAsync();
-            var rows = await conn.QueryAsync<CommitteeQueueItem>("SELECT * FROM func_getCommitteeQueue()");
-            return rows.AsList();
+            var rows = (await conn.QueryAsync<CommitteeQueueItemRow>(
+                "SELECT * FROM func_getCommitteeQueue(@ChangeType, @Search, @SortBy, @SortDir, @Page, @PageSize)",
+                new { query.ChangeType, query.Search, query.SortBy, query.SortDir, query.Page, query.PageSize })).AsList();
+            return new PagedResult<CommitteeQueueItem>
+            {
+                Items = rows,
+                TotalCount = rows.Count > 0 ? (int)rows[0].TotalCount : 0,
+                Page = query.Page,
+                PageSize = query.PageSize,
+            };
+        }
+
+        /// <summary>Widens CommitteeQueueItem with the window-function total_count column
+        /// func_getCommitteeQueue returns alongside every row.</summary>
+        private class CommitteeQueueItemRow : CommitteeQueueItem
+        {
+            public long TotalCount { get; set; }
         }
 
         public async Task<Guid> CastVoteAsync(CastCommitteeVoteInput input)

@@ -55,7 +55,7 @@ namespace Humaid.RiskGovernance.AdminUI.Services.Committee
 
         public Task RouteToCommitteeAsync(Guid assessmentId, Guid actorUserId) => _committeeRepo.RouteAsync(assessmentId, actorUserId);
 
-        public Task<IReadOnlyList<CommitteeQueueItem>> GetQueueAsync() => _committeeRepo.GetQueueAsync();
+        public Task<PagedResult<CommitteeQueueItem>> GetQueueAsync(GridQuery query) => _committeeRepo.GetQueueAsync(query);
 
         public async Task<Guid> CastVoteAsync(CastCommitteeVoteInput input)
         {
