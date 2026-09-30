@@ -75,5 +75,12 @@ namespace Humaid.RiskGovernance.AdminUI.DA.Repos.Users
             await conn.ExecuteAsync(
                 "SELECT func_setUserAuth0Subject(@UserId, @Auth0Subject, @Reason, @ActorUserId)", input);
         }
+
+        public async Task<AppUser?> LinkAuth0ByEmailAsync(string email, string auth0Subject)
+        {
+            await using var conn = await _connectionFactory.OpenAsync();
+            return await conn.QuerySingleOrDefaultAsync<AppUser>(
+                "SELECT * FROM func_linkUserAuth0ByEmail(@email, @auth0Subject)", new { email, auth0Subject });
+        }
     }
 }

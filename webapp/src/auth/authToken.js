@@ -15,10 +15,13 @@ export async function getAuthHeader() {
   try {
     const token = await getTokenSilently()
     return token ? { Authorization: `Bearer ${token}` } : {}
-  } catch {
+  } catch (err) {
     // Silent-refresh failed (expired session, revoked consent, etc.) - let the request go out
     // without a token and 401/403 normally. RequireAuth's own Auth0Gate is what re-authenticates;
-    // a fetch helper mid-request is the wrong place to trigger that redirect.
+    // a fetch helper mid-request is the wrong place to trigger that redirect. Logged (not thrown) so
+    // the actual Auth0 SDK error (e.g. "login_required", "consent_required", "missing_refresh_token")
+    // is visible instead of silently showing up as an unexplained 401 downstream.
+    console.warn('Auth0 getAccessTokenSilently() failed; request will go out without a token:', err)
     return {}
   }
 }

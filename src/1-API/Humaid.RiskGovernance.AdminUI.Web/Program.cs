@@ -207,6 +207,15 @@ else
 
 // Epic 11: every authenticated caller is resolved to their app_user row, whose role - never a token
 // claim or a request field - is what [Authorize(Roles = ...)] on every action is checked against.
+// IHttpContextAccessor + the "Auth0" client below back AppUserClaimsTransformation's email-match
+// fallback (Epic 11 follow-up) - harmless to register even under the dev bypass, since that fallback
+// only ever fires for a request carrying a real Bearer token.
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddHttpClient("Auth0", client =>
+{
+    client.BaseAddress = new Uri(string.IsNullOrWhiteSpace(auth0Domain) ? "http://localhost/" : $"https://{auth0Domain}/");
+});
+builder.Services.AddScoped<IAuth0UserInfoClient, Auth0UserInfoClient>();
 builder.Services.AddTransient<IClaimsTransformation, AppUserClaimsTransformation>();
 builder.Services.AddAuthorization(options =>
 {

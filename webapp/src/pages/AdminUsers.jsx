@@ -39,7 +39,7 @@ function RoleToggle({ roles, onChange }) {
 export default function AdminUsers() {
   const { currentUser } = useDevUser()
   const [bump, setBump] = useState(0)
-  const { data: users, loading } = useFetch(Endpoints.users.adminAll(), [bump])
+  const { data: users, loading, error } = useFetch(Endpoints.users.adminAll(), [bump])
 
   const [email, setEmail] = useState('')
   const [displayName, setDisplayName] = useState('')
@@ -215,7 +215,8 @@ export default function AdminUsers() {
         </CardHeader>
         <CardContent>
           {loading && <p className="text-sm text-muted-foreground">Loading…</p>}
-          {!loading && (!users || users.length === 0) && <p className="text-sm text-muted-foreground">No users yet.</p>}
+          {!loading && error && <p className="text-sm text-destructive">Failed to load users: {error}</p>}
+          {!loading && !error && (!users || users.length === 0) && <p className="text-sm text-muted-foreground">No users yet.</p>}
           {users?.length > 0 && (
             <Table>
               <TableHeader>

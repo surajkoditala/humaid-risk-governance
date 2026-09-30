@@ -4,6 +4,7 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Auth
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.Users;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Users;
     using Humaid.RiskGovernance.AdminUI.Web.Auth;
+    using Microsoft.AspNetCore.Http;
     using Microsoft.Extensions.Logging.Abstractions;
     using Moq;
     using Xunit;
@@ -17,11 +18,14 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Auth
     public class AppUserClaimsTransformationTests
     {
         private readonly Mock<IUserService> _userService = new();
+        private readonly Mock<IAuth0UserInfoClient> _auth0UserInfoClient = new();
+        private readonly Mock<IHttpContextAccessor> _httpContextAccessor = new();
         private readonly AppUserClaimsTransformation _sut;
 
         public AppUserClaimsTransformationTests()
         {
-            _sut = new AppUserClaimsTransformation(_userService.Object, NullLogger<AppUserClaimsTransformation>.Instance);
+            _sut = new AppUserClaimsTransformation(
+                _userService.Object, _auth0UserInfoClient.Object, _httpContextAccessor.Object, NullLogger<AppUserClaimsTransformation>.Instance);
         }
 
         private static ClaimsPrincipal Authenticated(params Claim[] claims) =>
@@ -78,6 +82,30 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Auth
             Assert.Null(result.GetAppUserId());
             Assert.Empty(result.GetAppRoles());
             Assert.False(result.IsInRole(AppRoles.Admin));
+        }
+
+        [Fact]
+        public async Task FallsBackToEmailMatchWhenSubjectIsUnrecognizedButBearerTokenResolvesAnEmail()
+        {
+            // Epic 11 follow-up: a real teammate's first-ever login won't match any app_user row by
+            // subject (their row was Admin-created with auth0_subject still NULL) - the fallback
+            // should claim that row by the verified email Auth0's own /userinfo returns.
+            var userId = Guid.NewGuid();
+            _userService.Setup(s => s.GetByAuth0SubjectAsync("auth0|new-login")).ReturnsAsync((AppUser?)null);
+            _auth0UserInfoClient.Setup(c => c.GetEmailAsync("real-token", It.IsAny<CancellationToken>()))
+                .ReturnsAsync("suleman@myridius.com");
+            _userService.Setup(s => s.LinkAuth0ByEmailAsync("suleman@myridius.com", "auth0|new-login"))
+                .ReturnsAsync(new AppUser { Id = userId, Roles = [AppRoles.Admin], DisplayName = "Mohd Suleman" });
+
+            var httpContext = new DefaultHttpContext();
+            httpContext.Request.Headers.Authorization = "Bearer real-token";
+            _httpContextAccessor.Setup(a => a.HttpContext).Returns(httpContext);
+
+            var principal = Authenticated(new Claim(ClaimTypes.NameIdentifier, "auth0|new-login"));
+            var result = await _sut.TransformAsync(principal);
+
+            Assert.Equal(userId, result.GetAppUserId());
+            Assert.True(result.IsInRole(AppRoles.Admin));
         }
 
         [Fact]

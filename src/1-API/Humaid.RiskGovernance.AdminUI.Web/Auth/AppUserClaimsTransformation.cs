@@ -20,11 +20,19 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Auth
     public class AppUserClaimsTransformation : IClaimsTransformation
     {
         private readonly IUserService _userService;
+        private readonly IAuth0UserInfoClient _auth0UserInfoClient;
+        private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly ILogger<AppUserClaimsTransformation> _logger;
 
-        public AppUserClaimsTransformation(IUserService userService, ILogger<AppUserClaimsTransformation> logger)
+        public AppUserClaimsTransformation(
+            IUserService userService,
+            IAuth0UserInfoClient auth0UserInfoClient,
+            IHttpContextAccessor httpContextAccessor,
+            ILogger<AppUserClaimsTransformation> logger)
         {
             _userService = userService;
+            _auth0UserInfoClient = auth0UserInfoClient;
+            _httpContextAccessor = httpContextAccessor;
             _logger = logger;
         }
 
@@ -70,7 +78,31 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Auth
                 return Guid.TryParse(devUserId, out var id) ? await _userService.GetByIdAsync(id) : null;
 
             var subject = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            return string.IsNullOrWhiteSpace(subject) ? null : await _userService.GetByAuth0SubjectAsync(subject);
+            if (string.IsNullOrWhiteSpace(subject))
+                return null;
+
+            var user = await _userService.GetByAuth0SubjectAsync(subject);
+            if (user is not null)
+                return user;
+
+            // Epic 11 follow-up: not yet linked to any app_user row by subject. Fall back to matching
+            // an existing, not-yet-linked row by the verified email Auth0's own /userinfo endpoint
+            // returns for this exact access token - closes the chicken-and-egg gap where an Admin
+            // can't run "Link Auth0" for a real teammate until that person has already logged in once
+            // and been refused everything. Self-limiting: once linked, every later request matches by
+            // subject above and never reaches this fallback again for that person.
+            return await TryLinkByEmailAsync(subject);
+        }
+
+        private async Task<Infrastructure.Models.Users.AppUser?> TryLinkByEmailAsync(string subject)
+        {
+            var authHeader = _httpContextAccessor.HttpContext?.Request.Headers.Authorization.ToString();
+            if (string.IsNullOrWhiteSpace(authHeader) || !authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+                return null;
+
+            var accessToken = authHeader["Bearer ".Length..];
+            var email = await _auth0UserInfoClient.GetEmailAsync(accessToken);
+            return string.IsNullOrWhiteSpace(email) ? null : await _userService.LinkAuth0ByEmailAsync(email, subject);
         }
     }
 }

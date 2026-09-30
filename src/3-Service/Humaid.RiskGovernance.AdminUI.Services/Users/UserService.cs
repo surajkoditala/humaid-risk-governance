@@ -69,5 +69,8 @@ namespace Humaid.RiskGovernance.AdminUI.Services.Users
             }
             return _userRepo.SetAuth0SubjectAsync(input);
         }
+
+        public Task<AppUser?> LinkAuth0ByEmailAsync(string email, string auth0Subject) =>
+            _userRepo.LinkAuth0ByEmailAsync(email, auth0Subject);
     }
 }

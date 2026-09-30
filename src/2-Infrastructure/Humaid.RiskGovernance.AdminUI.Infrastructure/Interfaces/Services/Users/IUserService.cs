@@ -24,5 +24,9 @@ namespace Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.Users
         Task SetUserActiveAsync(SetUserActiveInput input);
 
         Task SetUserAuth0SubjectAsync(SetUserAuth0SubjectInput input);
+
+        /// <summary>Epic 11 follow-up: fallback for a caller whose Auth0 subject matches no row -
+        /// claims an existing, not-yet-linked row by email instead. Null if no such row exists.</summary>
+        Task<AppUser?> LinkAuth0ByEmailAsync(string email, string auth0Subject);
     }
 }
