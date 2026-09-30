@@ -8,9 +8,10 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 # Optional: trust an extra local root CA before any network call - see the Workbench Dockerfile's
-# comment and ops/certs/README.md for why this is here (SSL-inspecting corporate proxies).
-COPY ops/certs/ /usr/local/share/ca-certificates/extra/
-RUN find /usr/local/share/ca-certificates/extra/ -name '*.crt' -o -name '*.pem' | grep -q . && update-ca-certificates || true
+# comment and ops/certs/README.md for why this is here (SSL-inspecting corporate proxies). Must
+# land directly in ca-certificates/ - update-ca-certificates does not recurse into subdirectories.
+COPY ops/certs/ /usr/local/share/ca-certificates/
+RUN find /usr/local/share/ca-certificates/ -maxdepth 1 \( -name '*.crt' -o -name '*.pem' \) | grep -q . && update-ca-certificates || true
 
 COPY src/6-MockExternalSystems/Humaid.RiskGovernance.MockSystems/*.csproj src/6-MockExternalSystems/Humaid.RiskGovernance.MockSystems/
 RUN dotnet restore src/6-MockExternalSystems/Humaid.RiskGovernance.MockSystems/Humaid.RiskGovernance.MockSystems.csproj
@@ -22,6 +23,13 @@ RUN dotnet publish src/6-MockExternalSystems/Humaid.RiskGovernance.MockSystems/H
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
+
+# Same corporate-proxy trust as the build stage above, but at RUNTIME - see the Workbench
+# Dockerfile's equivalent step for why this stage needs it too, not just the build stage.
+USER root
+COPY ops/certs/ /usr/local/share/ca-certificates/
+RUN find /usr/local/share/ca-certificates/ -maxdepth 1 \( -name '*.crt' -o -name '*.pem' \) | grep -q . && update-ca-certificates || true
+
 COPY --from=build /app/publish .
 
 ENV ASPNETCORE_URLS=http://+:8080
