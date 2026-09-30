@@ -15,7 +15,18 @@ src/6-MockExternalSystems/Humaid.RiskGovernance.MockSystems/appsettings.Developm
 # Eval run artifacts - see evals/README.md. The datasets themselves (evals/datasets/) are checked in.
 evals/results/
 
+# Repo-root .env - docker-compose.app.yml reads AUTH0_DOMAIN/AUTH0_CLIENT_ID/AUTH0_AUDIENCE/
+# ANTHROPIC_API_KEY from here for local container builds.
+/.env
+
 # Local-only corporate root CA certs for Docker builds behind an SSL-inspecting proxy (Netskope,
 # Zscaler, etc.) - see ops/certs/README.md. Never commit an actual cert; only .gitkeep is tracked.
 ops/certs/*.crt
 ops/certs/*.pem
+
+# Python (ai/langgraph/ - see ai/langgraph/README.md)
+ai/langgraph/.venv/
+ai/langgraph/__pycache__/
+ai/langgraph/**/__pycache__/
+ai/langgraph/.env
+ai/langgraph/*.egg-info/

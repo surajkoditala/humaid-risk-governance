@@ -179,6 +179,58 @@ sequenceDiagram
 
 ---
 
+## 4b. Human-in-the-loop gates on the ecosystem
+
+The §4 flowchart shows *who* does each step. This view shows the *gates*: the points where the flow
+cannot advance until a human has acted. Laid out top-to-bottom so it stays narrow in GitHub. Same colour
+key as §4, plus orange for a gate enforced in code. Epic-by-epic detail is in
+[`human-in-the-loop-gates.md`](../governance/human-in-the-loop-gates.md); a simpler yes/no version for
+presenting is in [`presentation-flowchart.md`](presentation-flowchart.md).
+
+```mermaid
+flowchart TB
+    classDef ai fill:#ede4fc,stroke:#7c3aed,color:#3b0764,stroke-width:2px
+    classDef deterministic fill:#dbeafe,stroke:#1d4ed8,color:#1e3a8a,stroke-width:2px
+    classDef human fill:#dcfce7,stroke:#15803d,color:#14532d,stroke-width:2px
+    classDef gate fill:#fff7ed,stroke:#c2410c,color:#7c2d12,stroke-width:2px
+
+    PO["Product Owner<br/>submits request + documents"]:::human --> INGEST["Data Ingestion Layer<br/>immutable snapshot"]:::deterministic
+
+    INGEST --> MAP["AI: category mapping<br/>(Epic 2)"]:::ai
+    MAP --> G1{{"GATE 1<br/>Analyst adds / removes<br/>reason mandatory"}}:::gate
+
+    G1 --> POL["Policy research<br/>deterministic (Epic 3)"]:::deterministic
+    POL --> G2{{"GATE 2<br/>Every category has a<br/>rely on / not relevant call"}}:::gate
+
+    INGEST --> EXTR["AI: document extraction<br/>(Epic 4)"]:::ai
+    EXTR --> G3{{"GATE 3<br/>Analyst corrects any field<br/>low-confidence pre-flagged"}}:::gate
+
+    G2 --> DRAFT["AI: narrative draft<br/>(Epic 5)"]:::ai
+    G3 --> DRAFT
+    DRAFT --> G4{{"GATE 4<br/>Every section reviewed or edited<br/>before it can route"}}:::gate
+
+    G4 --> SCORE["Scoring engine<br/>deterministic (Epic 7)"]:::deterministic
+    SCORE --> G5{{"GATE 5<br/>Analyst may override, reason mandatory<br/>residual can never be 0"}}:::gate
+
+    G5 --> G6{{"GATE 6<br/>Analyst finalizes<br/>(blocked until all steps done)"}}:::gate
+    G6 --> VOTE["Committee votes individually<br/>(Epic 8)"]:::human
+    VOTE --> G7{{"GATE 7<br/>Quorum reached<br/>any Reject wins"}}:::gate
+    G7 --> DEC["Final decision<br/>request locked, read-only"]:::human
+
+    AUD[("Immutable audit trail")]
+    G1 -.-> AUD
+    G3 -.-> AUD
+    G4 -.-> AUD
+    G5 -.-> AUD
+    G7 -.-> AUD
+
+    NOAI["AI unavailable?<br/>Manual entry path always works.<br/>An AI outage never blocks the user."]:::human -.-> MAP
+    NOAI -.-> EXTR
+    NOAI -.-> DRAFT
+```
+
+---
+
 ## 5. Mock data generation — how synthetic data was actually created
 
 Per [`ai/data-generation/README.md`](../../ai/data-generation/README.md), generation was hybrid, exactly as this diagram originally proposed: one hand-authored "golden path" scenario for demo reliability, plus AI-assisted bulk variation for the rest — both grounded in the FFIEC categories the project already cites, not random noise.
@@ -254,6 +306,7 @@ flowchart LR
 
 ## Revision log
 
+- **2026-09-30** — added §4b, a top-to-bottom human-in-the-loop gates diagram (seven gates plus the "AI outage never blocks the user" fallback), per the Q3 sync. Added `presentation-flowchart.md`, a simpler yes/no version for presenting, and `ai/how-the-ai-thinks.md`.
 - **2026-09-23** — color-coded the §4 workflow flowchart (purple = AI, blue = deterministic, green = human, gray = infrastructure) with a Legend subgraph, per Shanthi's standup feedback that the diagram should make the AI-vs-human split explicit at a glance rather than requiring every label to be read. No structural change to the diagram itself. `docs/governance/human-in-the-loop-gates.md` gained a matching diagram of the same split, one subgraph per epic, using the same color key.
 - **2026-09-20** — aligned with the new Epic 14 (Mock External Systems & Data Ingestion) in `docs/requirements/user-stories.md`: the mock-systems, ingestion, and feedback-loop components now cite the stories that specify them (US-14.1–14.6). Numbered 14 rather than 11 because Epics 11–13 (Access Control, Deployment and Operations, NFRs) were already claimed in Azure Boards. No diagram changes — the components themselves were already accurate; they just had no stories behind them.
 - **2026-09-18 (reverted)** — a follow-up pass (now reverted) had corrected the Data Ingestion Layer to describe Mock Systems linking as *optional*, matching the `Intake.jsx` code as it stood at the time. Team direction has since moved back toward Mock Systems data being the primary, expected intake path (Suleman is implementing this), so that correction no longer reflects where the system is headed. Reverted rather than left half-consistent with two different intents. **The epics/stories are being updated to match this direction — see `docs/requirements/user-stories.md` and Azure Boards; if `Intake.jsx` still shows optional linking, that's the code catching up, not this diagram being wrong.**
