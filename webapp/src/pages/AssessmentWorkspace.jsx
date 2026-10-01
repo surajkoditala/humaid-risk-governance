@@ -81,7 +81,7 @@ function CategoriesTab({ assessmentId, changeRequest, bump, isFinalized }) {
       <Card>
         <CardHeader>
           <CardTitle>AI-proposed categories</CardTitle>
-          <CardDescription>Grounded against this change type's allowed FFIEC categories.</CardDescription>
+          <CardDescription>Only categories that apply to this type of change can be proposed.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           <Button onClick={propose} disabled={proposing || isFinalized}>
@@ -202,7 +202,7 @@ function PolicyTab({ assessmentId, mapping, bump }) {
       <Card>
         <CardHeader>
           <CardTitle>Search the policy corpus</CardTitle>
-          <CardDescription>Deterministic full-text search — not an LLM call (see docs/governance).</CardDescription>
+          <CardDescription>Search FFIEC policy excerpts by keyword.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">

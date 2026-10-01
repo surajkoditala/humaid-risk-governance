@@ -73,7 +73,7 @@ export default function Configuration() {
       <Card>
         <CardHeader>
           <CardTitle>Workflow rules</CardTitle>
-          <CardDescription>Plain structured config, not buried in code. Every change is audited.</CardDescription>
+          <CardDescription>Every change is audited.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -117,8 +117,7 @@ export default function Configuration() {
         <CardHeader>
           <CardTitle>Scoring configuration</CardTitle>
           <CardDescription>
-            The mitigation cap per category; a value ≥ 1.0 is rejected outright since that would
-            let residual risk reach zero.
+            Controls reduce risk but can never fully eliminate it — the cap must stay below 1.0.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">

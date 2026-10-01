@@ -141,7 +141,7 @@ export default function Intake() {
       <Card>
         <CardHeader>
           <CardTitle>Submit a change request</CardTitle>
-          <CardDescription>Structured intake, no more email/SharePoint.</CardDescription>
+          <CardDescription>Tell us what's changing — FCRM will review the risk before go-live.</CardDescription>
         </CardHeader>
         <CardContent>
           <form className="space-y-4" onSubmit={submit}>
@@ -243,11 +243,7 @@ export default function Intake() {
       <Card>
         <CardHeader>
           <CardTitle>Attach a supporting document</CardTitle>
-          <CardDescription>
-            PDF, DOCX, or XLSX — uploaded to blob storage and its text extracted server-side
-            (deterministic parsing, not an AI call); that text is what the Extraction tab's AI
-            step then runs against.
-          </CardDescription>
+          <CardDescription>PDF, DOCX, or XLSX.</CardDescription>
         </CardHeader>
         <CardContent>
           <form className="space-y-4" onSubmit={attach}>
