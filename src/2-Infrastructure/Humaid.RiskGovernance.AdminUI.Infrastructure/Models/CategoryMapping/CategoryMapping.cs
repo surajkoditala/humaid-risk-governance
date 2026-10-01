@@ -13,6 +13,10 @@ namespace Humaid.RiskGovernance.AdminUI.Infrastructure.Models.CategoryMapping
         public string Source { get; set; } = string.Empty;
         public string? AiCitation { get; set; }
         public bool IsActive { get; set; }
+
+        /// <summary>The reason given for the most recent add/remove of this mapping - read live
+        /// from audit_event (never populated when Source is AiProposed and untouched since).</summary>
+        public string? AnalystReason { get; set; }
     }
 
     public class OverrideCategoryMappingInput
