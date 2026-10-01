@@ -37,6 +37,10 @@ function CategoriesTab({ assessmentId, changeRequest, bump, isFinalized }) {
   const [proposeError, setProposeError] = useState(null)
   const [addCategoryId, setAddCategoryId] = useState('')
   const [reason, setReason] = useState('')
+  // DEF-034: each mapped row removes with its own reason - a single shared `reason` field (meant
+  // for the Add form below) made Remove silently reuse whatever the Add box happened to hold,
+  // which was empty in the normal case since there's no reason input next to Remove itself.
+  const [removeReasons, setRemoveReasons] = useState({})
 
   const propose = async () => {
     setProposing(true)
@@ -52,18 +56,19 @@ function CategoriesTab({ assessmentId, changeRequest, bump, isFinalized }) {
     }
   }
 
-  const override = async (riskCategoryId, isActive) => {
-    if (!reason.trim()) {
+  const override = async (riskCategoryId, isActive, reasonText) => {
+    if (!reasonText.trim()) {
       toast.error('A reason is required to add or remove a category (Epic 6).')
       return
     }
     try {
       await apiFetch(Endpoints.categoryMapping.override(), {
         method: 'POST',
-        body: { assessmentId, riskCategoryId, isActive, reason, actorUserId: currentUser.id },
+        body: { assessmentId, riskCategoryId, isActive, reason: reasonText, actorUserId: currentUser.id },
       })
       setReason('')
       setAddCategoryId('')
+      setRemoveReasons((prev) => ({ ...prev, [riskCategoryId]: '' }))
       bump()
     } catch (err) {
       toast.error(err.message)
@@ -93,16 +98,31 @@ function CategoriesTab({ assessmentId, changeRequest, bump, isFinalized }) {
         <CardContent className="space-y-4">
           <div className="space-y-2">
             {(mapping || []).filter((m) => m.isActive).map((m) => (
-              <div key={m.id} className="flex items-center justify-between rounded-md border p-3">
+              <div key={m.id} className="flex flex-col gap-2 rounded-md border p-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-sm font-medium">{m.categoryName}</p>
                   <p className="text-xs text-muted-foreground">
-                    {m.source === 'AiProposed' ? `AI — ${m.aiCitation || m.citationSection}` : 'Analyst added'}
+                    {m.source === 'AiProposed'
+                      ? `AI — ${m.aiCitation || m.citationSection}`
+                      : `Analyst added${m.analystReason ? ` — ${m.analystReason}` : ''}`}
                   </p>
                 </div>
-                <Button size="sm" variant="outline" disabled={isFinalized} onClick={() => override(m.riskCategoryId, false)}>
-                  Remove
-                </Button>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Reason for removing"
+                    value={removeReasons[m.riskCategoryId] || ''}
+                    onChange={(e) => setRemoveReasons((prev) => ({ ...prev, [m.riskCategoryId]: e.target.value }))}
+                    className="sm:w-56"
+                  />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={isFinalized}
+                    onClick={() => override(m.riskCategoryId, false, removeReasons[m.riskCategoryId] || '')}
+                  >
+                    Remove
+                  </Button>
+                </div>
               </div>
             ))}
             {(!mapping || mapping.filter((m) => m.isActive).length === 0) && (
@@ -128,7 +148,7 @@ function CategoriesTab({ assessmentId, changeRequest, bump, isFinalized }) {
                 </SelectContent>
               </Select>
               <Input placeholder="Reason" value={reason} onChange={(e) => setReason(e.target.value)} className="sm:flex-1" />
-              <Button variant="outline" disabled={!addCategoryId || isFinalized} onClick={() => override(addCategoryId, true)}>
+              <Button variant="outline" disabled={!addCategoryId || isFinalized} onClick={() => override(addCategoryId, true, reason)}>
                 Add
               </Button>
             </div>
