@@ -83,13 +83,13 @@
 <div class="wrap">
   <p class="kicker">Risk Assessment Workbench</p>
   <h1>One change request, start to finish</h1>
-  <p class="lede">Every step a Product Owner's request takes on its way to a committee decision — where AI helps, where it's deliberately kept out, and where a human always has the final say.</p>
+  <p class="lede">Every step a request takes, from someone proposing a change to a committee deciding on it — where AI helps, where it's deliberately kept out, and where a human always has the final say.</p>
 
   <div class="opener">
     <p class="opener-title">Presentation opener<span class="time">~30-40 sec, before the live demo</span></p>
     <ol>
       <li><b>Problem</b>At a $500B bank, every new product, feature, or vendor has to clear a financial-crime risk review before it can launch. Today that runs on email, Word docs, and spreadsheets — takes 15-20 business days, and two analysts can reach different conclusions on the same request.</li>
-      <li><b>Solution</b>We built the Risk Assessment Workbench — one governed platform that carries a change request from intake to committee decision. AI helps categorize risk, research policy, extract documents, and draft the assessment — but a human always reviews, and the committee always decides. Nothing is ever auto-approved.</li>
+      <li><b>Solution</b>We built the Risk Assessment Workbench — one platform that carries a request from first submission to a committee decision. AI helps categorize risk, pull facts from documents, and draft the write-up — but a human always reviews its work, and the committee always makes the final call. Nothing is ever auto-approved.</li>
       <li><b>What you'll see</b>I'll walk one real request — launching a prepaid settlement card — end to end: intake, AI risk categorization grounded in the actual FFIEC BSA/AML manual, policy research, document extraction, AI-drafted narrative, risk scoring that can never hit zero, and a committee vote — with a full audit trail behind every step.</li>
       <li><b>Transition</b>"Let's jump in." → switch straight to the Intake / Categories tab.</li>
     </ol>
@@ -108,8 +108,8 @@
     <div class="step" data-kind="none">
       <div class="node">1</div>
       <div class="card">
-        <div class="row1"><span class="title">Intake</span><span class="tag deterministic">No AI</span></div>
-        <p class="desc">Product Owner submits a change type, title, description, and an optional document (PDF, DOCX, XLSX). For a product, customer segment, or vendor change, they also link the specific Mock Systems record — an immutable snapshot of its risk context is captured for AI grounding later.</p>
+        <div class="row1"><span class="title">Submit a request</span><span class="tag deterministic">No AI</span></div>
+        <p class="desc">A Product Owner describes what they want to launch — what kind of change it is, what it involves, and any supporting document. If it touches a specific product, customer group, or vendor, they link that record too, so there's full context from the start.</p>
         <p class="who">Product Owner</p>
       </div>
     </div>
@@ -117,8 +117,8 @@
     <div class="step" data-kind="ai">
       <div class="node">2</div>
       <div class="card">
-        <div class="row1"><span class="title">Categorize</span><span class="tag ai">AI proposes</span></div>
-        <p class="desc">AI proposes FFIEC risk categories — but only from a fixed allow-list <em>for that specific change type</em> (e.g. a Product change can only get Products &amp; Services or Customers &amp; Entities proposed). Never invented outside that list. The analyst accepts, adds, or removes any category, always with a reason.</p>
+        <div class="row1"><span class="title">Categorize the risk</span><span class="tag ai">AI suggests</span></div>
+        <p class="desc"><strong>AI suggests</strong> which risk categories apply, based on official banking-regulator guidance — it only picks from categories that make sense for this kind of change, never invents new ones. <strong>A human reviews and can override</strong>: accept the suggestion, add a category, or remove one — always stating why.</p>
         <p class="who">Analyst reviews</p>
       </div>
     </div>
@@ -126,8 +126,8 @@
     <div class="step" data-kind="none">
       <div class="node">3</div>
       <div class="card">
-        <div class="row1"><span class="title">Research policy</span><span class="tag deterministic">No AI — search</span></div>
-        <p class="desc">Analyst searches the FFIEC BSA/AML policy library and marks which sections were relied on. Plain text search, not a model call — policy lookup doesn't need one.</p>
+        <div class="row1"><span class="title">Find supporting policy</span><span class="tag deterministic">No AI — search</span></div>
+        <p class="desc">An analyst searches the bank's policy library for relevant guidance and marks which parts support the assessment. This is a plain keyword search, not AI — looking up a document doesn't need one.</p>
         <p class="who">Analyst</p>
       </div>
     </div>
@@ -135,8 +135,8 @@
     <div class="step" data-kind="ai">
       <div class="node">4</div>
       <div class="card">
-        <div class="row1"><span class="title">Extract fields</span><span class="tag ai">AI extracts</span></div>
-        <p class="desc">If a document was attached, its text is parsed automatically at upload (deterministic, not AI). AI then reads that text and pulls out structured facts (e.g. vendor name, data access scope) — every value tagged AI-extracted until an analyst corrects it.</p>
+        <div class="row1"><span class="title">Pull facts from the document</span><span class="tag ai">AI extracts</span></div>
+        <p class="desc"><strong>AI reads</strong> the attached document and pulls out key facts — like a vendor's name or what customer data it touches. Every fact is clearly labeled as AI-generated. <strong>A human checks and can correct</strong> any value before it's used.</p>
         <p class="who">Analyst corrects</p>
       </div>
     </div>
@@ -144,8 +144,8 @@
     <div class="step" data-kind="ai">
       <div class="node">5</div>
       <div class="card">
-        <div class="row1"><span class="title">Draft narrative</span><span class="tag ai">AI drafts</span></div>
-        <p class="desc">AI writes the assessment write-up for each mapped category, citing the relied-on policy and the facts extracted from the document. It stays marked "AI-drafted" until the analyst edits, regenerates, or explicitly accepts it.</p>
+        <div class="row1"><span class="title">Draft the write-up</span><span class="tag ai">AI drafts</span></div>
+        <p class="desc"><strong>AI writes a first draft</strong> of the risk write-up for each category, using the policy and facts gathered so far. It stays labeled "AI-drafted" until <strong>a human edits it, asks for a new draft, or approves it as-is</strong>.</p>
         <p class="who">Analyst reviews</p>
       </div>
     </div>
@@ -154,7 +154,7 @@
       <div class="node">6</div>
       <div class="card">
         <div class="row1"><span class="title">Score the risk</span><span class="tag human">Human input</span></div>
-        <p class="desc">Analyst rates inherent risk and control effectiveness. The system then calculates residual risk — a formula built so it can never reach zero, because controls reduce risk, they don't erase it.</p>
+        <p class="desc">An analyst rates how risky the change is on its own, and how well existing safeguards reduce that risk. The system then works out the risk that's left over — built so that number can never hit zero, because no safeguard removes risk completely.</p>
         <p class="who">Analyst</p>
       </div>
     </div>
@@ -163,7 +163,7 @@
       <div class="node">7</div>
       <div class="card">
         <div class="row1"><span class="title">Finalize</span><span class="tag gate">Gate</span></div>
-        <p class="desc">Every mapped category must have a reviewed narrative, at least one policy-reliance decision, and a calculated score — before Finalize unlocks. Once finalized, the assessment locks; no more edits.</p>
+        <p class="desc">Before this can be finalized, every category needs a reviewed write-up, supporting policy, and a score. Once finalized, the assessment is locked — no more edits.</p>
         <p class="who">Analyst</p>
       </div>
     </div>
@@ -171,8 +171,8 @@
     <div class="step" data-kind="none">
       <div class="node">8</div>
       <div class="card">
-        <div class="row1"><span class="title">Route to committee</span><span class="tag deterministic">No AI</span></div>
-        <p class="desc">A separate, explicit action from Finalize. Until the analyst does this, a finalized assessment is locked but still not visible in the committee's queue.</p>
+        <div class="row1"><span class="title">Send to committee</span><span class="tag deterministic">No AI</span></div>
+        <p class="desc">A separate step from finalizing — the analyst sends the assessment on for a decision. Until then, it stays out of the committee's queue, even once it's finalized.</p>
         <p class="who">Analyst</p>
       </div>
     </div>
@@ -180,8 +180,8 @@
     <div class="step" data-kind="human">
       <div class="node">9</div>
       <div class="card">
-        <div class="row1"><span class="title">Committee vote</span><span class="tag human">Human decides</span></div>
-        <p class="desc">Each committee member votes independently — Approve, Reject, Defer, or Approve with conditions, reasons required for anything but a plain approve. Once the configured quorum is reached, the system resolves the outcome automatically (reject and defer take priority over approve).</p>
+        <div class="row1"><span class="title">Committee decides</span><span class="tag human">Human decides</span></div>
+        <p class="desc">Each committee member votes independently — Approve, Reject, Defer, or Approve with Conditions — giving a reason for anything other than a plain approve. Once enough members have voted, the system works out the final outcome (a Reject or Defer always outweighs an Approve).</p>
         <p class="who">Committee</p>
       </div>
     </div>
@@ -189,14 +189,14 @@
     <div class="step" data-kind="none">
       <div class="node">10</div>
       <div class="card">
-        <div class="row1"><span class="title">Decision &amp; audit trail</span><span class="tag deterministic">Permanent record</span></div>
-        <p class="desc">The Product Owner sees the outcome. Every AI output, every human edit or override, every vote — logged permanently and never editable, so the reasoning behind any decision can be reconstructed later.</p>
+        <div class="row1"><span class="title">Outcome &amp; full history</span><span class="tag deterministic">Permanent record</span></div>
+        <p class="desc">The Product Owner is told the outcome. Every AI suggestion, every human edit, and every vote is permanently recorded and can never be changed — so anyone can trace exactly how and why a decision was reached.</p>
         <p class="who">System</p>
       </div>
     </div>
   </div>
 
   <div class="principle">
-    <p><strong>The rule that holds the whole thing together:</strong> AI proposes, extracts, and drafts — a person always reviews, and the committee always decides. Nothing in this system is ever auto-approved or auto-rejected.</p>
+    <p><strong>The rule that holds the whole thing together:</strong> AI can suggest, extract, and draft — but a human always reviews and can override, and the committee always makes the final call. Nothing is ever auto-approved or auto-rejected.</p>
   </div>
 </div>
