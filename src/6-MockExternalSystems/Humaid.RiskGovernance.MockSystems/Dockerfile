@@ -21,6 +21,9 @@ RUN dotnet publish src/6-MockExternalSystems/Humaid.RiskGovernance.MockSystems/H
     -c Release -o /app/publish --no-restore
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
+# See the Workbench Dockerfile's comment: patches OS-level CVEs (e.g. openssl/libssl3t64) that can
+# lag behind on this base image tag, ahead of the deploy pipeline's Trivy HIGH/CRITICAL gate.
+RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=build /app/publish .
 
