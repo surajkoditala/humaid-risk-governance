@@ -54,3 +54,6 @@ dependency) and are mirrored below for review/audit — if you change one, chang
 ## See also
 
 - [`docs/architecture/langgraph-evaluation.md`](../docs/architecture/langgraph-evaluation.md) — whether an orchestration framework (LangGraph) should replace the harness described above, and why the current recommendation is no (proposal, pending team decision).
+- [`docs/architecture/langgraph-integration.md`](../docs/architecture/langgraph-integration.md) — how `ai/langgraph/`'s standalone Python service (an alternate *implementation* behind the same interfaces, not a replacement for them) ties into the Workbench today.
+- [`harness/README.md`](../harness/README.md) — unrelated to the above: this repo's own *development-process* rules and standards (coding conventions, review checklist, and a local dev-tooling LangGraph CLI that checks a diff against them). Governs how this repo's code gets written, not how the product's AI touchpoints behave at runtime.
+- [`docs/architecture/dev-harness.md`](../docs/architecture/dev-harness.md) — diagrammed architecture of that dev-tooling LangGraph CLI (node flow, module layout, how it borrows `ai/langgraph/`'s provider config without depending on it).

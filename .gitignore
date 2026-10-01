@@ -30,3 +30,9 @@ ai/langgraph/__pycache__/
 ai/langgraph/**/__pycache__/
 ai/langgraph/.env
 ai/langgraph/*.egg-info/
+
+# Dev harness (harness/dev_harness/ - see harness/README.md) - local review output, not an artifact
+harness/dev_harness/__pycache__/
+harness/*.md.bak
+harness/last-report.md
+harness/dev_harness/last-report.md

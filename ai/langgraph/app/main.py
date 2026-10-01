@@ -13,7 +13,7 @@ from fastapi import FastAPI
 
 load_dotenv()
 
-from app.schemas import (
+from app.schemas import (  # noqa: E402 - must load .env (above) before app.llm reads env vars
     CategoryMappingRequest,
     CategoryMappingResponse,
 )
