@@ -141,7 +141,6 @@ export default function Intake() {
       <Card>
         <CardHeader>
           <CardTitle>Submit a change request</CardTitle>
-          <CardDescription>Tell us what's changing — FCRM will review the risk before go-live.</CardDescription>
         </CardHeader>
         <CardContent>
           <form className="space-y-4" onSubmit={submit}>
