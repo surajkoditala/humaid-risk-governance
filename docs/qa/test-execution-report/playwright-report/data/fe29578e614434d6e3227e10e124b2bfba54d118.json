@@ -1,0 +1,25 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/api/Assessment/OpenWorkspace/ef797803-aaf9-4a7a-b7af-a86f6f010f9a",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "durationMs": 283,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:22:21 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": true,
+      "isBadRequest": false,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": "eba39f9c-a4ba-40cf-946d-fa0a3da1bb98",
+      "message": null
+    }
+  }
+}

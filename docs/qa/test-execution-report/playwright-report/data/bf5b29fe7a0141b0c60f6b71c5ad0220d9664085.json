@@ -1,0 +1,25 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/api/ChangeRequest/ForUser/4fa322d3-2245-44ef-b664-1a804442db23",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "durationMs": 261,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:22:09 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": true,
+      "isBadRequest": false,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": [],
+      "message": null
+    }
+  }
+}

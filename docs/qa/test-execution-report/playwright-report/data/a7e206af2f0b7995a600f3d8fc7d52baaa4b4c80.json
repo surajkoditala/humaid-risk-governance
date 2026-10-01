@@ -1,0 +1,30 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/api/Committee/50f965f9-70e5-4c4d-bec5-36017302898e/Decision",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "durationMs": 278,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:23:29 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": true,
+      "isBadRequest": false,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": {
+        "id": "aafde869-a249-41d5-b790-c6fed1ff4f27",
+        "resolution": "Deferred",
+        "conditionsText": null,
+        "decidedAt": "2026-09-25T07:23:30.023872+00:00"
+      },
+      "message": null
+    }
+  }
+}

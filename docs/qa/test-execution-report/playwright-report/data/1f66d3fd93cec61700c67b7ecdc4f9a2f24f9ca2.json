@@ -1,0 +1,20 @@
+[
+  {
+    "id": "button-name",
+    "impact": "critical",
+    "help": "Buttons must have discernible text",
+    "nodes": 1,
+    "sample": [
+      "#base-ui-_r_8_"
+    ]
+  },
+  {
+    "id": "scrollable-region-focusable",
+    "impact": "serious",
+    "help": "Scrollable region must have keyboard access",
+    "nodes": 1,
+    "sample": [
+      ".overflow-x-auto"
+    ]
+  }
+]

@@ -1,0 +1,20 @@
+{
+  "request": {
+    "method": "PUT",
+    "url": "/api/Audit/ef797803-aaf9-4a7a-b7af-a86f6f010f9a",
+    "body": {
+      "reason": "tamper"
+    }
+  },
+  "response": {
+    "status": 405,
+    "durationMs": 246,
+    "headers": {
+      "content-length": "0",
+      "date": "Fri, 25 Sep 2026 07:23:41 GMT",
+      "server": "Kestrel",
+      "allow": "GET"
+    },
+    "body": ""
+  }
+}

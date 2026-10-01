@@ -1,0 +1,42 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/api/DataIngestion/MockVendors",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "durationMs": 766,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:22:20 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": true,
+      "isBadRequest": false,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": [
+        {
+          "id": "c3333333-0000-0000-0000-000000000001",
+          "label": "Global KYC Solutions Inc"
+        },
+        {
+          "id": "c3333333-0000-0000-0000-000000000003",
+          "label": "Northbridge Document Services"
+        },
+        {
+          "id": "c3333333-0000-0000-0000-000000000002",
+          "label": "QuickPay Processing LLC"
+        },
+        {
+          "id": "c3333333-0000-0000-0000-000000000004",
+          "label": "Vantage AML Screening Ltd"
+        }
+      ],
+      "message": null
+    }
+  }
+}

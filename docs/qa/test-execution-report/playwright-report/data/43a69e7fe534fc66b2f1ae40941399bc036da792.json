@@ -1,0 +1,31 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/api/Narrative/Edit",
+    "body": {
+      "assessmentId": "eba39f9c-a4ba-40cf-946d-fa0a3da1bb98",
+      "riskCategoryId": "22222222-2222-2222-2222-222222222222",
+      "newText": "post-finalize tamper",
+      "reason": "QA lock test",
+      "actorUserId": "4fa322d3-2245-44ef-b664-1a804442db23"
+    }
+  },
+  "response": {
+    "status": 200,
+    "durationMs": 765,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:23:24 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": true,
+      "isBadRequest": false,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": "a4483065-c1c3-4d27-8aa8-421a0a6dff45",
+      "message": null
+    }
+  }
+}

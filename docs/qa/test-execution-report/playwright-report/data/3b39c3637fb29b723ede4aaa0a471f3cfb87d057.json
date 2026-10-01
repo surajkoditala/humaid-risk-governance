@@ -1,0 +1,40 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/api/ChangeRequest/Submit",
+    "body": {
+      "changeType": "Feature",
+      "title": "[QA-E2E FINAL09251251] API probe - empty assessment",
+      "description": "Nothing will be reviewed on this one",
+      "submittedByUserId": "a6a709a7-65e7-4a90-9b58-cbbaec1d651a"
+    }
+  },
+  "response": {
+    "status": 200,
+    "durationMs": 818,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:22:22 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": true,
+      "isBadRequest": false,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": {
+        "id": "18404cb0-2e0b-4ef4-9a7d-b06fffe699f5",
+        "requestNumber": "CR-2026-00061",
+        "changeType": "Feature",
+        "title": "[QA-E2E FINAL09251251] API probe - empty assessment",
+        "description": "Nothing will be reviewed on this one",
+        "typeSpecificFieldsJson": "{}",
+        "status": "Submitted",
+        "submittedByUserId": "a6a709a7-65e7-4a90-9b58-cbbaec1d651a",
+        "submittedAt": "2026-09-25T07:22:23.309325+00:00"
+      },
+      "message": null
+    }
+  }
+}

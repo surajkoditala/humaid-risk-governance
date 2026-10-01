@@ -1,0 +1,30 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/api/Committee/eba39f9c-a4ba-40cf-946d-fa0a3da1bb98/Decision",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "durationMs": 318,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:23:38 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": true,
+      "isBadRequest": false,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": {
+        "id": "93d8a260-c62c-4768-80e9-03056e8b0ed6",
+        "resolution": "ApprovedWithConditions",
+        "conditionsText": "Jordan Blake: Annual on-site audit of the vendor; PII encrypted at rest",
+        "decidedAt": "2026-09-25T07:23:38.508341+00:00"
+      },
+      "message": null
+    }
+  }
+}

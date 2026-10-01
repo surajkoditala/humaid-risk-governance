@@ -1,0 +1,44 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/api/Committee/eba39f9c-a4ba-40cf-946d-fa0a3da1bb98/Votes",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "durationMs": 296,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:23:38 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": true,
+      "isBadRequest": false,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": [
+        {
+          "id": "3a49fa0e-830d-4b3b-ae75-977b8d77c818",
+          "committeeMemberUserId": "083ecfe5-aa01-4703-9168-762f0065078f",
+          "committeeMemberName": "Jordan Blake",
+          "vote": "ApproveWithConditions",
+          "conditionsText": "Annual on-site audit of the vendor; PII encrypted at rest",
+          "rationale": null,
+          "votedAt": "2026-09-25T07:23:37.930855+00:00"
+        },
+        {
+          "id": "2c433f59-84a4-46a5-ab83-b6aff078bcda",
+          "committeeMemberUserId": "fa142c1c-58cc-4666-b135-7768a2ab33f0",
+          "committeeMemberName": "Riley Voss",
+          "vote": "Approve",
+          "conditionsText": null,
+          "rationale": null,
+          "votedAt": "2026-09-25T07:23:38.383984+00:00"
+        }
+      ],
+      "message": null
+    }
+  }
+}

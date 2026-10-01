@@ -1,0 +1,42 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/api/Scoring/Calculate",
+    "body": {
+      "assessmentId": "eba39f9c-a4ba-40cf-946d-fa0a3da1bb98",
+      "riskCategoryId": "22222222-2222-2222-2222-222222222223",
+      "inherentRating": 1,
+      "controlIdsCredited": [],
+      "controlEffectiveness": 1
+    }
+  },
+  "response": {
+    "status": 200,
+    "durationMs": 306,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:23:10 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": true,
+      "isBadRequest": false,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": {
+        "id": "1912a7b8-c573-4f2e-a1e0-8f2b5d498f2f",
+        "riskCategoryId": "22222222-2222-2222-2222-222222222223",
+        "categoryName": "Geographic Locations",
+        "inherentRating": 1,
+        "controlEffectiveness": 1,
+        "mitigationFactorApplied": 0.85,
+        "residualRating": 0.15,
+        "isOverride": false,
+        "overrideReason": null,
+        "scoredBy": "System"
+      },
+      "message": null
+    }
+  }
+}
