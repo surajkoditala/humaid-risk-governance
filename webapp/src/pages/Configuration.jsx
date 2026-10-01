@@ -7,10 +7,11 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { useDevUser } from '../auth/DevUserContext.jsx'
+import { RequiredMark } from '../components/RequiredMark.jsx'
 import { Endpoints, apiFetch } from '../lib/api.js'
 import { useFetch } from '../lib/useFetch.js'
 
-// Epic 10 — Platform Configuration, analyst/admin-owned, no code change required.
+// Platform Configuration, analyst/admin-owned, no code change required.
 export default function Configuration() {
   const { currentUser } = useDevUser()
   const [bump, setBump] = useState(0)
@@ -27,7 +28,7 @@ export default function Configuration() {
 
   const saveRule = async () => {
     if (!ruleReason.trim()) {
-      toast.error('A reason is required to change a workflow rule (US-10.2).')
+      toast.error('A reason is required to change a workflow rule.')
       return
     }
     try {
@@ -72,7 +73,7 @@ export default function Configuration() {
       <Card>
         <CardHeader>
           <CardTitle>Workflow rules</CardTitle>
-          <CardDescription>US-10.2 — plain structured config, not buried in code. Every change is audited.</CardDescription>
+          <CardDescription>Plain structured config, not buried in code. Every change is audited.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -87,16 +88,25 @@ export default function Configuration() {
 
           <div className="grid gap-3 border-t pt-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label>Rule key</Label>
+              <Label>
+                Rule key
+                <RequiredMark />
+              </Label>
               <Input value={ruleKey} onChange={(e) => setRuleKey(e.target.value)} />
             </div>
             <div className="space-y-1.5">
-              <Label>Reason (mandatory)</Label>
+              <Label>
+                Reason
+                <RequiredMark />
+              </Label>
               <Input value={ruleReason} onChange={(e) => setRuleReason(e.target.value)} />
             </div>
           </div>
           <div className="space-y-1.5">
-            <Label>Value (JSON)</Label>
+            <Label>
+              Value (JSON)
+              <RequiredMark />
+            </Label>
             <Textarea rows={2} value={ruleValue} onChange={(e) => setRuleValue(e.target.value)} />
           </div>
           <Button onClick={saveRule}>Save rule</Button>
@@ -107,17 +117,20 @@ export default function Configuration() {
         <CardHeader>
           <CardTitle>Scoring configuration</CardTitle>
           <CardDescription>
-            US-10.1 — the mitigation cap per category; a value ≥ 1.0 is rejected outright since that
-            would let residual risk reach zero.
+            The mitigation cap per category; a value ≥ 1.0 is rejected outright since that would
+            let residual risk reach zero.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex flex-wrap items-end gap-2">
             <div className="space-y-1.5">
-              <Label>Category</Label>
+              <Label>
+                Category
+                <RequiredMark />
+              </Label>
               <Select value={categoryId} onValueChange={setCategoryId}>
                 <SelectTrigger className="w-56">
-                  <SelectValue placeholder="Select category">
+                  <SelectValue placeholder="Select category *">
                     {categories?.find((c) => c.id === categoryId)?.name}
                   </SelectValue>
                 </SelectTrigger>
@@ -131,11 +144,14 @@ export default function Configuration() {
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label>Max mitigation factor (0–1)</Label>
+              <Label>
+                Max mitigation factor (0–1)
+                <RequiredMark />
+              </Label>
               <Input className="w-40" type="number" step="0.05" min={0} max={0.99} value={mitigationFactor} onChange={(e) => setMitigationFactor(e.target.value)} />
             </div>
           </div>
-          <Input placeholder="Reason" value={scoringReason} onChange={(e) => setScoringReason(e.target.value)} />
+          <Input placeholder="Reason *" value={scoringReason} onChange={(e) => setScoringReason(e.target.value)} />
           <Button onClick={saveScoringConfig}>Save configuration</Button>
         </CardContent>
       </Card>

@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { useDevUser } from '../auth/DevUserContext.jsx'
+import { RequiredMark } from '../components/RequiredMark.jsx'
 import { Endpoints, apiFetch } from '../lib/api.js'
 import { CHANGE_TYPES } from '../lib/constants.js'
 import { useFetch } from '../lib/useFetch.js'
@@ -140,13 +141,16 @@ export default function Intake() {
       <Card>
         <CardHeader>
           <CardTitle>Submit a change request</CardTitle>
-          <CardDescription>Epic 1 — structured intake, no more email/SharePoint.</CardDescription>
+          <CardDescription>Structured intake, no more email/SharePoint.</CardDescription>
         </CardHeader>
         <CardContent>
           <form className="space-y-4" onSubmit={submit}>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label>Change type</Label>
+                <Label>
+                  Change type
+                  <RequiredMark />
+                </Label>
                 <Select
                   value={changeType}
                   onValueChange={(v) => {
@@ -156,7 +160,7 @@ export default function Intake() {
                   }}
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select a type" />
+                    <SelectValue placeholder="Select a type *" />
                   </SelectTrigger>
                   <SelectContent>
                     {CHANGE_TYPES.map((t) => (
@@ -168,19 +172,28 @@ export default function Intake() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="title">Title</Label>
+                <Label htmlFor="title">
+                  Title
+                  <RequiredMark />
+                </Label>
                 <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} />
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="description">Description</Label>
+              <Label htmlFor="description">
+                Description
+                <RequiredMark />
+              </Label>
               <Textarea id="description" rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
             </div>
             {typeSpecificSchema ? (
               <div className="grid gap-4 sm:grid-cols-2">
                 {typeSpecificSchema.map((field) => (
                   <div className="space-y-1.5" key={field.key}>
-                    <Label htmlFor={field.key}>{field.label}</Label>
+                    <Label htmlFor={field.key}>
+                      {field.label}
+                      <RequiredMark />
+                    </Label>
                     <Input
                       id={field.key}
                       value={typeSpecificFields[field.key] || ''}
@@ -191,7 +204,7 @@ export default function Intake() {
               </div>
             ) : (
               <div className="space-y-1.5">
-                <Label htmlFor="details">Type-specific details</Label>
+                <Label htmlFor="details">Type-specific details (optional)</Label>
                 <Textarea
                   id="details"
                   rows={2}
@@ -232,17 +245,20 @@ export default function Intake() {
           <CardTitle>Attach a supporting document</CardTitle>
           <CardDescription>
             PDF, DOCX, or XLSX — uploaded to blob storage and its text extracted server-side
-            (deterministic parsing, not an AI call); that text is what Epic 4's extraction then
-            runs against.
+            (deterministic parsing, not an AI call); that text is what the Extraction tab's AI
+            step then runs against.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form className="space-y-4" onSubmit={attach}>
             <div className="space-y-1.5">
-              <Label>Request</Label>
+              <Label>
+                Request
+                <RequiredMark />
+              </Label>
               <Select value={attachToId} onValueChange={setAttachToId}>
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select one of my requests">
+                  <SelectValue placeholder="Select one of my requests *">
                     {(() => {
                       const r = myRequests?.find((req) => req.id === attachToId)
                       return r ? `${r.requestNumber} — ${r.title}` : undefined
@@ -259,7 +275,10 @@ export default function Intake() {
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="file">File (PDF, DOCX, or XLSX)</Label>
+              <Label htmlFor="file">
+                File (PDF, DOCX, or XLSX)
+                <RequiredMark />
+              </Label>
               <Input
                 id="file"
                 type="file"
