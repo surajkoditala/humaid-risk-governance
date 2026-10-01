@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { isAuth0Configured } from '../auth/authConfig.js'
 import { useDevUser } from '../auth/DevUserContext.jsx'
+import { RequiredMark } from '../components/RequiredMark.jsx'
 import { Endpoints, apiFetch, downloadFile } from '../lib/api.js'
 import { useFetch } from '../lib/useFetch.js'
 
@@ -58,7 +59,7 @@ function CategoriesTab({ assessmentId, changeRequest, bump, isFinalized }) {
 
   const override = async (riskCategoryId, isActive, reasonText) => {
     if (!reasonText.trim()) {
-      toast.error('A reason is required to add or remove a category (Epic 6).')
+      toast.error('A reason is required to add or remove a category.')
       return
     }
     try {
@@ -80,7 +81,7 @@ function CategoriesTab({ assessmentId, changeRequest, bump, isFinalized }) {
       <Card>
         <CardHeader>
           <CardTitle>AI-proposed categories</CardTitle>
-          <CardDescription>US-2.1 — grounded against this change type's FFIEC categories.</CardDescription>
+          <CardDescription>Only categories that apply to this type of change can be proposed.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           <Button onClick={propose} disabled={proposing || isFinalized}>
@@ -109,7 +110,7 @@ function CategoriesTab({ assessmentId, changeRequest, bump, isFinalized }) {
                 </div>
                 <div className="flex gap-2">
                   <Input
-                    placeholder="Reason for removing"
+                    placeholder="Reason for removing *"
                     value={removeReasons[m.riskCategoryId] || ''}
                     onChange={(e) => setRemoveReasons((prev) => ({ ...prev, [m.riskCategoryId]: e.target.value }))}
                     className="sm:w-56"
@@ -131,11 +132,14 @@ function CategoriesTab({ assessmentId, changeRequest, bump, isFinalized }) {
           </div>
 
           <div className="space-y-2 border-t pt-4">
-            <Label>Add a category (reason required — Epic 6)</Label>
+            <Label>
+              Add a category
+              <RequiredMark />
+            </Label>
             <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
               <Select value={addCategoryId} onValueChange={setAddCategoryId}>
                 <SelectTrigger className="w-full sm:w-64">
-                  <SelectValue placeholder="Select category">
+                  <SelectValue placeholder="Select category *">
                     {allCategories?.find((c) => c.id === addCategoryId)?.name}
                   </SelectValue>
                 </SelectTrigger>
@@ -147,7 +151,7 @@ function CategoriesTab({ assessmentId, changeRequest, bump, isFinalized }) {
                   ))}
                 </SelectContent>
               </Select>
-              <Input placeholder="Reason" value={reason} onChange={(e) => setReason(e.target.value)} className="sm:flex-1" />
+              <Input placeholder="Reason *" value={reason} onChange={(e) => setReason(e.target.value)} className="sm:flex-1" />
               <Button variant="outline" disabled={!addCategoryId || isFinalized} onClick={() => override(addCategoryId, true, reason)}>
                 Add
               </Button>
@@ -198,7 +202,7 @@ function PolicyTab({ assessmentId, mapping, bump }) {
       <Card>
         <CardHeader>
           <CardTitle>Search the policy corpus</CardTitle>
-          <CardDescription>Deterministic full-text search — not an LLM call (see docs/governance).</CardDescription>
+          <CardDescription>Search FFIEC policy excerpts by keyword.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
@@ -343,7 +347,7 @@ function ExtractionTab({ changeRequest, bump }) {
       <Card>
         <CardHeader>
           <CardTitle>Attachments</CardTitle>
-          <CardDescription>US-4.1 — extract structured facts from each document's text.</CardDescription>
+          <CardDescription>Extract structured facts from each document's text.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
           {(attachments || []).map((a) => (
@@ -377,7 +381,7 @@ function ExtractionTab({ changeRequest, bump }) {
               <div className="mt-2 flex flex-col gap-2">
                 <div className="flex gap-2">
                   <Input
-                    placeholder="Corrected value"
+                    placeholder="Corrected value *"
                     className="flex-1"
                     value={correcting[f.fieldKey] || ''}
                     onChange={(e) => setCorrecting((c) => ({ ...c, [f.fieldKey]: e.target.value }))}
@@ -396,7 +400,7 @@ function ExtractionTab({ changeRequest, bump }) {
                     Material change (reason required)
                   </label>
                   <Input
-                    placeholder="Reason for this correction"
+                    placeholder={(correctIsMaterial[f.fieldKey] ?? true) ? 'Reason for this correction *' : 'Reason for this correction (optional)'}
                     className="h-8 flex-1 text-xs"
                     value={correctReason[f.fieldKey] || ''}
                     onChange={(e) => setCorrectReason((c) => ({ ...c, [f.fieldKey]: e.target.value }))}
@@ -485,14 +489,14 @@ function NarrativeTab({ assessmentId, mapping, bump, isFinalized }) {
                 <div className="space-y-2 border-t pt-3">
                   <Textarea
                     rows={2}
-                    placeholder="Edited narrative text"
+                    placeholder="Edited narrative text *"
                     value={editText[m.riskCategoryId] || ''}
                     onChange={(e) => setEditText((c) => ({ ...c, [m.riskCategoryId]: e.target.value }))}
                     disabled={isFinalized}
                   />
                   <div className="flex gap-2">
                     <Input
-                      placeholder="Reason for edit"
+                      placeholder="Reason for edit *"
                       className="flex-1"
                       value={editReason[m.riskCategoryId] || ''}
                       onChange={(e) => setEditReason((c) => ({ ...c, [m.riskCategoryId]: e.target.value }))}
@@ -617,7 +621,10 @@ function ScoringTab({ assessmentId, mapping, bump, isFinalized }) {
 
               <div className="flex flex-wrap items-end gap-2 border-t pt-3">
                 <div className="space-y-1">
-                  <Label className="text-xs">Inherent (1-5)</Label>
+                  <Label className="text-xs">
+                    Inherent (1-5)
+                    <RequiredMark />
+                  </Label>
                   <Input
                     className="w-24"
                     type="number"
@@ -628,7 +635,10 @@ function ScoringTab({ assessmentId, mapping, bump, isFinalized }) {
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs">Control effectiveness (0-1)</Label>
+                  <Label className="text-xs">
+                    Control effectiveness (0-1)
+                    <RequiredMark />
+                  </Label>
                   <Input
                     className="w-32"
                     type="number"
@@ -653,7 +663,10 @@ function ScoringTab({ assessmentId, mapping, bump, isFinalized }) {
 
               <div className="flex flex-wrap items-end gap-2 border-t pt-3">
                 <div className="space-y-1">
-                  <Label className="text-xs">Override residual</Label>
+                  <Label className="text-xs">
+                    Override residual
+                    <RequiredMark />
+                  </Label>
                   <Input
                     className="w-28"
                     type="number"
@@ -663,7 +676,7 @@ function ScoringTab({ assessmentId, mapping, bump, isFinalized }) {
                   />
                 </div>
                 <Input
-                  placeholder="Reason"
+                  placeholder="Reason *"
                   className="flex-1"
                   value={overrideForm[m.riskCategoryId]?.reason || ''}
                   onChange={(e) => setOverrideForm((c) => ({ ...c, [m.riskCategoryId]: { ...c[m.riskCategoryId], reason: e.target.value } }))}
@@ -718,7 +731,7 @@ function FinalizeTab({ assessmentId, assessment, bump }) {
     <Card>
       <CardHeader>
         <CardTitle>Readiness</CardTitle>
-        <CardDescription>US-6.3 — everything must be reviewed before this can move on.</CardDescription>
+        <CardDescription>Everything must be reviewed before this can move on.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {readiness?.noCategoriesMapped && (
@@ -788,7 +801,7 @@ function AuditTab({ changeRequest, bump }) {
       <CardHeader className="flex-row items-start justify-between space-y-0">
         <div>
           <CardTitle>Audit trail</CardTitle>
-          <CardDescription>US-9.1 — every AI output, human edit, and reason, in order.</CardDescription>
+          <CardDescription>Every AI output, human edit, and reason, in order.</CardDescription>
         </div>
         <button
           type="button"
