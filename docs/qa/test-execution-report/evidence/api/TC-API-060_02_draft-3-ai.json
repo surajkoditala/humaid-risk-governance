@@ -1,0 +1,36 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/api/Narrative/Draft",
+    "body": {
+      "assessmentId": "eba39f9c-a4ba-40cf-946d-fa0a3da1bb98",
+      "riskCategoryId": "22222222-2222-2222-2222-222222222223",
+      "regenerationFeedback": null
+    }
+  },
+  "response": {
+    "status": 200,
+    "durationMs": 3000,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:22:57 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": true,
+      "isBadRequest": false,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": {
+        "id": "d41ca34c-ab7b-4f0b-81f9-fc03ca6af113",
+        "riskCategoryId": "22222222-2222-2222-2222-222222222223",
+        "categoryName": "Geographic Locations",
+        "narrativeText": "The proposed change involves onboarding a Malta-based card settlement processor, QA corrected value, which will have access to cardholder PII and settlement files. This vendor will serve retail cardholders and MSB merchants through an API delivery channel, which is a non-face-to-face method. According to the FFIEC BSA/AML Manual on Risks Associated with Money Laundering and Terrorist Financing, non-face-to-face delivery channels, including reliance on third-party agents or correspondent relationships to deliver products, reduce a bank's ability to verify customer identity and intent directly, thereby increasing risk (Delivery Channels). Given that Malta is the vendor jurisdiction, it is critical to consider the geographic risk factors associated with operating in or contracting with vendors in that location, as outlined in the supervisory citation for Geographic Locations.",
+        "status": "AiDrafted",
+        "unsupportedClaimFlagsJson": "[]"
+      },
+      "message": null
+    }
+  }
+}

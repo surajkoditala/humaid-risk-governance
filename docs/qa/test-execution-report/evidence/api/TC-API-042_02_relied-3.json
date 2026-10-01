@@ -1,0 +1,31 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/api/PolicyResearch/RecordReliance",
+    "body": {
+      "assessmentId": "eba39f9c-a4ba-40cf-946d-fa0a3da1bb98",
+      "riskCategoryId": "22222222-2222-2222-2222-222222222223",
+      "policyChunkId": "539e307e-5d18-454b-a33c-fbcf3ff8c407",
+      "decision": "ReliedUpon",
+      "decidedByUserId": "4fa322d3-2245-44ef-b664-1a804442db23"
+    }
+  },
+  "response": {
+    "status": 200,
+    "durationMs": 285,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:22:40 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": true,
+      "isBadRequest": false,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": "13789a14-dbae-4c63-bb86-9043d5e273ab",
+      "message": null
+    }
+  }
+}

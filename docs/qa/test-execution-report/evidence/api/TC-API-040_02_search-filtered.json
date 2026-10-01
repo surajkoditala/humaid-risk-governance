@@ -1,0 +1,46 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/api/PolicyResearch/Search?queryText=customer%20due%20diligence&riskCategoryId=22222222-2222-2222-2222-222222222222&topK=5",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "durationMs": 280,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:22:32 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": true,
+      "isBadRequest": false,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": [
+        {
+          "id": "e7a09ebd-9c1f-4779-8499-fa131c4a77c4",
+          "policyDocumentId": "33333333-3333-3333-3333-333333333331",
+          "documentTitle": "FFIEC BSA/AML Examination Manual",
+          "sourceUrl": "https://bsaaml.ffiec.gov",
+          "effectiveDate": "2014-01-01T00:00:00",
+          "sectionRef": "Risks Associated with Money Laundering and Terrorist Financing - Customers",
+          "chunkText": "Certain categories of customers and entities pose elevated money laundering risk, including cash-intensive businesses, money services businesses, non-resident aliens, politically exposed persons, and non-governmental organizations operating in higher-risk sectors. A risk-based customer due diligence program should scale scrutiny to the customer's risk profile.",
+          "rank": 0.36762074
+        },
+        {
+          "id": "af07f40f-b9fa-4614-891b-b0fcc9a8f54b",
+          "policyDocumentId": "33333333-3333-3333-3333-333333333331",
+          "documentTitle": "FFIEC BSA/AML Examination Manual",
+          "sourceUrl": "https://bsaaml.ffiec.gov",
+          "effectiveDate": "2014-01-01T00:00:00",
+          "sectionRef": "Risks Associated with Money Laundering and Terrorist Financing - Beneficial Ownership",
+          "chunkText": "Legal entity customers with complex or opaque ownership structures, including shell companies, can be used to obscure the identity of beneficial owners. Banks are expected to identify and verify beneficial owners holding a defined ownership threshold as part of customer due diligence.",
+          "rank": 0.26833457
+        }
+      ],
+      "message": null
+    }
+  }
+}

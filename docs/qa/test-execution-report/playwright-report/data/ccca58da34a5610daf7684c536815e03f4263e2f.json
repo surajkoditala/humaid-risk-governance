@@ -1,0 +1,56 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/api/CategoryMapping/eba39f9c-a4ba-40cf-946d-fa0a3da1bb98",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "durationMs": 296,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:22:30 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": true,
+      "isBadRequest": false,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": [
+        {
+          "id": "3104cd90-9650-45c0-ba54-a0c69f1512e4",
+          "riskCategoryId": "22222222-2222-2222-2222-222222222222",
+          "categoryCode": "CUSTOMERS_ENTITIES",
+          "categoryName": "Customers & Entities",
+          "citationSection": "FFIEC BSA/AML Manual - Risks Associated with Money Laundering and Terrorist Financing: Customers",
+          "source": "AiProposed",
+          "aiCitation": "FFIEC BSA/AML Manual - Risks Associated with Money Laundering and Terrorist Financing: Customers",
+          "isActive": true
+        },
+        {
+          "id": "50856e97-3118-4319-8d00-bea81ee5e589",
+          "riskCategoryId": "22222222-2222-2222-2222-222222222223",
+          "categoryCode": "GEOGRAPHIC_LOCATIONS",
+          "categoryName": "Geographic Locations",
+          "citationSection": "FFIEC BSA/AML Manual - Risks Associated with Money Laundering and Terrorist Financing: Geographic Locations",
+          "source": "AnalystAdded",
+          "aiCitation": null,
+          "isActive": true
+        },
+        {
+          "id": "aafa75fc-965b-4f03-bc3e-d02c0f89aa81",
+          "riskCategoryId": "22222222-2222-2222-2222-222222222224",
+          "categoryCode": "DELIVERY_CHANNELS",
+          "categoryName": "Delivery Channels",
+          "citationSection": "FFIEC BSA/AML Manual - Risks Associated with Money Laundering and Terrorist Financing: Products and Services (Delivery Channels)",
+          "source": "AnalystAdded",
+          "aiCitation": null,
+          "isActive": true
+        }
+      ],
+      "message": null
+    }
+  }
+}

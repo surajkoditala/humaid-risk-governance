@@ -1,0 +1,117 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/api/Audit/ef797803-aaf9-4a7a-b7af-a86f6f010f9a",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "durationMs": 295,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:22:30 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": true,
+      "isBadRequest": false,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": [
+        {
+          "id": "e0c73283-3ee0-41fb-b433-c6fde83fff73",
+          "entityType": "ChangeRequest",
+          "entityId": "ef797803-aaf9-4a7a-b7af-a86f6f010f9a",
+          "action": "Created",
+          "actorUserId": "a6a709a7-65e7-4a90-9b58-cbbaec1d651a",
+          "actorName": "Priya Owens",
+          "actorLabel": "human",
+          "beforeValueJson": null,
+          "afterValueJson": "{\"title\": \"[QA-E2E FINAL09251251] API lifecycle - onboard settlement vendor\", \"status\": \"Submitted\", \"changeType\": \"Vendor\"}",
+          "reason": null,
+          "createdAt": "2026-09-25T07:22:21.121384+00:00"
+        },
+        {
+          "id": "a0c8e3d4-37fc-4ebd-9c23-8a27a6ae6a55",
+          "entityType": "ExternalSnapshot",
+          "entityId": "ef797803-aaf9-4a7a-b7af-a86f6f010f9a",
+          "action": "Ingested",
+          "actorUserId": null,
+          "actorName": null,
+          "actorLabel": "system",
+          "beforeValueJson": null,
+          "afterValueJson": "{\"hasVendor\": true, \"hasProduct\": false, \"hasCustomer\": false}",
+          "reason": null,
+          "createdAt": "2026-09-25T07:22:21.191721+00:00"
+        },
+        {
+          "id": "968095f5-d0b7-40df-8036-e0157fa8a847",
+          "entityType": "Attachment",
+          "entityId": "bec64b5e-fcf3-4dfb-9805-490a757c5a5c",
+          "action": "Uploaded",
+          "actorUserId": "a6a709a7-65e7-4a90-9b58-cbbaec1d651a",
+          "actorName": "Priya Owens",
+          "actorLabel": "human",
+          "beforeValueJson": null,
+          "afterValueJson": "{\"version\": 1, \"fileName\": \"vendor-due-diligence.pdf\"}",
+          "reason": null,
+          "createdAt": "2026-09-25T07:22:21.523301+00:00"
+        },
+        {
+          "id": "26def3b7-bc0f-4c98-814f-cc0d595394f6",
+          "entityType": "CategoryMapping",
+          "entityId": "3104cd90-9650-45c0-ba54-a0c69f1512e4",
+          "action": "AiProposed",
+          "actorUserId": null,
+          "actorName": null,
+          "actorLabel": "system/AI",
+          "beforeValueJson": null,
+          "afterValueJson": "{\"citation\": \"FFIEC BSA/AML Manual - Risks Associated with Money Laundering and Terrorist Financing: Customers\", \"riskCategoryId\": \"22222222-2222-2222-2222-222222222222\"}",
+          "reason": null,
+          "createdAt": "2026-09-25T07:22:28.181692+00:00"
+        },
+        {
+          "id": "81ef379f-9f6a-45b6-b239-f86031ae0e8a",
+          "entityType": "CategoryMapping",
+          "entityId": "50856e97-3118-4319-8d00-bea81ee5e589",
+          "action": "Overridden",
+          "actorUserId": "4fa322d3-2245-44ef-b664-1a804442db23",
+          "actorName": "Amara Chen",
+          "actorLabel": "human",
+          "beforeValueJson": null,
+          "afterValueJson": "{\"isActive\": true, \"riskCategoryId\": \"22222222-2222-2222-2222-222222222223\"}",
+          "reason": "Vendor is domiciled in Malta - geographic exposure",
+          "createdAt": "2026-09-25T07:22:30.50241+00:00"
+        },
+        {
+          "id": "378a5310-b42e-4465-ad2f-8c64ad9268a5",
+          "entityType": "CategoryMapping",
+          "entityId": "aafa75fc-965b-4f03-bc3e-d02c0f89aa81",
+          "action": "Overridden",
+          "actorUserId": "4fa322d3-2245-44ef-b664-1a804442db23",
+          "actorName": "Amara Chen",
+          "actorLabel": "human",
+          "beforeValueJson": null,
+          "afterValueJson": "{\"isActive\": false, \"riskCategoryId\": \"22222222-2222-2222-2222-222222222224\"}",
+          "reason": "QA: removal test",
+          "createdAt": "2026-09-25T07:22:30.814147+00:00"
+        },
+        {
+          "id": "65d9d702-d89d-4a28-9f55-d43033871923",
+          "entityType": "CategoryMapping",
+          "entityId": "aafa75fc-965b-4f03-bc3e-d02c0f89aa81",
+          "action": "Overridden",
+          "actorUserId": "4fa322d3-2245-44ef-b664-1a804442db23",
+          "actorName": "Amara Chen",
+          "actorLabel": "human",
+          "beforeValueJson": "{\"id\": \"aafa75fc-965b-4f03-bc3e-d02c0f89aa81\", \"source\": \"AnalystAdded\", \"is_active\": false, \"created_at\": \"2026-09-25T07:22:30.814147+00:00\", \"ai_citation\": null, \"assessment_id\": \"eba39f9c-a4ba-40cf-946d-fa0a3da1bb98\", \"risk_category_id\": \"22222222-2222-2222-2222-222222222224\", \"created_by_user_id\": \"4fa322d3-2245-44ef-b664-1a804442db23\"}",
+          "afterValueJson": "{\"isActive\": true, \"riskCategoryId\": \"22222222-2222-2222-2222-222222222224\"}",
+          "reason": "QA: restore - API channel is non-face-to-face",
+          "createdAt": "2026-09-25T07:22:31.128224+00:00"
+        }
+      ],
+      "message": null
+    }
+  }
+}

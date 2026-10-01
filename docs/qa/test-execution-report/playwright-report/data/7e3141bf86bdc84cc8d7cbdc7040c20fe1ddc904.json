@@ -1,0 +1,29 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/api/Committee/Vote",
+    "body": {
+      "assessmentId": "eba39f9c-a4ba-40cf-946d-fa0a3da1bb98",
+      "committeeMemberUserId": "fa142c1c-58cc-4666-b135-7768a2ab33f0",
+      "vote": "Approve"
+    }
+  },
+  "response": {
+    "status": 200,
+    "durationMs": 652,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:23:37 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": true,
+      "isBadRequest": false,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": "2c433f59-84a4-46a5-ab83-b6aff078bcda",
+      "message": null
+    }
+  }
+}

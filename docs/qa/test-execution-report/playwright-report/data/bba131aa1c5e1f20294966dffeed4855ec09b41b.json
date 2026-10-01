@@ -1,0 +1,25 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/api/Scoring/Controls/22222222-2222-2222-2222-222222222221",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "durationMs": 823,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:23:18 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": true,
+      "isBadRequest": false,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": [],
+      "message": null
+    }
+  }
+}

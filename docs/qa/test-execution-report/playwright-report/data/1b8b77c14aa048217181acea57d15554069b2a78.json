@@ -1,0 +1,58 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/api/PolicyResearch/eba39f9c-a4ba-40cf-946d-fa0a3da1bb98/Reliance",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "durationMs": 285,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:22:41 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": true,
+      "isBadRequest": false,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": [
+        {
+          "id": "dd0edbb8-1852-48e5-814e-319bd2f44f18",
+          "riskCategoryId": "22222222-2222-2222-2222-222222222222",
+          "policyChunkId": "3f171e93-f2ca-40a4-af6a-18ede9021c9b",
+          "decision": "ReliedUpon",
+          "sectionRef": "Risks Associated with Money Laundering and Terrorist Financing - Products and Services",
+          "chunkText": "Certain products and services are inherently vulnerable to money laundering because they involve rapid movement of funds or limited face-to-face contact, including electronic funds transfers, correspondent banking, private banking, trade finance, and prepaid access products. Examiners assess whether a bank has identified, measured, and mitigated the risks these offerings present before launch."
+        },
+        {
+          "id": "13789a14-dbae-4c63-bb86-9043d5e273ab",
+          "riskCategoryId": "22222222-2222-2222-2222-222222222223",
+          "policyChunkId": "539e307e-5d18-454b-a33c-fbcf3ff8c407",
+          "decision": "ReliedUpon",
+          "sectionRef": "Risks Associated with Money Laundering and Terrorist Financing - Delivery Channels",
+          "chunkText": "Non-face-to-face account opening and transaction channels, including online and mobile banking, and reliance on third-party agents or correspondent relationships to deliver products, reduce a bank's ability to verify customer identity and intent directly, and should be factored into the overall risk assessment of a proposed change."
+        },
+        {
+          "id": "e215d692-fa83-4f3e-8be6-58731f580516",
+          "riskCategoryId": "22222222-2222-2222-2222-222222222224",
+          "policyChunkId": "8fc9b915-62af-410e-af73-373e51aac522",
+          "decision": "ReliedUpon",
+          "sectionRef": "Risks Associated with Money Laundering and Terrorist Financing - Correspondent Banking",
+          "chunkText": "Correspondent accounts, particularly those for foreign financial institutions, can expose a bank to the risks of the respondent's own customer base and the adequacy of its AML controls. Enhanced due diligence is expected for correspondent relationships involving higher-risk jurisdictions or nested account arrangements."
+        },
+        {
+          "id": "ee986728-74a5-4b0e-9649-8772ffaabb96",
+          "riskCategoryId": "22222222-2222-2222-2222-222222222222",
+          "policyChunkId": "af07f40f-b9fa-4614-891b-b0fcc9a8f54b",
+          "decision": "NotRelevant",
+          "sectionRef": "Risks Associated with Money Laundering and Terrorist Financing - Beneficial Ownership",
+          "chunkText": "Legal entity customers with complex or opaque ownership structures, including shell companies, can be used to obscure the identity of beneficial owners. Banks are expected to identify and verify beneficial owners holding a defined ownership threshold as part of customer due diligence."
+        }
+      ],
+      "message": null
+    }
+  }
+}
