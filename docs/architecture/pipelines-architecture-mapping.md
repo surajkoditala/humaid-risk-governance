@@ -4,6 +4,68 @@
 
 ---
 
+## How AI was used to build these pipelines
+
+**Summary:** we designed and built all seven pipelines with Claude Code, working in short engineer-led loops. AI also runs *inside* four of them, as a reviewer or classifier.
+
+AI plays two separate roles here:
+
+| Role | Where | What it does |
+|---|---|---|
+| **AI as engineer** (build time) | Claude Code CLI on the engineer's machine, connected to the GitHub repo (`git`, `gh`) | Designs, writes, debugs and documents pipelines and Terraform, one small task at a time |
+| **AI as reviewer** (run time) | Claude Code CLI inside ADO (`claude -p --max-turns 1`) | Reviews scan output, plan or diff on each PR and returns a `VERDICT:` line; the watchdog uses it to classify telemetry signals |
+
+### 1. Did we use AI for the pipeline design?
+
+Yes, for the design as well as the code. Claude Code proposed the gate structure and step ordering, and the token-separation and fail-closed patterns. A human then accepted, changed or rejected each proposal before it merged (see section 4). Two examples of design work that came from asking Claude to review its own output:
+
+- **Hard gates.** We asked Claude to review `dev-pr-review.yml`. It proposed making `validate`, TFLint (errors only) and Trivy HIGH/CRITICAL hard gates. It also proposed ordering steps cheapest-first and a machine-parseable verdict line that fails closed. All of these merged in [#26](https://github.com/surajkoditala/humaid-risk-governance/pull/26).
+- **AI-review quality.** We asked Claude why a harmless PR came back `NEEDS_ATTENTION`. It traced the cause to whole-config scanner findings being treated as PR findings, and redesigned the prompt to be diff-aware ([#23](https://github.com/surajkoditala/humaid-risk-governance/pull/23)). Pre-existing findings are now reported as a count only ([#25](https://github.com/surajkoditala/humaid-risk-governance/pull/25)).
+
+### 2. How we used AI to arrive at the design
+
+We worked in a fixed loop and never asked for "build me a pipeline" in one prompt:
+
+1. **Frame one small task.** Examples: "add a terraform plan step to the PR review and feed it to the AI review", or "onboard the container registry module".
+2. **Claude asks before building.** On open design points it asked first: which service connection, whether the plan feeds the AI review, hard-fail or soft-fail, which trigger paths, whether apply needs manual approval.
+3. **Claude implements and shows the diff.** For modules, the engineer asked to see changes before any commit.
+4. **The engineer runs it for real in Azure DevOps** and pastes back the run log, error or portal screenshot.
+5. **Claude diagnoses and fixes.** It then commits on a `feature/<context>` branch, pushes, and opens a PR with a description.
+6. **The engineer decides on merge.** The engineer merges, or redirects ("too wasteful", "revert that").
+
+Most real-world constraints only showed up at step 4, and AI turned each one into a design change. Examples: storage 403s (RBAC), Container Apps 409 quota and 400 workload-profile errors (Consumption-only), PostgreSQL blocked in `eastus2` on the subscription (`centralus`, with the private endpoint pinned to `eastus2`), and a private-endpoint region mismatch.
+
+### 3. How we interacted with AI and what we gave it
+
+| Input | Purpose |
+|---|---|
+| **`CLAUDE.md`** (repo root) | Persistent context loaded every session: project goals, tech stack, branch layout (`main` = infra, `release/1.00` = app), Terraform and backend versions, region and cost decisions, pipeline gate table, secrets rules, commit conventions. It stopped the same context being re-explained each time |
+| **Small task prompts** | One concern per prompt: a step, a module, a fix, a rename |
+| **Answers to Claude's clarifying questions** | Design choices only a human could make (service connection, approval policy, gating strictness) |
+| **Real pipeline logs, error text, ADO and GitHub screenshots** | Ground truth from Azure DevOps. Claude does not trigger ADO runs; the engineer runs them and feeds back the results |
+| **Constraints and corrections** | Examples: "hackathon, runtime matters", "repo holds app *and* infra", "branch names must be `feature/<context>`". Claude saved standing rules to its memory and applied them to later work |
+| **Tool access** | `git` and `gh` CLI on the local clone, used to branch, commit, push and open PRs. Azure credentials, ADO service connections, variable groups and repo settings stayed with the engineer |
+
+Claude's verification was concrete: `bash -n` on the inline scripts, an 18-case test of the verdict parser, and fake-`curl` harnesses for the GitHub notification steps. These all ran before a PR was opened.
+
+### 4. What AI did and what humans decided
+
+| AI did | Human decided |
+|---|---|
+| Wrote the pipeline YAML (plan step, deploy pipeline, hard gates, notifications) and onboarded 10 Terraform modules into `iac/environments/dev` | Which pipelines exist, their triggers and paths, and that dev apply is **fully automatic on merge**, with branch protection as the gate |
+| Proposed the review prompt, a verdict parser that fails closed, and the read-step/post-step token separation | That a merged PR is the approval: no manual approval stage, a required check `gh-infra-dev-pr-review`, and Checkov soft-fail at first |
+| Diagnosed every failed ADO run from logs (403, 409, 400, region and version errors) and proposed the fix | Cost and region trade-offs: Consumption plan only, PostgreSQL in `centralus`, no HA or geo-backup in dev |
+| Reviewed its own pipeline and suggested improvements (hard gates, auto-merge, `succeededOrFailed()` artifacts) | **Accepted** hard gates. **Rejected** blanket `succeededOrFailed()` as wasted runtime, so pipelines are fail-fast. **Reverted auto-merge** after Claude had built it, because one repo holds app and infra and humans must merge |
+| Set the response cap (<400 words, ~2000 tokens), `--max-turns 1`, and count-only reporting of pre-existing findings | The token budget and the review format (heredoc prompt), chosen from options Claude laid out |
+| Standardized tags, cleaned module artifacts, renamed `erc`→`gh`, renamed container apps | Tag schema, naming conventions, app names (`gh-hrg-workbench`, `gh-hrg-mockapi`) |
+| Built `@mention` notifications for attention verdicts and deploy failures | Picked `@mention` over email, plus every merge, admin bypass and permission grant (PAT scopes, RBAC, variable-group access) |
+
+**Where the human overrode the AI.** Claude once claimed that VNet integration was *required* for the backend's internal-only ingress to be isolated. The engineer pushed back, and Claude acknowledged it was wrong and corrected the rationale in `main.cae.tf`. Every AI output went through a human-merged PR. No AI step can merge, approve or apply on its own judgement: the deploy pipeline applies only what a human merged, and the AI's only power in a pipeline is to *block*, with `BLOCKING_ISSUES`.
+
+**Engineering judgement (deterministic vs probabilistic).** Deterministic tools make the hard pass/fail calls: fmt, validate, TFLint, Trivy and `plan`. The LLM goes last and only adds a verdict on top. If its output can't be parsed, the result fails closed to `NEEDS_ATTENTION`. If the AI is unavailable, the PR is not blocked.
+
+---
+
 ## 1. Pipeline inventory
 
 | Pipeline (Azure DevOps name) | File | Branch | Trigger | What it does |
