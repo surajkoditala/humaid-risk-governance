@@ -23,8 +23,7 @@ namespace Humaid.RiskGovernance.AdminUI.Services.Configuration
         {
             // DEF-002: same gap as scoring config - US-10.2 is scoped to an Analyst "with
             // configuration privileges", not any authenticated caller.
-            var actorRole = await _userRepo.GetRoleAsync(input.ActorUserId);
-            if (actorRole is not ("Analyst" or "Admin"))
+            if (!await _userRepo.HasRoleAsync(input.ActorUserId, "Analyst") && !await _userRepo.HasRoleAsync(input.ActorUserId, "Admin"))
             {
                 throw new ValidationException("Only an FCRM Analyst may change a workflow rule.");
             }

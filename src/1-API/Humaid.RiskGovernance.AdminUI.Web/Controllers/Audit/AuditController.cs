@@ -3,13 +3,17 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.Audit
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.Audit;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Audit;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Core;
+    using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Users;
     using Humaid.RiskGovernance.AdminUI.Web.Controllers.Core;
     using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
 
     /// <summary>Epic 9 - Immutable Audit Trail. Read-only by design - there is deliberately no
-    /// write endpoint here beyond what other modules' own stored functions already append.</summary>
-    [Authorize]
+    /// write endpoint here beyond what other modules' own stored functions already append.
+    /// US-9.1/US-9.3 name "Auditor/Examiner" as a reader; that isn't one of the four app roles
+    /// (AppRoles), so it maps to Analyst (preparing for exam) and Admin (platform/compliance
+    /// oversight) until the team adds a dedicated role.</summary>
+    [Authorize(Roles = AppRoles.AnalystOrAdmin)]
     [Route("api/[controller]")]
     public class AuditController : BaseApiController
     {

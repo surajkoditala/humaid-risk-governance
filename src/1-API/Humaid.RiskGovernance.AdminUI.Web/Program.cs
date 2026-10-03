@@ -40,6 +40,7 @@ using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.Narrative
 using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.PolicyResearch;
 using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.Scoring;
 using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.Users;
+using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Users;
 using Humaid.RiskGovernance.AdminUI.Services.Assessment;
 using Humaid.RiskGovernance.AdminUI.Services.Audit;
 using Humaid.RiskGovernance.AdminUI.Services.CategoryMapping;
@@ -158,11 +159,17 @@ builder.Services.AddOpenApi();
 var auth0Domain = builder.Configuration["AUTH0_DOMAIN"];
 var auth0Audience = builder.Configuration["AUTH0_AUDIENCE"];
 
-// No Auth0 tenant configured yet and running locally: fall back to DevBypassAuthHandler instead of
-// JwtBearer, mirroring webapp/src/auth/RequireAuth.jsx's own "Auth0 not configured -> local dev
-// mode" bypass. Can never activate outside Development, and never when AUTH0_DOMAIN is actually
-// set - see DevBypassAuthHandler.cs.
-if (string.IsNullOrWhiteSpace(auth0Domain) && builder.Environment.IsDevelopment())
+// Running without a real login is allowed only when ALL of these hold: no Auth0 tenant configured,
+// the Development environment, and NOT hosted in Azure Container Apps (Azure sets CONTAINER_APP_NAME
+// on every replica). The Environment check alone is not enough: the deployed dev environment runs
+// with ASPNETCORE_ENVIRONMENT=Development, which is how the app shipped open (QA DEF-010).
+var runningInAzure = !string.IsNullOrWhiteSpace(builder.Configuration["CONTAINER_APP_NAME"]);
+var useDevAuth = string.IsNullOrWhiteSpace(auth0Domain) && builder.Environment.IsDevelopment() && !runningInAzure;
+
+// Local, no Auth0 tenant yet: DevBypassAuthHandler lets the webapp's "acting as" switcher name a
+// seeded user in the X-Dev-User-Id header - mirroring webapp/src/auth/RequireAuth.jsx's own "Auth0
+// not configured -> local dev mode" bypass. The role checks still apply to whoever is switched in.
+if (useDevAuth)
 {
     builder.Services
         .AddAuthentication(DevBypassAuthHandler.SchemeName)
@@ -170,6 +177,16 @@ if (string.IsNullOrWhiteSpace(auth0Domain) && builder.Environment.IsDevelopment(
 }
 else
 {
+    // Fail closed. A missing Auth0 setting anywhere the dev bypass is not allowed stops the app at
+    // startup (the new revision never becomes healthy, so a working one keeps serving) instead of
+    // starting with no way to validate a token, or worse, with everyone let in.
+    if (string.IsNullOrWhiteSpace(auth0Domain) || string.IsNullOrWhiteSpace(auth0Audience))
+    {
+        throw new InvalidOperationException(
+            "AUTH0_DOMAIN and AUTH0_AUDIENCE must both be set. The local dev-login fallback is only available " +
+            "when running in the Development environment outside Azure Container Apps with AUTH0_DOMAIN unset.");
+    }
+
     builder.Services
         .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         .AddJwtBearer(options =>
@@ -187,7 +204,26 @@ else
             };
         });
 }
-builder.Services.AddAuthorization();
+
+// Epic 11: every authenticated caller is resolved to their app_user row, whose role - never a token
+// claim or a request field - is what [Authorize(Roles = ...)] on every action is checked against.
+// IHttpContextAccessor + the "Auth0" client below back AppUserClaimsTransformation's email-match
+// fallback (Epic 11 follow-up) - harmless to register even under the dev bypass, since that fallback
+// only ever fires for a request carrying a real Bearer token.
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddHttpClient("Auth0", client =>
+{
+    client.BaseAddress = new Uri(string.IsNullOrWhiteSpace(auth0Domain) ? "http://localhost/" : $"https://{auth0Domain}/");
+});
+builder.Services.AddScoped<IAuth0UserInfoClient, Auth0UserInfoClient>();
+builder.Services.AddTransient<IClaimsTransformation, AppUserClaimsTransformation>();
+builder.Services.AddAuthorization(options =>
+{
+    // The full user list backs the local "acting as" switcher only. Outside local dev it is an
+    // administrator's directory, not something any signed-in user can enumerate.
+    options.AddPolicy(AccessPolicies.UserDirectory, policy =>
+        policy.RequireAssertion(context => useDevAuth || context.User.IsInRole(AppRoles.Admin)));
+});
 
 // CORS — the webapp runs as its own Vite dev server (localhost:3000), not hosted from this API's
 // wwwroot, so it needs an explicit allowed origin rather than same-origin requests.

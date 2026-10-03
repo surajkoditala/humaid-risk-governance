@@ -7,7 +7,8 @@ namespace Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Users
         public string Email { get; set; } = string.Empty;
         public string DisplayName { get; set; } = string.Empty;
 
-        /// <summary>ProductOwner | Analyst | CommitteeMember | Admin.</summary>
-        public string Role { get; set; } = string.Empty;
+        /// <summary>Every role this user holds (Epic 11 follow-up: app_user_role, not a single
+        /// column) - each entry is one of ProductOwner | Analyst | CommitteeMember | Admin.</summary>
+        public string[] Roles { get; set; } = [];
     }
 }

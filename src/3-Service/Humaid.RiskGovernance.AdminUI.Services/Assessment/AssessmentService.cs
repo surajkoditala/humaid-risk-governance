@@ -94,8 +94,7 @@ namespace Humaid.RiskGovernance.AdminUI.Services.Assessment
             // DEF-002: a Product Owner id finalizing an assessment returned 200 (audit even
             // recorded them as the finalizer) - US-6.3 AC3 requires this to be the analyst's own,
             // accountable action.
-            var actorRole = await _userRepo.GetRoleAsync(actorUserId);
-            if (actorRole is not ("Analyst" or "Admin"))
+            if (!await _userRepo.HasRoleAsync(actorUserId, "Analyst") && !await _userRepo.HasRoleAsync(actorUserId, "Admin"))
             {
                 throw new ValidationException("Only an FCRM Analyst may finalize an assessment.");
             }

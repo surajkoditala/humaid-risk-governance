@@ -14,6 +14,17 @@
 # this stage wwwroot is empty and every non-API route 404s - that's what shipped before this fix.
 FROM node:22-alpine AS webapp-build
 WORKDIR /webapp
+
+# Epic 11: Vite inlines import.meta.env.VITE_* into the bundle at THIS build step, not at container
+# start - unlike every backend config value in this repo (flat IConfiguration keys read at runtime),
+# these three cannot be set as a Container App env var later and take effect. They must reach
+# `docker build` as --build-args (see .azure-pipelines/workbench/environments/dev.yml and
+# templates/variables.yml). Defaulting to empty keeps every build that doesn't pass them identical
+# to before this change - isAuth0Configured (authConfig.js) is false, same "acting as" dev mode.
+ARG VITE_AUTH0_DOMAIN=""
+ARG VITE_AUTH0_CLIENT_ID=""
+ARG VITE_AUTH0_AUDIENCE=""
+
 COPY webapp/package.json webapp/package-lock.json ./
 RUN npm ci
 COPY webapp/ ./
@@ -22,6 +33,9 @@ COPY webapp/ ./
 # Vite inlines import.meta.env.VITE_* at build time. Empty string means same-origin, which is
 # correct once the built assets are served from this same container.
 ENV VITE_API_BASE_URL=""
+ENV VITE_AUTH0_DOMAIN=${VITE_AUTH0_DOMAIN}
+ENV VITE_AUTH0_CLIENT_ID=${VITE_AUTH0_CLIENT_ID}
+ENV VITE_AUTH0_AUDIENCE=${VITE_AUTH0_AUDIENCE}
 RUN npm run build
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
@@ -32,9 +46,11 @@ WORKDIR /src
 # the Windows host trusts but this Linux build stage does not. Only ops/certs/.gitkeep is tracked
 # in git; drop your own *.crt there locally (gitignored) if `dotnet restore` fails with NU1301/
 # UntrustedRoot. No-op (and no build-time cost) when the directory holds no real certs - see
-# ops/certs/README.md.
-COPY ops/certs/ /usr/local/share/ca-certificates/extra/
-RUN find /usr/local/share/ca-certificates/extra/ -name '*.crt' -o -name '*.pem' | grep -q . && update-ca-certificates || true
+# ops/certs/README.md. Must land directly in ca-certificates/ - update-ca-certificates does NOT
+# recurse into subdirectories (confirmed against this same base image; a nested extra/ subfolder
+# is silently ignored, "0 added" every time with no error).
+COPY ops/certs/ /usr/local/share/ca-certificates/
+RUN find /usr/local/share/ca-certificates/ -maxdepth 1 \( -name '*.crt' -o -name '*.pem' \) | grep -q . && update-ca-certificates || true
 
 # Copy csproj files first so `dotnet restore` is cached separately from source changes.
 COPY src/1-API/Humaid.RiskGovernance.AdminUI.Web/*.csproj src/1-API/Humaid.RiskGovernance.AdminUI.Web/
@@ -67,6 +83,18 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 # pinning a digest, which would just go stale again the next time a CVE lands.
 RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
+
+# Same corporate-proxy trust as the build stage above (see ops/certs/README.md) - but this one
+# matters at RUNTIME, not just at build. The app's own outbound HTTPS calls (Auth0's JWKS endpoint
+# for JWT signature validation, the Anthropic API) go through the same SSL-inspecting proxy as
+# `dotnet restore` did, and this stage starts from a fresh base image that never saw the build
+# stage's trust store update. Without this, JWT validation fails with "the signature key was not
+# found" (the app can't fetch Auth0's real signing keys) even though login itself works fine (the
+# browser, running on the host, already trusts the proxy's root cert).
+USER root
+COPY ops/certs/ /usr/local/share/ca-certificates/
+RUN find /usr/local/share/ca-certificates/ -maxdepth 1 \( -name '*.crt' -o -name '*.pem' \) | grep -q . && update-ca-certificates || true
+
 COPY --from=build /app/publish .
 COPY --from=webapp-build /webapp/dist ./wwwroot
 COPY --from=build /src/src/4-Persistence/Humaid.RiskGovernance.AdminUI.DB ./db
