@@ -1,0 +1,399 @@
+# =============================================================================
+# PR validation pipeline for iac/environments/dev
+# =============================================================================
+# Repo lives in GitHub; pipeline runs in Azure DevOps (GitHub service
+# connection required on the pipeline).
+#
+# Triggers ONLY when: a PR targets `main` AND the PR contains changes under
+# iac/environments/dev/**.
+# =============================================================================
+
+# Disable push triggers — this pipeline is PR-only
+trigger: none
+
+# Trigger only for PRs targeting main that touch iac/environments/dev
+pr:
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - iac/environments/dev/*
+
+# Variable groups: checkov-secrets (existing) + one holding CLAUDE_CODE_OAUTH_TOKEN
+# (from `claude setup-token`, uses your Claude Pro/Max subscription — no API billing)
+# and, if you want the bot to comment on the PR, a GitHub PAT (repo scope).
+variables:
+  - group: checkov-secrets
+  - group: ai-review-secrets   # CLAUDE_CODE_OAUTH_TOKEN, GITHUB_PAT (optional)
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+  # Checkout repository
+  - checkout: self
+
+  # Install Terraform CLI
+  - task: TerraformInstaller@1
+    displayName: 'Install Terraform'
+    inputs:
+      terraformVersion: '1.12.2'
+
+  # Check Terraform formatting
+  - script: |
+      terraform fmt -check -recursive # Check if any files are not properly formatted
+    displayName: 'Terraform Format Check'
+    workingDirectory: $(System.DefaultWorkingDirectory)/iac/environments/dev
+
+  # ---------------------------------------------------------------------------
+  # Hard gates (fail-fast): a failing gate fails the build and skips the steps
+  # after it, so the required GitHub check goes red and blocks the merge; the
+  # pipeline log shows the error. Ordered cheapest-first so bad PRs fail in
+  # seconds. Hard gates: fmt, init, validate, TFLint (errors only), Trivy
+  # HIGH/CRITICAL, Terraform Plan, and AI verdict BLOCKING_ISSUES.
+  # Informational only (never fail the build): Trivy MEDIUM, Checkov (soft-fail),
+  # TFLint warnings.
+  # ---------------------------------------------------------------------------
+
+  # Initialize Terraform and download private modules
+  - script: |
+      terraform init \
+        -backend=false \
+        -input=false \
+        -no-color
+    displayName: 'Terraform Init'
+    workingDirectory: $(System.DefaultWorkingDirectory)/iac/environments/dev
+
+  # HARD GATE: static validation. Fast, needs no cloud credentials, and catches
+  # undeclared variables/data sources, bad module output references, and stale
+  # tag keys before anything else runs.
+  - script: |
+      terraform validate -no-color
+    displayName: 'Terraform Validate'
+    workingDirectory: $(System.DefaultWorkingDirectory)/iac/environments/dev
+
+  # Install and Run TFLint to check for issues in Terraform code
+  - script: |
+      set -euo pipefail
+      TFLINT_VERSION="0.63.1"
+      TFLINT_FILE="tflint_linux_amd64.zip"
+      TFLINT_URL=https://github.com/terraform-linters/tflint/releases/download/v${TFLINT_VERSION}
+      curl -fsSLo "${TFLINT_FILE}" "${TFLINT_URL}/${TFLINT_FILE}"
+      curl -fsSLo checksums.txt "${TFLINT_URL}/checksums.txt"
+      grep " ${TFLINT_FILE}$" checksums.txt | sha256sum --check -
+      unzip -q "${TFLINT_FILE}"
+      sudo install -m 0755 tflint /usr/local/bin/tflint
+      rm -f tflint "${TFLINT_FILE}" checksums.txt
+      tflint --version
+      tflint --init
+      # HARD GATE on ERROR-severity issues only. Warnings/notices are still
+      # printed in the log but no longer affect the exit code.
+      set +e
+      tflint --recursive --minimum-failure-severity=error
+      TFLINT_EXIT_CODE=$?
+      set -e
+      if [ "${TFLINT_EXIT_CODE}" -ne 0 ]; then
+        echo "##vso[task.logissue type=error]TFLint found error-severity issues (exit ${TFLINT_EXIT_CODE})."
+        exit "${TFLINT_EXIT_CODE}"
+      fi
+    displayName: 'Terraform Lint (TFLint)'
+    workingDirectory: $(System.DefaultWorkingDirectory)/iac/environments/dev
+
+  # Install Trivy
+  - script: |
+      set -euo pipefail
+      curl -sfL \
+        https://raw.githubusercontent.com/aquasecurity/trivy/v0.71.2/contrib/install.sh \
+        -o install.sh
+      chmod +x install.sh
+      sudo ./install.sh -b /usr/local/bin
+      rm -f install.sh
+
+      trivy --version
+    displayName: 'Install Trivy'
+
+  # Scan Terraform configuration using Trivy
+  # NOTE: writes JSON alongside the human-readable table so the AI review
+  # step below has structured findings to read.
+  - script: |
+      set -euo pipefail
+
+      trivy config . \
+        --severity MEDIUM,HIGH,CRITICAL \
+        --exit-code 0 \
+        --format json \
+        --output "$(Build.ArtifactStagingDirectory)/trivy-results.json"
+
+      set +e
+      trivy config . \
+        --severity MEDIUM,HIGH,CRITICAL \
+        --exit-code 1
+      TRIVY_EXIT_CODE=$?
+      set -e
+
+      if [ "${TRIVY_EXIT_CODE}" -eq 1 ]; then
+        echo "##vso[task.logissue type=warning]Trivy found security findings."
+      elif [ "${TRIVY_EXIT_CODE}" -ne 0 ]; then
+        exit "${TRIVY_EXIT_CODE}"
+      fi
+    displayName: 'Terraform Security Scan (Trivy)'
+    workingDirectory: $(System.DefaultWorkingDirectory)/iac/environments/dev
+
+  # HARD GATE: any HIGH or CRITICAL Trivy finding fails the build. Trivy scans
+  # the whole config (not just this PR's diff), which is fine for this
+  # severity floor: HIGH/CRITICAL findings should not exist anywhere in the
+  # config. MEDIUM findings stay informational (see the scan step above).
+  - script: |
+      set -euo pipefail
+      trivy config . --severity HIGH,CRITICAL --exit-code 1
+    displayName: 'Terraform Security Gate (Trivy HIGH/CRITICAL)'
+    workingDirectory: $(System.DefaultWorkingDirectory)/iac/environments/dev
+
+  # Running Checkov through custom install because the Microsoft DevOps
+  # extension doesn't let you pass arbitrary CLI flags.
+  # NOTE: all modules referenced here are local (relative source paths), so
+  # --download-external-modules is intentionally omitted — it only applies to
+  # registry/git-remote module sources, and enabling it against a local
+  # relative source silently breaks Checkov's graph build (0 resources
+  # scanned, no error). Re-add it (with VCS_BASE_URL/VCS_TOKEN) only if a
+  # private git/registry module source gets introduced.
+  # --soft-fail keeps this step from hard-failing so you still get plan-level
+  # review even when Checkov finds things — remove it if you want it to gate the PR.
+  - script: |
+      set -euo pipefail
+      python -m pip install --quiet checkov==3.2.482
+
+      checkov -d . \
+        --config-file ../../../.azure-pipelines/iac/.checkov.yml \
+        --soft-fail \
+        --output cli \
+        --output json \
+        --output-file-path console,$(Build.ArtifactStagingDirectory)/checkov-results.json
+    displayName: 'Terraform Security Scan (Checkov)'
+    workingDirectory: $(System.DefaultWorkingDirectory)/iac/environments/dev
+
+  # Terraform Plan — authenticates via Workload Identity Federation using the
+  # 'azure-cloud' Azure DevOps service connection (no client secret / storage
+  # account key). Re-inits WITH the real backend (earlier init used
+  # -backend=false for fmt/lint/checkov, which needs no credentials).
+  # ARM_USE_AZUREAD=true is required because WIF has no storage-account-key
+  # auth path — the service connection's identity needs Storage Blob Data
+  # Contributor on the state storage account.
+  # HARD GATE: a failed init or plan fails the build. Validated stable across
+  # multiple real PR runs, and a PR whose plan can't be produced can't be
+  # deployed by dev-tf-deploy either.
+  - task: AzureCLI@2
+    displayName: 'Terraform Plan'
+    inputs:
+      azureSubscription: 'azure-cloud'
+      scriptType: bash
+      scriptLocation: inlineScript
+      addSpnToEnvironment: true
+      workingDirectory: $(System.DefaultWorkingDirectory)/iac/environments/dev
+      inlineScript: |
+        set -euo pipefail
+        STAGING="$(Build.ArtifactStagingDirectory)"
+
+        export ARM_CLIENT_ID="$servicePrincipalId"
+        export ARM_OIDC_TOKEN="$idToken"
+        export ARM_TENANT_ID="$tenantId"
+        export ARM_SUBSCRIPTION_ID="$(az account show --query id -o tsv)"
+        export ARM_USE_OIDC=true
+        export ARM_USE_AZUREAD=true
+
+        set +e
+        terraform init -reconfigure -input=false -no-color
+        INIT_EXIT_CODE=$?
+        set -e
+        if [ "${INIT_EXIT_CODE}" -ne 0 ]; then
+          echo "##vso[task.logissue type=error]Terraform init (with backend) failed (exit ${INIT_EXIT_CODE})."
+          exit "${INIT_EXIT_CODE}"
+        fi
+
+        set +e
+        terraform plan -input=false -no-color -out=tfplan
+        PLAN_EXIT_CODE=$?
+        set -e
+        if [ "${PLAN_EXIT_CODE}" -ne 0 ]; then
+          echo "##vso[task.logissue type=error]Terraform plan failed (exit ${PLAN_EXIT_CODE})."
+          exit "${PLAN_EXIT_CODE}"
+        fi
+
+        terraform show -no-color tfplan > "$STAGING/tfplan.txt"
+        terraform show -no-color -json tfplan > "$STAGING/tfplan.json"
+
+  # Install Node.js (required to install the Claude Code CLI)
+  # NOTE: UseNode@1 resolved node v10.x on this agent instead of the
+  # requested 20.x, which is below Claude Code's node>=22 requirement and
+  # broke the postinstall script. NodeTool@0 (deprecated but functional)
+  # installs the requested version correctly — verified working.
+  - task: NodeTool@0
+    displayName: 'Install Node.js'
+    inputs:
+      versionSpec: '20.x'
+
+  # Install Claude Code CLI — auths via CLAUDE_CODE_OAUTH_TOKEN (Pro/Max
+  # subscription quota, generated locally with `claude setup-token`), so this
+  # step runs on your existing subscription instead of metered API billing.
+  - script: |
+      set -euo pipefail
+      npm install -g @anthropic-ai/claude-code
+      claude --version
+    displayName: 'Install Claude Code CLI'
+
+  # AI review of the Trivy + Checkov findings and the Terraform plan —
+  # summarizes and prioritizes what actually needs attention before merge.
+  - task: Bash@3
+    displayName: 'AI Review (Claude) — Trivy, Checkov & Terraform Plan'
+    env:
+      CLAUDE_CODE_OAUTH_TOKEN: $(CLAUDE_CODE_OAUTH_TOKEN)
+    inputs:
+      targetType: 'inline'
+      script: |
+        set -euo pipefail
+        STAGING="$(Build.ArtifactStagingDirectory)"
+
+        TRIVY_JSON=$(cat "$STAGING/trivy-results.json" 2>/dev/null | head -c 40000 || echo "{}")
+        CHECKOV_JSON=$(cat "$STAGING/checkov-results.json" 2>/dev/null | head -c 40000 || echo "{}")
+        TFPLAN_TEXT=$(cat "$STAGING/tfplan.txt" 2>/dev/null | head -c 40000 || echo "(no plan available — init or plan failed, see pipeline log)")
+
+        PROMPT_FILE=$(mktemp)
+        cat > "$PROMPT_FILE" <<PROMPT_EOF
+        You are reviewing Trivy and Checkov scan results plus a Terraform plan for a pull request under iac/environments/dev, before it merges to main.
+
+        Repo context: this is a cost-conscious hackathon dev environment (single region for most resources, Standard/Burstable SKUs, minimal replicas, Premium-only features intentionally skipped, diagnostic settings mostly disabled to avoid cost). Don't flag these as risks by themselves -- they're deliberate tradeoffs for this environment, not oversights. One known exception: the PostgreSQL server intentionally runs in centralus while everything else is in eastus2 (this subscription is blocked from provisioning PostgreSQL Flexible Server in eastus2 -- a Free Trial subscription restriction) -- do not flag this region split as an anomaly.
+
+        IMPORTANT -- diff-awareness: Trivy and Checkov scan the ENTIRE current config, not just this PR's diff, so most findings are almost always on resources this plan isn't touching. Only let a finding drive the verdict (NEEDS_ATTENTION/BLOCKING_ISSUES) if it's on a resource this plan is actually creating or modifying (shown with + or ~ in the plan's resource actions). Findings on resources with no planned action in this plan are pre-existing conditions unrelated to this PR -- they must NOT affect the verdict and must NOT be itemized (see item 4 below: a count only, not a list -- itemizing them repeats the same static list on every unrelated PR, which is noise, not signal; ongoing drift tracking belongs in a separate periodic scan, not per-PR review). A plan showing no changes at all should essentially never be anything other than LOOKS_GOOD on scan findings alone, regardless of what Trivy/Checkov report, since nothing in this PR could have introduced those findings.
+
+        Severity weighting: HIGH/CRITICAL findings on resources this plan touches should be the primary driver of NEEDS_ATTENTION or BLOCKING_ISSUES. MEDIUM findings (e.g. audit-logging/hardening gaps like missing log_connections or soft-delete retention) are worth listing but should rarely justify anything above LOOKS_GOOD on their own unless several compound on a single newly-created resource -- treat them as track-and-fix-soon, not merge-blocking.
+
+        Produce a concise PR-review comment with:
+        1. A verdict on its own first line, in EXACTLY this format with nothing else on the line (no bold, no extra words): VERDICT: LOOKS_GOOD or VERDICT: NEEDS_ATTENTION or VERDICT: BLOCKING_ISSUES. This line is machine-parsed. BLOCKING_ISSUES fails the build, so reserve it for: no plan could be produced; unexpected destroys/replacements of stateful resources (databases, storage accounts, key vaults); HIGH/CRITICAL findings on resources this plan creates/modifies; anything that would break the deployment or expose data. Use NEEDS_ATTENTION for real but non-blocking concerns and LOOKS_GOOD otherwise.
+        2. A short summary of what the Terraform plan changes (resources added/changed/destroyed), flagging anything surprising (e.g. unexpected destroys/replacements) or any indication the plan failed.
+        3. A short bulleted list of scan findings that are actual risks worth fixing before merge AND are on a resource this plan creates/modifies (reference the specific resource/check ID).
+        4. One line only: the count of pre-existing findings on resources this plan does NOT touch, e.g. "4 pre-existing findings unrelated to this PR -- see Trivy/Checkov artifacts for detail." Do not itemize them, do not describe them, just the count and that pointer.
+        5. A short bulleted list of findings that look like noise or false positives, with a one-line reason why.
+        Be specific and terse -- this will be posted directly as a PR comment. Keep the ENTIRE response under 400 words and under roughly 2000 tokens combined. The verdict itself must be a single line. Use markdown. Answer directly in text -- do not read, write, or run anything.
+
+        Note: Checkov reporting resource_count: 0 / passed: 0 / failed: 0 is EXPECTED and not a scan failure when the diff only touches resource types Checkov has no applicable policies for (e.g. azurerm_resource_group -- verified by isolating it: Checkov genuinely has zero built-in checks for that resource type, unlike e.g. aws_s3_bucket which returns real findings). Do not flag this as BLOCKING or as evidence Checkov didn't run -- only treat it as suspicious if the diff includes resource types that normally have Checkov coverage (storage, compute, networking, etc.) and still shows 0.
+
+        --- TERRAFORM PLAN ---
+        $TFPLAN_TEXT
+
+        --- TRIVY FINDINGS (JSON) ---
+        $TRIVY_JSON
+
+        --- CHECKOV FINDINGS (JSON) ---
+        $CHECKOV_JSON
+        PROMPT_EOF
+
+        set +e
+        REVIEW_TEXT=$(claude -p --output-format text --max-turns 1 < "$PROMPT_FILE")
+        CLAUDE_EXIT_CODE=$?
+        set -e
+        rm -f "$PROMPT_FILE"
+
+        if [ "${CLAUDE_EXIT_CODE}" -ne 0 ] || [ -z "$REVIEW_TEXT" ]; then
+          echo "##vso[task.logissue type=warning]AI review returned no content (exit ${CLAUDE_EXIT_CODE})."
+          exit 0
+        fi
+
+        echo "$REVIEW_TEXT" > "$STAGING/ai-review.md"
+
+        echo "=============================================="
+        echo " AI REVIEW — Trivy & Checkov"
+        echo "=============================================="
+        cat "$STAGING/ai-review.md"
+
+        # Parse the verdict from an anchored line ("VERDICT: X", tolerating
+        # markdown decoration such as headings, bold, blockquote). Nothing but
+        # decoration may surround the value. A substring match anywhere in the
+        # text is NOT used: phrases like "no BLOCKING_ISSUES found" must not
+        # match. Unparseable => fail closed to NEEDS_ATTENTION (never LOOKS_GOOD).
+        VERDICT=$(echo "$REVIEW_TEXT" \
+          | grep -m1 -E '^[[:space:]#>*_]*(VERDICT|Verdict)[[:space:]]*:[[:space:]*_]*(LOOKS_GOOD|NEEDS_ATTENTION|BLOCKING_ISSUES)[[:space:]*_]*$' \
+          | grep -oE 'LOOKS_GOOD|NEEDS_ATTENTION|BLOCKING_ISSUES' || true)
+        if [ -z "$VERDICT" ]; then
+          echo "##vso[task.logissue type=warning]AI review verdict line missing or unparseable -- treating as NEEDS_ATTENTION."
+          VERDICT="NEEDS_ATTENTION"
+        fi
+        echo "AI review verdict: $VERDICT"
+        # Exposed to later steps; the final 'Enforce AI review verdict' step
+        # fails the build on BLOCKING_ISSUES AFTER the comment/artifacts are out.
+        echo "##vso[task.setvariable variable=AI_VERDICT]$VERDICT"
+
+  # Post the AI review as a comment on the GitHub PR.
+  # Requires GITHUB_PAT (repo scope) in the ai-review-secrets group.
+  # Only runs when this build was actually triggered by a GitHub PR.
+  # NOTIFICATION: when the verdict is NEEDS_ATTENTION or BLOCKING_ISSUES the
+  # comment @mentions the PR author, so GitHub emails/notifies them per their own
+  # notification settings. Caveat: GitHub does not notify you about your own
+  # activity, and this comment is posted as the GITHUB_PAT owner -- so PRs
+  # authored by the PAT owner get no notification. A dedicated bot account (or
+  # GitHub App) for the PAT removes that limitation.
+  - task: Bash@3
+    displayName: 'Post AI review to GitHub PR'
+    condition: and(succeeded(), eq(variables['Build.Reason'], 'PullRequest'))
+    env:
+      GITHUB_PAT: $(GITHUB_PAT)
+      AI_VERDICT: $(AI_VERDICT)
+    inputs:
+      targetType: 'inline'
+      script: |
+        set -euo pipefail
+        STAGING="$(Build.ArtifactStagingDirectory)"
+        REVIEW_FILE="$STAGING/ai-review.md"
+
+        if [ ! -f "$REVIEW_FILE" ]; then
+          echo "No ai-review.md found — skipping PR comment."
+          exit 0
+        fi
+
+        REPO="$(Build.Repository.Name)"       # e.g. myorg/myridius-erc-iac
+        PR_NUMBER="$(System.PullRequest.PullRequestNumber)"
+
+        # @mention the PR author only when the verdict needs their attention.
+        # If the author lookup fails the comment is still posted, just without
+        # the mention (a notification hiccup must not lose the review).
+        MENTION=""
+        if [ "$AI_VERDICT" = "NEEDS_ATTENTION" ] || [ "$AI_VERDICT" = "BLOCKING_ISSUES" ]; then
+          AUTHOR=$(curl -sf -H "Authorization: token $GITHUB_PAT" -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${REPO}/pulls/${PR_NUMBER}" | jq -r '.user.login // empty') || AUTHOR=""
+          if [ -n "$AUTHOR" ]; then
+            MENTION="@${AUTHOR} -- AI review verdict: **${AI_VERDICT}**. Please take a look before merging."
+          else
+            echo "##vso[task.logissue type=warning]Could not look up the PR author -- posting the review without an @mention."
+          fi
+        fi
+
+        BODY=$(jq -Rs --arg m "$MENTION" '{body: ("### 🤖 AI Review — Trivy, Checkov & Terraform Plan\n\n" + (if $m == "" then "" else $m + "\n\n" end) + .)}' "$REVIEW_FILE")
+
+        curl -sf -X POST \
+          -H "Authorization: token $GITHUB_PAT" \
+          -H "Accept: application/vnd.github+json" \
+          "https://api.github.com/repos/${REPO}/issues/${PR_NUMBER}/comments" \
+          -d "$BODY" > /dev/null
+
+        echo "Posted AI review comment to PR #${PR_NUMBER} in ${REPO}"
+
+  # Publish scan + AI review artifacts for the build
+  - publish: $(Build.ArtifactStagingDirectory)
+    artifact: 'pr-review-$(Build.BuildId)'
+    displayName: 'Publish scan & AI review artifacts'
+    condition: succeededOrFailed()  # cheap; keeps tfplan/scan JSON available to debug failed builds
+
+  # HARD GATE: fail the build on an AI BLOCKING_ISSUES verdict. Runs last so
+  # the PR comment and artifacts are published before this can fail. Only
+  # reached when every earlier step passed. If the AI step produced no verdict
+  # (e.g. an AI outage), AI_VERDICT is unset and this is a no-op -- an AI
+  # outage must not block PRs.
+  - script: |
+      if [ "$AI_VERDICT" = "BLOCKING_ISSUES" ]; then
+        echo "##vso[task.logissue type=error]AI review verdict is BLOCKING_ISSUES -- see the PR comment / ai-review.md artifact."
+        exit 1
+      fi
+      echo "AI review verdict: ${AI_VERDICT:-not available} -- not blocking."
+    displayName: 'Enforce AI review verdict'
+    env:
+      AI_VERDICT: $(AI_VERDICT)

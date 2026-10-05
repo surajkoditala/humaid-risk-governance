@@ -1,0 +1,129 @@
+---
+formatter: markdown table
+
+settings:
+  required: false
+
+output:
+  file: README.md
+  mode: inject
+  sort-by: name
+  header-from: README.md
+  output-values: true
+  output-variables: true
+  output-providers: true
+  output-requirements: true
+  output-resources: true
+ 
+content: |-
+  {{ .Header }}
+
+  {{ include "Intro.md" }}
+
+  #Examples
+
+  #Basic Example
+  ```hcl
+  {{ include "examples/basic/main.tf" }}
+
+  {{ include "examples/basic/variables.tf" }}
+
+  {{ include "examples/basic/outputs.tf" }}
+
+  {{ include "examples/basic/terraform.tf" }}
+
+  {{ include "examples/basic/providers.tf" }}
+
+  {{ include "examples/basic/locals.tf" }}
+  ```
+
+  #Database Example
+  ```hcl
+  {{ include "examples/database/main.tf" }}
+
+  {{ include "examples/database/variables.tf" }}
+
+  {{ include "examples/database/outputs.tf" }}
+
+  {{ include "examples/database/terraform.tf" }}
+
+  {{ include "examples/database/providers.tf" }}
+
+  {{ include "examples/database/locals.tf" }}
+  ```
+
+  #Default Example
+  ```hcl
+  {{ include "examples/default/main.tf" }}
+
+  {{ include "examples/default/variables.tf" }}
+
+  {{ include "examples/default/outputs.tf" }}
+
+  {{ include "examples/default/terraform.tf" }}
+
+  {{ include "examples/default/providers.tf" }}
+
+  {{ include "examples/default/locals.tf" }}
+  ```
+
+  #Diagnostic Settings Example
+  ```hcl
+  {{ include "examples/diagnostic-settings/main.tf" }}
+
+  {{ include "examples/diagnostic-settings/variables.tf" }}
+
+  {{ include "examples/diagnostic-settings/outputs.tf" }}
+
+  {{ include "examples/diagnostic-settings/terraform.tf" }}
+
+  {{ include "examples/diagnostic-settings/providers.tf" }}
+
+  {{ include "examples/diagnostic-settings/locals.tf" }}
+  ```
+
+  #Ephemeral Password Example
+  ```hcl
+  {{ include "examples/ephemeral-password/main.tf" }}
+
+  {{ include "examples/ephemeral-password/variables.tf" }}
+
+  {{ include "examples/ephemeral-password/outputs.tf" }}
+
+  {{ include "examples/ephemeral-password/terraform.tf" }}
+
+  {{ include "examples/ephemeral-password/providers.tf" }}
+
+  {{ include "examples/ephemeral-password/locals.tf" }}
+  ```
+
+  #Private Endpoint and DNS Example
+  ```hcl
+  {{ include "examples/private-endpoint-and-dns/main.tf" }}
+
+  {{ include "examples/private-endpoint-and-dns/variables.tf" }}
+
+  {{ include "examples/private-endpoint-and-dns/outputs.tf" }}
+
+  {{ include "examples/private-endpoint-and-dns/terraform.tf" }}
+
+  {{ include "examples/private-endpoint-and-dns/providers.tf" }}
+
+  {{ include "examples/private-endpoint-and-dns/locals.tf" }}
+  ```
+
+  {{ .Requirements }}
+
+  {{ .Providers }}
+
+  {{ .Modules }}
+
+  {{ .Resources }}
+
+  {{ .Inputs }}
+
+  {{ .Outputs }}
+
+  {{ include "CHANGELOG.md" }}
+
+  {{ .Footer }}

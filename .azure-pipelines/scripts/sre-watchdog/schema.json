@@ -1,0 +1,22 @@
+{
+  "type": "object",
+  "required": ["conditions"],
+  "properties": {
+    "conditions": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "required": ["name", "status", "summary"],
+        "properties": {
+          "name": { "type": "string", "enum": ["failed_request_burst", "unhandled_exceptions", "failure_rate_trend", "exception_count_trend"] },
+          "status": { "type": "string", "enum": ["critical", "warning", "ok"] },
+          "app": { "type": "string" },
+          "since": { "type": "string" },
+          "summary": { "type": "string" }
+        }
+      }
+    }
+  }
+}

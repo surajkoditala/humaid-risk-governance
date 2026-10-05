@@ -1,0 +1,9 @@
+# This is ignored to get the remote TFC to regenerate its own provider list for every run
+.terraform.lock.hcl
+
+# Upload all files by default but disallowing any files matching the following configuration
+.terraform/provider/
+*.md
+*.txt
+docs/
+docs*
