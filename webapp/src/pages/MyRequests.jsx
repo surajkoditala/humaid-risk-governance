@@ -2,8 +2,9 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Table, TableBody, TableCell, TableHeader, TableRow } from '@/components/ui/table'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import ClampedText from '../components/ClampedText.jsx'
+import SlaBadge from '../components/SlaBadge.jsx'
 import GridPagination from '../components/GridPagination.jsx'
 import SortableHeader from '../components/SortableHeader.jsx'
 import { useDevUser } from '../auth/DevUserContext.jsx'
@@ -11,6 +12,7 @@ import { Endpoints } from '../lib/api.js'
 import { CHANGE_REQUEST_STATUSES, CHANGE_TYPES } from '../lib/constants.js'
 import { useDebouncedValue } from '../lib/useDebouncedValue.js'
 import { useFetch } from '../lib/useFetch.js'
+import { formatDate } from '../lib/sla.js'
 import { useGridQuery } from '../lib/useGridQuery.js'
 
 const STATUS_VARIANT = {
@@ -36,7 +38,7 @@ export default function MyRequests() {
     <Card>
       <CardHeader>
         <CardTitle>My requests</CardTitle>
-        <CardDescription>Status and days elapsed since submission.</CardDescription>
+        <CardDescription>Status, days elapsed since submission, and when each request is due.</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="mb-4 flex flex-wrap items-center gap-2">
@@ -87,6 +89,7 @@ export default function MyRequests() {
                 <col />
                 <col className="w-40" />
                 <col className="w-28" />
+                <col className="w-36" />
               </colgroup>
               <TableHeader>
                 <TableRow>
@@ -101,6 +104,7 @@ export default function MyRequests() {
                     onSort={toggleSort}
                     className="text-right"
                   />
+                  <TableHead>Due</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -123,6 +127,10 @@ export default function MyRequests() {
                       )}
                     </TableCell>
                     <TableCell className="text-right">{r.daysElapsed}</TableCell>
+                    <TableCell className="whitespace-normal">
+                      {r.dueAt && <p className="text-sm">{formatDate(r.dueAt)}</p>}
+                      <SlaBadge state={r.slaState} />
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
