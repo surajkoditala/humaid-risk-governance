@@ -64,6 +64,10 @@ module "container_app_gh_riskgovernance_ui" {
             value = local.AI_PROVIDER
           },
           {
+            name  = "ANTHROPIC_WORKSPACE_ID"
+            value = local.ANTHROPIC_WORKSPACE_ID
+          },
+          {
             name  = "FOUNDRY_PROJECT_ENDPOINT"
             value = local.FOUNDRY_PROJECT_ENDPOINT
           },
