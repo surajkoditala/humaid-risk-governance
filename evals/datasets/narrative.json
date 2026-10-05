@@ -1,0 +1,51 @@
+[
+  {
+    "id": "nr-01-well-grounded",
+    "description": "Sufficient relied-upon policy + extracted facts supplied — narrative should read as grounded (citation-presence proxy: mentions the category/citation it was actually given).",
+    "checkType": "citation_presence",
+    "changeType": "Product",
+    "changeTitle": "Launch same-day international wire transfer service",
+    "changeDescription": "New product allowing retail and commercial customers to send same-day international wire transfers.",
+    "riskCategoryId": "22222222-2222-2222-2222-222222222221",
+    "categoryName": "Products & Services",
+    "categoryCitation": "FFIEC BSA/AML Manual - Risks Associated with Money Laundering and Terrorist Financing: Products and Services",
+    "reliedUponPolicyExcerpts": [
+      "[Risks Associated with Money Laundering and Terrorist Financing - Products and Services] Certain products and services are inherently vulnerable to money laundering because they involve rapid movement of funds or limited face-to-face contact, including electronic funds transfers."
+    ],
+    "extractedFieldFacts": [
+      "product_type: WireTransfer",
+      "daily_limit_usd: 500000"
+    ],
+    "citationPresenceKeywords": ["wire", "product"]
+  },
+  {
+    "id": "nr-02-no-grounding-supplied",
+    "description": "No relied-upon policy and no extracted facts supplied. Heuristic proxy only — this checks the response is well-formed (non-empty narrative, valid JSON), NOT that it avoided fabrication; that property is a prompt-level guarantee (see ai/prompts/narrative-drafting.md's 'never invent a citation, a fact, or a source not supplied'), not independently machine-verifiable without a second judge model. Documented limitation, not a gap in this check.",
+    "checkType": "well_formed",
+    "changeType": "Process",
+    "changeTitle": "Update internal case-routing logic",
+    "changeDescription": "Change how customer service tickets are routed between teams; no customer-facing or data-flow changes.",
+    "riskCategoryId": "22222222-2222-2222-2222-222222222224",
+    "categoryName": "Delivery Channels",
+    "categoryCitation": "FFIEC BSA/AML Manual - Risks Associated with Money Laundering and Terrorist Financing: Products and Services (Delivery Channels)",
+    "reliedUponPolicyExcerpts": [],
+    "extractedFieldFacts": []
+  },
+  {
+    "id": "nr-03-regeneration-incorporates-feedback",
+    "description": "US-5.2 — regenerating with analyst feedback should visibly incorporate that feedback, not just repeat the first draft. Proxy check: the regenerated text contains the feedback's key term; the first draft (no feedback) is not required to.",
+    "checkType": "regeneration_keyword",
+    "changeType": "Vendor",
+    "changeTitle": "Onboard a correspondent banking settlement vendor",
+    "changeDescription": "Engage a vendor to process correspondent banking settlement instructions on the bank's behalf.",
+    "riskCategoryId": "22222222-2222-2222-2222-222222222222",
+    "categoryName": "Customers & Entities",
+    "categoryCitation": "FFIEC BSA/AML Manual - Risks Associated with Money Laundering and Terrorist Financing: Customers",
+    "reliedUponPolicyExcerpts": [
+      "[Risks Associated with Money Laundering and Terrorist Financing - Correspondent Banking] Correspondent accounts, particularly those for foreign financial institutions, can expose a bank to the risks of the respondent's own customer base."
+    ],
+    "extractedFieldFacts": ["vendor_name: SettleCorr Ltd"],
+    "regenerationFeedback": "Emphasize the correspondent banking nested-account risk more strongly in this narrative.",
+    "expectedRegenerationKeyword": "correspondent"
+  }
+]

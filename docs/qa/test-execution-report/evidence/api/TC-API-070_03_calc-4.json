@@ -1,0 +1,42 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/api/Scoring/Calculate",
+    "body": {
+      "assessmentId": "eba39f9c-a4ba-40cf-946d-fa0a3da1bb98",
+      "riskCategoryId": "22222222-2222-2222-2222-222222222224",
+      "inherentRating": 3,
+      "controlIdsCredited": [],
+      "controlEffectiveness": 0.5
+    }
+  },
+  "response": {
+    "status": 200,
+    "durationMs": 303,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:23:10 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": true,
+      "isBadRequest": false,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": {
+        "id": "81dd2e07-f2e3-4eb3-901d-101e14fb51b8",
+        "riskCategoryId": "22222222-2222-2222-2222-222222222224",
+        "categoryName": "Delivery Channels",
+        "inherentRating": 3,
+        "controlEffectiveness": 0.5,
+        "mitigationFactorApplied": 0.85,
+        "residualRating": 2.58,
+        "isOverride": false,
+        "overrideReason": null,
+        "scoredBy": "System"
+      },
+      "message": null
+    }
+  }
+}

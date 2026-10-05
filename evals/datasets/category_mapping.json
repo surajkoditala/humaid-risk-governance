@@ -1,0 +1,58 @@
+[
+  {
+    "id": "cm-01-wire-transfer-product",
+    "description": "Golden path — a clear Products & Services scenario (mirrors the seeded golden-path change request).",
+    "changeType": "Product",
+    "title": "Launch same-day international wire transfer service",
+    "description_text": "New product allowing retail and commercial customers to send same-day international wire transfers to over 40 countries, including several FATF-monitored jurisdictions, via online and branch channels.",
+    "allowedCategories": [
+      { "riskCategoryId": "22222222-2222-2222-2222-222222222221", "code": "PRODUCTS_SERVICES", "citationSection": "FFIEC BSA/AML Manual - Risks Associated with Money Laundering and Terrorist Financing: Products and Services" },
+      { "riskCategoryId": "22222222-2222-2222-2222-222222222222", "code": "CUSTOMERS_ENTITIES", "citationSection": "FFIEC BSA/AML Manual - Risks Associated with Money Laundering and Terrorist Financing: Customers" }
+    ],
+    "expectedCategoryCodes": ["PRODUCTS_SERVICES"]
+  },
+  {
+    "id": "cm-02-vendor-kyc-onboarding",
+    "description": "A vendor change with clear third-party/data-access risk — should map to Customers & Entities.",
+    "changeType": "Vendor",
+    "title": "Onboard a third-party KYC verification vendor",
+    "description_text": "Engage an external vendor to perform identity verification checks on new customers, requiring the vendor to receive customer PII including government ID scans.",
+    "allowedCategories": [
+      { "riskCategoryId": "22222222-2222-2222-2222-222222222222", "code": "CUSTOMERS_ENTITIES", "citationSection": "FFIEC BSA/AML Manual - Risks Associated with Money Laundering and Terrorist Financing: Customers" },
+      { "riskCategoryId": "22222222-2222-2222-2222-222222222224", "code": "DELIVERY_CHANNELS", "citationSection": "FFIEC BSA/AML Manual - Risks Associated with Money Laundering and Terrorist Financing: Products and Services (Delivery Channels)" }
+    ],
+    "expectedCategoryCodes": ["CUSTOMERS_ENTITIES"]
+  },
+  {
+    "id": "cm-03-geography-expansion",
+    "description": "A geographic expansion into a jurisdiction the description itself flags as higher-risk.",
+    "changeType": "Geography",
+    "title": "Expand retail banking operations into a new country",
+    "description_text": "Open retail branches in a country listed as a FATF-monitored jurisdiction for AML/CFT deficiencies, offering the existing retail product suite.",
+    "allowedCategories": [
+      { "riskCategoryId": "22222222-2222-2222-2222-222222222223", "code": "GEOGRAPHIC_LOCATIONS", "citationSection": "FFIEC BSA/AML Manual - Risks Associated with Money Laundering and Terrorist Financing: Geographic Locations" },
+      { "riskCategoryId": "22222222-2222-2222-2222-222222222221", "code": "PRODUCTS_SERVICES", "citationSection": "FFIEC BSA/AML Manual - Risks Associated with Money Laundering and Terrorist Financing: Products and Services" }
+    ],
+    "expectedCategoryCodes": ["GEOGRAPHIC_LOCATIONS"]
+  },
+  {
+    "id": "cm-04-customer-segment-msb",
+    "description": "Opening up to a customer segment FFIEC explicitly calls out as elevated risk (MSBs).",
+    "changeType": "CustomerSegment",
+    "title": "Begin onboarding money services businesses (MSBs) as commercial customers",
+    "description_text": "Extend commercial banking services to licensed money services businesses, a customer type not previously served by this business line.",
+    "allowedCategories": [
+      { "riskCategoryId": "22222222-2222-2222-2222-222222222222", "code": "CUSTOMERS_ENTITIES", "citationSection": "FFIEC BSA/AML Manual - Risks Associated with Money Laundering and Terrorist Financing: Customers" }
+    ],
+    "expectedCategoryCodes": ["CUSTOMERS_ENTITIES"]
+  },
+  {
+    "id": "cm-05-no-framework-mapping",
+    "description": "Deterministic, zero-cost case (no AI call) — a change type with no configured framework mapping must return empty, never guess. Exercises US-2.1 AC3 directly, matching CategoryMappingAiClient's early-return on an empty allowed list.",
+    "changeType": "Process",
+    "title": "Cosmetic mobile app UI refresh",
+    "description_text": "Update button colors and fonts in the mobile banking app; no new data flows, products, customers, or channels introduced.",
+    "allowedCategories": [],
+    "expectedCategoryCodes": []
+  }
+]

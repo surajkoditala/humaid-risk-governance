@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <!-- Deliberately references the SAME .AI project the production app uses - this evaluates the
+       real CategoryMappingAiClient/DocumentExtractionAiClient/NarrativeDraftingAiClient, not a
+       reimplementation, so a passing eval actually means something about production behavior. No
+       reference to .Services/.DA/1-API - the AI clients are pure functions over DTOs with no DB
+       dependency, so this harness is fully decoupled from persistence (see evals/README.md). -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.3" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="10.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\2-Infrastructure\Humaid.RiskGovernance.AdminUI.Infrastructure\Humaid.RiskGovernance.AdminUI.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\3-Service\Humaid.RiskGovernance.AdminUI.AI\Humaid.RiskGovernance.AdminUI.AI.csproj" />
+  </ItemGroup>
+
+</Project>

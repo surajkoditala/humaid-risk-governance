@@ -1,0 +1,29 @@
+variables:
+
+  buildId: '' # Can be overridden by pipeline UI or YAML parameters
+  
+  # Azure Service Connection
+  azureSubscription: 'azure-cloud'
+
+  # Shared ACR
+  acrName: crghdev01
+  acrLoginServer: crghdev01.azurecr.io
+  acrLoginServername: crghdev01
+
+  # DEV
+  devResourceGroup: rg-gh-dev
+  devContainerApp: ca-gh-hrg-workbench-dev
+  devUaiName: id-ca-gh-dev   # user-assigned identity granted AcrPull in iac
+
+  # Docker image tar artifact
+  artifactName: gh-hrg-workbench-image-tar
+
+  # Epic 11 - Auth0 SPA config, baked into the frontend bundle at image build time (Vite inlines
+  # import.meta.env.VITE_* then, not at container start - see the Dockerfile's own comment). Not
+  # secret (a SPA's client id/domain are public by design), but empty by default: an empty build
+  # arg leaves the built frontend in the same "Auth0 not configured" dev-bypass mode as today.
+  # Fill these in (here, or override in the pipeline UI) once the Auth0 tenant exists - see
+  # docs/architecture/auth0-setup.md.
+  frontendAuth0Domain: ''
+  frontendAuth0ClientId: ''
+  frontendAuth0Audience: ''

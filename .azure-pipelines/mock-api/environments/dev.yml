@@ -1,0 +1,306 @@
+parameters:
+  - name: imageName
+    type: string
+
+  - name: dockerfilePath
+    type: string
+    default: Dockerfile
+
+stages:
+  - stage: Dev_${{ replace(parameters.imageName, '-', '_') }}
+    displayName: Deploy ${{ parameters.imageName }} to DEV
+    dependsOn: ExtractVersion
+
+    jobs:
+      - job: ReviewCodeDockerScan
+        displayName: Build, Push Docker and Trivy Scan
+
+        pool:
+          name: Azure Pipelines
+          vmImage: ubuntu-latest
+
+        steps:
+          - checkout: self
+          - download: current
+            artifact: version-artifact
+            displayName: Download version.txt
+          - download: current
+            artifact: build-artifact
+            displayName: Download build.txt
+
+          - bash: |
+              VERSION=$(cat "$(Pipeline.Workspace)/version-artifact/version.txt")
+              BUILD_ID=$(cat "$(Pipeline.Workspace)/build-artifact/build.txt")
+              echo "Version: $VERSION"
+              echo "BuildId: $BUILD_ID"
+              echo "##vso[task.setvariable variable=versionSuffix]$VERSION"
+              echo "##vso[task.setvariable variable=buildId]$BUILD_ID"
+              echo "##vso[task.setvariable variable=pipelineFailureReason]"
+            displayName: Read Version and BuildId
+
+          - task: AzureCLI@2
+            displayName: Build and Push Docker Image
+            inputs:
+              azureSubscription: $(azureSubscription)
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                set -e
+                IMAGE_REF="$(acrLoginServer)/${{ parameters.imageName }}:$(versionSuffix)-$(buildId)"
+                echo "Logging into ACR..."
+                az acr login --name $(acrName)
+                echo "Building image: $IMAGE_REF"
+                if ! docker build \
+                  --pull \
+                  --no-cache \
+                  -f "${{ parameters.dockerfilePath }}" \
+                  -t "$IMAGE_REF" \
+                  .; then
+                  echo "##vso[task.setvariable variable=pipelineFailureReason]Docker image build failed."
+                  exit 1
+                fi
+                echo "Pushing image: $IMAGE_REF"
+                if ! docker push "$IMAGE_REF"; then
+                  echo "##vso[task.setvariable variable=pipelineFailureReason]Docker image push to ACR failed."
+                  exit 1
+                fi
+
+          - task: AzureCLI@2
+            displayName: Poll ACR for image availability
+            inputs:
+              azureSubscription: $(azureSubscription)
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                echo "Waiting for image to appear in ACR..."
+                IMAGE_TAG="$(versionSuffix)-$(buildId)"
+                FOUND_FLAG=0
+                for i in {1..10}; do
+                  echo "Checking image in ACR (attempt $i)..."
+                  FOUND=$(az acr repository show-tags \
+                    --name $(acrName) \
+                    --repository ${{ parameters.imageName }} \
+                    --query "[?@=='$IMAGE_TAG']" \
+                    -o tsv)
+                  if [ -n "$FOUND" ]; then
+                    echo "Image found in ACR."
+                    FOUND_FLAG=1
+                    break
+                  fi
+                  echo "Image not found yet..."
+                  sleep 10
+                done
+                if [ "$FOUND_FLAG" -ne 1 ]; then
+                  echo "##vso[task.setvariable variable=pipelineFailureReason]Docker image was not found in ACR after 10 attempts."
+                  echo "Image not found in ACR after retries."
+                  exit 1
+                fi
+
+          - bash: |
+              mkdir -p "$(Agent.TempDirectory)/trivy"
+            displayName: Prepare Trivy Workspace
+          - bash: |
+              mkdir -p "$(Agent.TempDirectory)/trivy/.trivycache"
+              chmod -R 777 "$(Agent.TempDirectory)/trivy"
+            displayName: Prepare Trivy Cache
+          - bash: |
+              FULL_IMAGE_REF="$(acrLoginServer)/${{ parameters.imageName }}:$(versionSuffix)-$(buildId)"
+              LOCAL_IMAGE_REF="${{ parameters.imageName }}:$(versionSuffix)-$(buildId)"
+              echo "Preparing local image tag for Trivy..."
+              echo "Source image: $FULL_IMAGE_REF"
+              echo "Local image:  $LOCAL_IMAGE_REF"
+              docker image inspect "$FULL_IMAGE_REF" >/dev/null
+              docker tag "$FULL_IMAGE_REF" "$LOCAL_IMAGE_REF"
+              docker image inspect "$LOCAL_IMAGE_REF" >/dev/null
+              docker images | grep "${{ parameters.imageName }}" || true
+            displayName: Prepare Local Image for Trivy
+
+          - bash: |
+              echo "Running Trivy scan..."
+              if ! docker run --rm \
+                --user "$(id -u):$(id -g)" \
+                --group-add "$(stat -c '%g' /var/run/docker.sock)" \
+                -v /var/run/docker.sock:/var/run/docker.sock \
+                -v $(Agent.TempDirectory)/trivy:/workspace \
+                -v $(Build.SourcesDirectory):/src \
+                aquasec/trivy:0.50.2 image \
+                --cache-dir /workspace/.trivycache \
+                --ignorefile /src/.trivyignore \
+                --scanners vuln \
+                --severity MEDIUM,HIGH,CRITICAL \
+                --format json \
+                --output /workspace/trivy-report.json \
+                ${{ parameters.imageName }}:$(versionSuffix)-$(buildId); then
+                echo "##vso[task.setvariable variable=pipelineFailureReason]Trivy JSON security scan failed to complete."
+                exit 1
+              fi
+            displayName: Trivy Scan (Generate Report)
+
+          - bash: |
+              echo "Generating readable Trivy report..."
+              if ! docker run --rm \
+                --user "$(id -u):$(id -g)" \
+                --group-add "$(stat -c '%g' /var/run/docker.sock)" \
+                -v /var/run/docker.sock:/var/run/docker.sock \
+                -v $(Agent.TempDirectory)/trivy:/workspace \
+                -v $(Build.SourcesDirectory):/src \
+                aquasec/trivy:0.50.2 image \
+                --cache-dir /workspace/.trivycache \
+                --ignorefile /src/.trivyignore \
+                --scanners vuln \
+                --severity MEDIUM,HIGH,CRITICAL \
+                --format table \
+                --output /workspace/trivy-report.txt \
+                ${{ parameters.imageName }}:$(versionSuffix)-$(buildId); then
+                echo "##vso[task.setvariable variable=pipelineFailureReason]Readable Trivy report generation failed."
+                exit 1
+              fi
+            displayName: Generate Readable Report
+
+          # Show the readable Trivy report directly in the pipeline runtime logs
+          - bash: |
+              REPORT="$(Agent.TempDirectory)/trivy/trivy-report.txt"
+              echo "##[group]Trivy Vulnerability Report"
+              if [ ! -f "$REPORT" ]; then
+                echo "Readable Trivy report was not generated."
+                echo "##[endgroup]"
+                exit 0
+              fi
+              cat "$REPORT"
+              echo "##[endgroup]"
+            displayName: Display Trivy Report in Pipeline
+            condition: always()
+
+          - task: PublishBuildArtifacts@1
+            displayName: Publish Trivy JSON Report
+            condition: always()
+            inputs:
+              PathtoPublish: '$(Agent.TempDirectory)/trivy/trivy-report.json'
+              ArtifactName: 'trivy-report'
+
+          - task: PublishBuildArtifacts@1
+            displayName: Publish Trivy Readable Report
+            condition: always()
+            inputs:
+              PathtoPublish: '$(Agent.TempDirectory)/trivy/trivy-report.txt'
+              ArtifactName: 'trivy-readable-report'
+
+          - bash: |
+              sudo apt-get update
+              sudo apt-get install -y jq
+            displayName: Install jq
+          - bash: |
+              REPORT="$(Agent.TempDirectory)/trivy/trivy-report.json"
+              if [ ! -f "$REPORT" ]; then
+                echo "##vso[task.setvariable variable=pipelineFailureReason]Trivy JSON report was not generated."
+                echo "Trivy report not found!"
+                exit 1
+              fi
+              echo "==== HIGH/CRITICAL Vulnerabilities ===="
+              jq -r '
+                .Results[]?.Vulnerabilities[]?
+                | select(.Severity=="HIGH" or .Severity=="CRITICAL")
+                | "\(.Severity) | \(.PkgName) | \(.InstalledVersion) -> \(.FixedVersion // "N/A") | \(.VulnerabilityID)"
+              ' "$REPORT"
+            displayName: Readable Vulnerability Summary
+
+          - bash: |
+              REPORT="$(Agent.TempDirectory)/trivy/trivy-report.json"
+              if [ ! -f "$REPORT" ]; then
+                echo "##vso[task.setvariable variable=pipelineFailureReason]Trivy JSON report was not available for vulnerability validation."
+                echo "Trivy report not found!"
+                exit 1
+              fi
+              COUNT=$(jq '[.Results[]?.Vulnerabilities[]?
+                | select(.Severity=="HIGH" or .Severity=="CRITICAL")]
+                | length' "$REPORT")
+              echo "High/Critical vulnerabilities count: $COUNT"
+              if [ "$COUNT" -gt 0 ]; then
+                echo "##vso[task.setvariable variable=pipelineFailureReason]Trivy detected $COUNT HIGH/CRITICAL vulnerability or vulnerabilities."
+                echo "Failing pipeline due to HIGH/CRITICAL vulnerabilities"
+                exit 1
+              fi
+              echo "No HIGH/CRITICAL vulnerabilities found."
+            displayName: Fail on HIGH/CRITICAL Vulnerabilities
+
+          - bash: |
+              IMAGE="$(acrLoginServer)/${{ parameters.imageName }}:$(versionSuffix)-$(buildId)"
+              TAR_FILE="$(Build.ArtifactStagingDirectory)/${{ parameters.imageName }}_$(versionSuffix)-$(buildId).tar"
+              echo "Available Docker images:"
+              docker images
+              if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
+                echo "##vso[task.setvariable variable=pipelineFailureReason]Docker image was not available locally for TAR creation."
+                echo "Docker image not found: $IMAGE"
+                exit 1
+              fi
+              echo "Saving Docker image: $IMAGE"
+              if ! docker save "$IMAGE" -o "$TAR_FILE"; then
+                echo "##vso[task.setvariable variable=pipelineFailureReason]Docker image TAR creation failed."
+                exit 1
+              fi
+              echo "Docker image TAR created successfully:"
+              ls -lh "$TAR_FILE"
+            displayName: Save image tar
+
+          - task: PublishBuildArtifacts@1
+            displayName: Publish image tar artifact
+            condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
+            inputs:
+              PathtoPublish: '$(Build.ArtifactStagingDirectory)/${{ parameters.imageName }}_$(versionSuffix)-$(buildId).tar'
+              ArtifactName: $(artifactName)
+
+          - task: AzureCLI@2
+            displayName: Delete Image from ACR on Pipeline Failure
+            condition: always()
+            inputs:
+              azureSubscription: $(azureSubscription)
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                if [ "$(Agent.JobStatus)" != "Failed" ]; then
+                  echo "Job status: $(Agent.JobStatus)"
+                  echo "Pipeline job succeeded. Skipping ACR image deletion."
+                  exit 0
+                fi
+                IMAGE_TAG="$(versionSuffix)-$(buildId)"
+                REPOSITORY="${{ parameters.imageName }}"
+                FAILURE_REASON="$(pipelineFailureReason)"
+                echo "Pipeline failure reason: $FAILURE_REASON"
+                echo "Checking whether image exists in ACR..."
+                echo "Repository: $REPOSITORY"
+                echo "Image tag: $IMAGE_TAG"
+                IMAGE_EXISTS=$(az acr repository show-tags \
+                  --name $(acrName) \
+                  --repository "$REPOSITORY" \
+                  --query "[?@=='$IMAGE_TAG']" \
+                  -o tsv 2>/dev/null || true)
+                if [ -z "$IMAGE_EXISTS" ]; then
+                  echo "Image $REPOSITORY:$IMAGE_TAG was not found in ACR."
+                  echo "No cleanup action is required."
+                  exit 0
+                fi
+                echo "Deleting image from ACR."
+                echo "Reason: $FAILURE_REASON"
+                az acr repository delete \
+                  --name $(acrName) \
+                  --image "$REPOSITORY:$IMAGE_TAG" \
+                  --yes
+                echo "Image $REPOSITORY:$IMAGE_TAG deleted successfully."
+
+      - deployment: DeployToDev
+        displayName: Deploy ${{ parameters.imageName }} to DEV environment
+        environment: dev
+        dependsOn: ReviewCodeDockerScan
+
+        # pool:
+        #   name: Azure Pipelines
+        #   vmImage: ubuntu-latest
+
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - template: ../templates/deploy.yml
+                  parameters:
+                    imageName: ${{ parameters.imageName }}
+                    environment: dev

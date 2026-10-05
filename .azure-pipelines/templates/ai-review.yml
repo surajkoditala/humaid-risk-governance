@@ -1,0 +1,38 @@
+# AI code review of a PR (2 steps). Shared by the Workbench and Mock API pipelines.
+#   1. review: Claude reads the PR diff (read-only, checkout only) -> ai-review.json
+#   2. post:   comments on the PR, then fails the build on BLOCKING_ISSUES
+# Logic lives in .azure-pipelines/scripts/ai-review/. To change what the reviewer
+# looks for, edit rules.md (shared) or <component>/prompt.md. PR builds only.
+#
+# Needs the `ai-review-secrets` variable group: CLAUDE_CODE_OAUTH_TOKEN
+# (`claude setup-token`, uses the Claude subscription, no API billing) and
+# GITHUB_PAT (repo scope, to comment on the PR).
+#
+# Caller must set the job-scoped `runFull` variable ('true'/'false') from its own
+# "Detect relevant path changes" step - both PR pipelines always trigger (their
+# required GitHub check must post on every PR), so this skips the review when the
+# PR doesn't touch that pipeline's scope.
+parameters:
+  - name: title    # heading of the PR comment
+    type: string
+  - name: scope    # space-separated repo paths whose changes are reviewed
+    type: string
+  - name: prompt   # repo-relative path of the component prompt (context + rules)
+    type: string
+
+steps:
+  - script: bash .azure-pipelines/scripts/ai-review/review.sh
+    displayName: 'AI code review (Claude)'
+    condition: and(succeeded(), eq(variables['Build.Reason'], 'PullRequest'), eq(variables['runFull'], 'true'))
+    timeoutInMinutes: 20
+    env:
+      CLAUDE_CODE_OAUTH_TOKEN: $(CLAUDE_CODE_OAUTH_TOKEN)
+      REVIEW_SCOPE: ${{ parameters.scope }}
+      REVIEW_PROMPT: ${{ parameters.prompt }}
+
+  - script: bash .azure-pipelines/scripts/ai-review/post.sh
+    displayName: 'Post AI review to PR (fails on blocking issues)'
+    condition: and(succeeded(), eq(variables['Build.Reason'], 'PullRequest'), eq(variables['runFull'], 'true'))
+    env:
+      GITHUB_PAT: $(GITHUB_PAT)
+      REVIEW_TITLE: ${{ parameters.title }}

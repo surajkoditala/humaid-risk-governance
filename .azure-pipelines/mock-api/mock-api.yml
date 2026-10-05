@@ -1,0 +1,98 @@
+trigger:
+  branches:
+    include:
+      - release/*
+    exclude:
+      - release/dev
+  paths:
+    include:
+      - src/6-MockExternalSystems/*
+
+pr: none
+
+parameters:
+  - name: environment
+    displayName: Select Environment
+    type: string
+    default: dev
+    values:
+      - dev
+
+  # Manual override parameters
+  - name: imageVersion
+    displayName: Branch Version (e.g. 1.00)
+    type: string
+    default: ''
+  - name: buildId
+    displayName: Build ID (e.g. 123)
+    type: string
+    default: ''
+
+variables:
+  - template: templates/variables.yml
+  - name: isManual
+    value: $[eq(variables['Build.Reason'], 'Manual')]
+
+stages:
+  - stage: ExtractVersion
+    displayName: Extract Version
+    jobs:
+      - job: ExtractVersionJob
+        displayName: Extract version and build ID
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - checkout: self
+
+          # # BLOCK manual DEV runs
+          # - bash: |
+          #     echo "Checking if manual run with 'dev' environment..."
+          #     if [[ "$(Build.Reason)" == "Manual" && "${{ parameters.environment }}" == "dev" ]]; then
+          #       echo "##vso[task.logissue type=error]Manual runs for 'dev' are not allowed. Please use 'test' or trigger automatically."
+          #       exit 1
+          #     fi
+          #     echo "Proceeding with environment: '${{ parameters.environment }}', reason: '$(Build.Reason)'"
+          #   displayName: Block Manual Runs for Dev
+
+          # Extract and persist version/buildId
+          - bash: |
+              # Resolve version
+              if [ -n "${{ parameters.imageVersion }}" ]; then
+                version="${{ parameters.imageVersion }}"
+                echo "Using manually passed version: $version"
+              else
+                # NOTE: Update during application version promotion (2.00, 3.00, etc.)
+                version="1.00"
+                echo "Using default version: $version"
+              fi
+              # Resolve build ID
+              if [ -n "${{ parameters.buildId }}" ]; then
+                effectiveBuildId="${{ parameters.buildId }}"
+                echo "Using manually passed buildId: $effectiveBuildId"
+              else
+                effectiveBuildId="$(Build.BuildId)"
+                echo "Using default buildId: $effectiveBuildId"
+              fi
+              # Save to files
+              echo "$version" > $(Pipeline.Workspace)/version.txt
+              echo "$effectiveBuildId" > $(Pipeline.Workspace)/build.txt
+              # Set pipeline variables
+              echo "##vso[task.setvariable variable=versionSuffix;isOutput=true]$version"
+              echo "##vso[task.setvariable variable=buildId;isOutput=true]$effectiveBuildId"
+            name: setVars
+            displayName: Extract version and buildId
+
+          # Publish artifacts
+          - publish: $(Pipeline.Workspace)/version.txt
+            artifact: version-artifact
+            displayName: Publish version.txt
+          - publish: $(Pipeline.Workspace)/build.txt
+            artifact: build-artifact
+            displayName: Publish build.txt
+
+  # DEV
+  - ${{ if or(eq(parameters.environment, 'dev'), ne(variables['Build.Reason'], 'Manual')) }}:
+    - template: environments/dev.yml
+      parameters:
+        imageName: gh-hrg-mockapi
+        dockerfilePath: src/6-MockExternalSystems/Humaid.RiskGovernance.MockSystems/Dockerfile

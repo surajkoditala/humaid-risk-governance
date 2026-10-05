@@ -1,0 +1,81 @@
+# Dev harness on PRs (informational): runs `python -m dev_harness check` over the PR's diff and
+# publishes the report as a build artifact. Draft - see the notes at the bottom.
+#
+# Deliberately NOT a required check: it never fails the build (the report is advice for the
+# human reviewer - "system prepares, humans decide"), so it can't block a merge or add a required
+# status to release/1.00. To make it visible on the PR, add a step that posts the report with the
+# same GITHUB_PAT used by .azure-pipelines/scripts/ai-review/post.sh.
+#
+# Needs the `ai-review-secrets` variable group to also hold ANTHROPIC_API_KEY (and optionally
+# ANTHROPIC_MODEL / ANTHROPIC_WORKSPACE_ID). Without a key the step skips with a warning.
+trigger: none
+
+pr:
+  branches:
+    include: [release/1.00]
+  paths:
+    exclude:
+      - docs/*
+
+variables:
+  - group: ai-review-secrets
+  - name: ANTHROPIC_MODEL_DEFAULT
+    value: claude-sonnet-4-5
+  # Cost guard: the diff goes to six concurrent checks, so cap what is sent per PR.
+  - name: HARNESS_MAX_DIFF_BYTES
+    value: 200000
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+  - checkout: self
+    fetchDepth: 0    # `--since HEAD^1` needs the PR merge commit's first parent
+
+  - task: UsePythonVersion@0
+    displayName: 'Install Python'
+    inputs:
+      versionSpec: '3.12'
+
+  - script: pip install --quiet ./ai/langgraph
+    displayName: 'Install harness dependencies (ai/langgraph)'
+
+  - bash: |
+      set -uo pipefail
+      # A secret/variable that is not defined arrives as its literal "$(NAME)" macro text.
+      case "${ANTHROPIC_API_KEY:-}" in
+        ''|'$('*)
+          echo "##vso[task.logissue type=warning]ANTHROPIC_API_KEY is not set in ai-review-secrets -- skipping the dev harness."
+          exit 0 ;;
+      esac
+      export LLM_PROVIDER=anthropic
+      case "${ANTHROPIC_MODEL:-}" in ''|'$('*) export ANTHROPIC_MODEL="$ANTHROPIC_MODEL_DEFAULT" ;; esac
+      case "${ANTHROPIC_WORKSPACE_ID:-}" in '$('*) unset ANTHROPIC_WORKSPACE_ID ;; esac
+
+      mkdir -p "$BUILD_ARTIFACTSTAGINGDIRECTORY"
+      # PR build: HEAD is GitHub's merge commit, its first parent is the target branch.
+      cd harness
+      python -m dev_harness check --since 'HEAD^1' --max-diff-bytes "$HARNESS_MAX_DIFF_BYTES" \
+        --out "$BUILD_ARTIFACTSTAGINGDIRECTORY/dev-harness-report.md" \
+        || echo "##vso[task.logissue type=warning]Dev harness failed to run -- not blocking."
+    displayName: 'Dev harness review (informational)'
+    condition: and(succeeded(), eq(variables['Build.Reason'], 'PullRequest'))
+    timeoutInMinutes: 15
+    env:
+      ANTHROPIC_API_KEY: $(ANTHROPIC_API_KEY)
+      ANTHROPIC_MODEL: $(ANTHROPIC_MODEL)
+      ANTHROPIC_WORKSPACE_ID: $(ANTHROPIC_WORKSPACE_ID)
+
+  - publish: $(Build.ArtifactStagingDirectory)
+    artifact: 'dev-harness-report-$(Build.BuildId)'
+    displayName: 'Publish dev harness report'
+    condition: succeededOrFailed()
+
+# Notes for the reviewer:
+#  * Auth: CLAUDE_CODE_OAUTH_TOKEN (already in ai-review-secrets) is a Claude Code token. ai/langgraph/app/llm.py
+#    sends an sk-ant-oat... value as a Bearer token, but the Messages API may not accept it outside Claude
+#    Code, so this draft asks for a real ANTHROPIC_API_KEY instead. Swap if the OAuth route is known to work.
+#  * The pipeline must be registered in Azure DevOps (New pipeline -> existing YAML -> this file) before
+#    it runs; the PR trigger then applies to the GitHub repo.
+#  * The entry point is the same CLI developers run locally (harness/dev_harness/README.md), so CI and
+#    local results stay comparable.

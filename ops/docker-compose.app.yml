@@ -1,0 +1,80 @@
+# Adds the two .NET services and the webapp as containers, on top of ops/docker-compose.yml's
+# Postgres + Azurite. This is a local-only convenience for running the whole solution as Docker
+# containers, the same way it will eventually run as Container Apps - NOT the actual Azure IaC
+# (see ops/README.md for that). Run both files together from the repo root, so Compose treats
+# them as one project and app containers can reach postgres/azurite by service name:
+#
+#   docker compose -f ops/docker-compose.yml -f ops/docker-compose.app.yml up -d --build
+#
+# First run needs the schema applied once (safe to re-run):
+#   bash ops/setup-local-db.sh
+#
+# Set ANTHROPIC_API_KEY in your shell or a repo-root .env (gitignored) before `up` if you want
+# the three AI-touchpoint endpoints (category mapping, document extraction, narrative drafting)
+# to actually call a model - everything else works without it.
+
+services:
+  workbench:
+    build:
+      context: ..
+      dockerfile: src/1-API/Humaid.RiskGovernance.AdminUI.Web/Dockerfile
+    container_name: risk-governance-workbench
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "5210:8080"
+    # A corporate VPN client on the host often reconfigures DNS in a way that doesn't propagate
+    # into Docker Desktop's network correctly, so the container can no longer resolve public
+    # hostnames like api.anthropic.com ("Name or service not known") even though the host still
+    # can. Point the container at a public resolver directly rather than the host's (possibly
+    # VPN-hijacked) one.
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    environment:
+      AZURE_POSTGRESQL_CONNECTIONSTRING: "Host=postgres;Port=5432;Username=postgres;Password=postgres;Database=risk_governance_db"
+      CORS_ALLOWED_ORIGINS: '["http://localhost:3000"]'
+      AUTH0_DOMAIN: "${AUTH0_DOMAIN:-}"
+      AUTH0_AUDIENCE: "${AUTH0_AUDIENCE:-}"
+      AI_PROVIDER: "Anthropic"
+      ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY:-}"
+      ANTHROPIC_MODEL: "${ANTHROPIC_MODEL:-claude-sonnet-4-5}"
+      # Only needed alongside an Organization-scoped ANTHROPIC_API_KEY (ClaudeApiClient.cs) - a
+      # workspace-scoped key needs no header at all, so this stays optional rather than required.
+      ANTHROPIC_WORKSPACE_ID: "${ANTHROPIC_WORKSPACE_ID:-}"
+      MOCK_SYSTEMS_BASE_URL: "http://mockapi:8080"
+      # Azurite's well-known, publicly-documented local dev account/key (not a secret).
+      BLOB_STORAGE_CONNECTION_STRING: "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;"
+
+  mockapi:
+    build:
+      context: ..
+      dockerfile: src/6-MockExternalSystems/Humaid.RiskGovernance.MockSystems/Dockerfile
+    container_name: risk-governance-mockapi
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "5220:8080"
+    environment:
+      MOCK_SYSTEMS_POSTGRESQL_CONNECTIONSTRING: "Host=postgres;Port=5432;Username=postgres;Password=postgres;Database=risk_governance_db"
+      CORS_ALLOWED_ORIGINS: '["http://localhost:5210"]'
+
+  webapp:
+    build:
+      context: ../webapp
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: "http://localhost:5210"
+        VITE_AUTH0_DOMAIN: "${AUTH0_DOMAIN:-}"
+        VITE_AUTH0_CLIENT_ID: "${AUTH0_CLIENT_ID:-}"
+        VITE_AUTH0_AUDIENCE: "${AUTH0_AUDIENCE:-}"
+    container_name: risk-governance-webapp
+    restart: unless-stopped
+    depends_on:
+      - workbench
+    ports:
+      - "3000:4173"

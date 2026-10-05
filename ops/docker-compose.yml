@@ -1,0 +1,42 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: risk-governance-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: risk_governance_db
+    ports:
+      # Mapped to 5433 on the host, not 5432 - this machine already has a native Postgres service
+      # listening on 5432 (used by other local projects); this avoids a port clash rather than
+      # requiring you to stop that service.
+      - "5433:5432"
+    volumes:
+      - risk-governance-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d risk_governance_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Phase 3 Step 4 - local stand-in for Azure Blob Storage (real document upload/extraction).
+  # Same "local, no hosted/cloud sign-in" constraint already enforced for Postgres.
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite:latest
+    container_name: risk-governance-azurite
+    restart: unless-stopped
+    # --skipApiVersionCheck: this Azurite build (3.35.0, from the "latest" tag) rejects requests
+    # from a newer Azure.Storage.Blobs SDK client that ask for an API version it predates
+    # ("2026-06-06") - "InvalidHeaderValue", the app's document attach failing outright. Azurite's
+    # own error message names this flag as the fix; newer/older API version skew like this is
+    # expected between an emulator pinned by image tag and whatever SDK version NuGet resolves.
+    command: "azurite-blob --blobHost 0.0.0.0 --blobPort 10000 --skipApiVersionCheck"
+    ports:
+      - "10000:10000"
+    volumes:
+      - risk-governance-azurite-data:/data
+
+volumes:
+  risk-governance-postgres-data:
+  risk-governance-azurite-data:

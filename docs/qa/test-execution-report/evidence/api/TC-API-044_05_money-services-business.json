@@ -1,0 +1,36 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/api/PolicyResearch/Search?queryText=money%20services%20business&topK=5",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "durationMs": 274,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:22:36 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": true,
+      "isBadRequest": false,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": [
+        {
+          "id": "e7a09ebd-9c1f-4779-8499-fa131c4a77c4",
+          "policyDocumentId": "33333333-3333-3333-3333-333333333331",
+          "documentTitle": "FFIEC BSA/AML Examination Manual",
+          "sourceUrl": "https://bsaaml.ffiec.gov",
+          "effectiveDate": "2014-01-01T00:00:00",
+          "sectionRef": "Risks Associated with Money Laundering and Terrorist Financing - Customers",
+          "chunkText": "Certain categories of customers and entities pose elevated money laundering risk, including cash-intensive businesses, money services businesses, non-resident aliens, politically exposed persons, and non-governmental organizations operating in higher-risk sectors. A risk-based customer due diligence program should scale scrutiny to the customer's risk profile.",
+          "rank": 0.50012815
+        }
+      ],
+      "message": null
+    }
+  }
+}

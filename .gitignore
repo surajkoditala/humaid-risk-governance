@@ -1,3 +1,47 @@
+# .NET build output
+bin/
+obj/
+*.user
+.vs/
+
+# Node (webapp has its own .gitignore too; this covers anything at the root)
+node_modules/
+
+# Local-only backend settings (real local dev values, keeps changing per developer/machine) -
+# see appsettings.Development.json.example, same idea as webapp/.env.local vs .env.example.
+src/1-API/Humaid.RiskGovernance.AdminUI.Web/appsettings.Development.json
+src/6-MockExternalSystems/Humaid.RiskGovernance.MockSystems/appsettings.Development.json
+
+# Eval run artifacts - see evals/README.md. The datasets themselves (evals/datasets/) are checked in.
+evals/results/
+
+# Repo-root .env - docker-compose.app.yml reads AUTH0_DOMAIN/AUTH0_CLIENT_ID/AUTH0_AUDIENCE/
+# ANTHROPIC_API_KEY from here for local container builds.
+/.env
+
+# Local-only corporate root CA certs for Docker builds behind an SSL-inspecting proxy (Netskope,
+# Zscaler, etc.) - see ops/certs/README.md. Never commit an actual cert; only .gitkeep is tracked.
+ops/certs/*.crt
+ops/certs/*.pem
+
+# Python (ai/langgraph/ - see ai/langgraph/README.md)
+ai/langgraph/.venv/
+ai/langgraph/__pycache__/
+ai/langgraph/**/__pycache__/
+ai/langgraph/.env
+ai/langgraph/*.egg-info/
+
+# Dev harness (harness/dev_harness/ - see harness/README.md) - local review output, not an artifact
+harness/dev_harness/__pycache__/
+harness/*.md.bak
+harness/last-report.md
+harness/dev_harness/last-report.md
+
+# Python bytecode
+__pycache__/
+*.pyc
+
+# --- Terraform (iac/) ---
 # Local .terraform directories
 **/.terraform/*
 

@@ -1,0 +1,202 @@
+<title>Risk Assessment Workflow</title>
+<style>
+  /* Layout: a single vertical flow, one step per row, connected by a spine line down the left edge */
+  :root{
+    --bg:#F4F5F1; --surface:#FFFFFF; --ink:#14181C; --muted:#5D6670; --line:#DEE2DD;
+    --accent:#9C6B2E; --accent-soft:#F4E9D8;
+    --decision:#1F6F5C; --decision-soft:#E1EFEA;
+    --gate:#8A4B3B; --gate-soft:#F3E3DE;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#12151A; --surface:#1B1F26; --ink:#EDEFEF; --muted:#9CA3AC; --line:#2A2F37;
+      --accent:#D9A455; --accent-soft:#3A2E1B;
+      --decision:#4FB79A; --decision-soft:#173A32;
+      --gate:#D98A73; --gate-soft:#3A241E;
+      color-scheme:dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#12151A; --surface:#1B1F26; --ink:#EDEFEF; --muted:#9CA3AC; --line:#2A2F37;
+    --accent:#D9A455; --accent-soft:#3A2E1B;
+    --decision:#4FB79A; --decision-soft:#173A32;
+    --gate:#D98A73; --gate-soft:#3A241E;
+    color-scheme:dark;
+  }
+
+  *{box-sizing:border-box}
+  body{background:var(--bg); color:var(--ink); font-family:"IBM Plex Sans",-apple-system,sans-serif; padding:32px 16px 48px; padding-block:32px 48px}
+  .wrap{max-width:760px; margin:0 auto}
+
+  h1{font-family:"Source Serif 4",Georgia,serif; font-size:clamp(28px,5vw,40px); font-weight:600; line-height:1.15; margin:0 0 6px; text-wrap:balance}
+  .kicker{font-size:12px; letter-spacing:.12em; text-transform:uppercase; color:var(--accent); font-weight:600; margin:0 0 10px}
+  .lede{font-size:16px; color:var(--muted); line-height:1.5; margin:0 0 28px; max-width:56ch}
+
+  .legend{display:flex; flex-wrap:wrap; gap:8px 14px; margin:0 0 36px; padding:14px 16px; background:var(--surface); border:1px solid var(--line); border-radius:10px}
+  .legend-item{display:flex; align-items:center; gap:7px; font-size:12.5px; color:var(--muted)}
+  .dot{width:9px; height:9px; border-radius:50%; flex:none}
+
+  .flow{position:relative; padding-left:38px}
+  .spine{position:absolute; left:13px; top:6px; bottom:6px; width:2px; background:var(--line)}
+
+  .step{position:relative; padding-bottom:26px}
+  .step:last-child{padding-bottom:0}
+  .node{position:absolute; left:-38px; top:2px; width:28px; height:28px; border-radius:50%; background:var(--surface); border:2px solid var(--line); display:flex; align-items:center; justify-content:center; font-family:"Source Serif 4",Georgia,serif; font-weight:600; font-size:13px; color:var(--muted)}
+  .step[data-kind="ai"] .node{border-color:var(--accent); color:var(--accent)}
+  .step[data-kind="human"] .node{border-color:var(--decision); color:var(--decision)}
+  .step[data-kind="gate"] .node{border-color:var(--gate); color:var(--gate)}
+
+  .card{background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:16px 18px}
+  .row1{display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:6px}
+  .title{font-family:"Source Serif 4",Georgia,serif; font-size:18px; font-weight:600}
+  .tag{font-size:10.5px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; padding:3px 9px; border-radius:99px; white-space:nowrap}
+  .tag.ai{background:var(--accent-soft); color:var(--accent)}
+  .tag.deterministic{background:var(--decision-soft); color:var(--decision)}
+  .tag.human{background:var(--decision-soft); color:var(--decision)}
+  .tag.gate{background:var(--gate-soft); color:var(--gate)}
+
+  .desc{font-size:14px; color:var(--muted); line-height:1.55; margin:0}
+  .who{font-size:12px; color:var(--ink); opacity:.6; margin-top:8px; font-weight:600}
+
+  .principle{margin-top:34px; padding:18px 20px; border-radius:12px; background:var(--decision-soft); border:1px solid var(--decision)}
+  .principle p{margin:0; font-size:14.5px; line-height:1.55; color:var(--ink)}
+  .principle strong{color:var(--decision)}
+
+  .opener{margin:0 0 30px; padding:18px 20px 20px; border-radius:12px; background:var(--surface); border:1px solid var(--line)}
+  .opener-title{font-family:"Source Serif 4",Georgia,serif; font-size:15px; font-weight:600; margin:0 0 12px; color:var(--ink)}
+  .opener-title .time{font-family:"IBM Plex Sans",sans-serif; font-weight:500; font-size:11.5px; color:var(--muted); margin-left:6px}
+  .opener ol{margin:0; padding:0; list-style:none; counter-reset:opener}
+  .opener li{counter-increment:opener; position:relative; padding:0 0 12px 26px; font-size:13.5px; line-height:1.55; color:var(--ink)}
+  .opener li:last-child{padding-bottom:0}
+  .opener li::before{content:counter(opener); position:absolute; left:0; top:1px; width:18px; height:18px; border-radius:50%; background:var(--accent-soft); color:var(--accent); font-size:10.5px; font-weight:700; display:flex; align-items:center; justify-content:center; font-family:"IBM Plex Sans",sans-serif}
+  .opener li b{display:block; font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); font-weight:600; margin-bottom:2px}
+  .opener .closer{margin-top:12px; padding-top:12px; border-top:1px dashed var(--line); font-size:13px; font-style:italic; color:var(--muted); line-height:1.5}
+
+  @media (max-width:480px){
+    .flow{padding-left:32px}
+    .spine{left:11px}
+    .node{left:-32px; width:24px; height:24px; font-size:12px}
+    .card{padding:14px}
+  }
+</style>
+
+<div class="wrap">
+  <p class="kicker">Risk Assessment Workbench</p>
+  <h1>One change request, start to finish</h1>
+  <p class="lede">Every step a request takes, from someone proposing a change to a committee deciding on it — where AI helps, where it's deliberately kept out, and where a human always has the final say.</p>
+
+  <div class="opener">
+    <p class="opener-title">Presentation opener<span class="time">~30-40 sec, before the live demo</span></p>
+    <ol>
+      <li><b>Problem</b>At a $500B bank, every new product, feature, or vendor has to clear a financial-crime risk review before it can launch. Today that runs on email, Word docs, and spreadsheets — takes 15-20 business days, and two analysts can reach different conclusions on the same request.</li>
+      <li><b>Solution</b>We built the Risk Assessment Workbench — one platform that carries a request from first submission to a committee decision. AI helps categorize risk, pull facts from documents, and draft the write-up — but a human always reviews its work, and the committee always makes the final call. Nothing is ever auto-approved.</li>
+      <li><b>What you'll see</b>I'll walk one real request — launching a prepaid settlement card — end to end: intake, AI risk categorization grounded in the actual FFIEC BSA/AML manual, policy research, document extraction, AI-drafted narrative, risk scoring that can never hit zero, and a committee vote — with a full audit trail behind every step.</li>
+      <li><b>Transition</b>"Let's jump in." → switch straight to the Intake / Categories tab.</li>
+    </ol>
+  </div>
+
+  <div class="legend">
+    <span class="legend-item"><span class="dot" style="background:var(--accent)"></span>AI assists</span>
+    <span class="legend-item"><span class="dot" style="background:var(--decision)"></span>Human decides</span>
+    <span class="legend-item"><span class="dot" style="background:var(--gate)"></span>Gate / lock point</span>
+    <span class="legend-item"><span class="dot" style="background:var(--muted)"></span>No AI — deterministic</span>
+  </div>
+
+  <div class="flow">
+    <div class="spine"></div>
+
+    <div class="step" data-kind="none">
+      <div class="node">1</div>
+      <div class="card">
+        <div class="row1"><span class="title">Submit a request</span><span class="tag deterministic">No AI</span></div>
+        <p class="desc">A Product Owner describes what they want to launch — what kind of change it is, what it involves, and any supporting document. If it touches a specific product, customer group, or vendor, they link that record too, so there's full context from the start.</p>
+        <p class="who">Product Owner</p>
+      </div>
+    </div>
+
+    <div class="step" data-kind="ai">
+      <div class="node">2</div>
+      <div class="card">
+        <div class="row1"><span class="title">Categorize the risk</span><span class="tag ai">AI suggests</span></div>
+        <p class="desc"><strong>AI suggests</strong> which risk categories apply, based on official banking-regulator guidance — it only picks from categories that make sense for this kind of change, never invents new ones. <strong>A human reviews and can override</strong>: accept the suggestion, add a category, or remove one — always stating why.</p>
+        <p class="who">Analyst reviews</p>
+      </div>
+    </div>
+
+    <div class="step" data-kind="none">
+      <div class="node">3</div>
+      <div class="card">
+        <div class="row1"><span class="title">Find supporting policy</span><span class="tag deterministic">No AI — search</span></div>
+        <p class="desc">An analyst searches the bank's policy library for relevant guidance and marks which parts support the assessment. This is a plain keyword search, not AI — looking up a document doesn't need one.</p>
+        <p class="who">Analyst</p>
+      </div>
+    </div>
+
+    <div class="step" data-kind="ai">
+      <div class="node">4</div>
+      <div class="card">
+        <div class="row1"><span class="title">Pull facts from the document</span><span class="tag ai">AI extracts</span></div>
+        <p class="desc"><strong>AI reads</strong> the attached document and pulls out key facts — like a vendor's name or what customer data it touches. Every fact is clearly labeled as AI-generated. <strong>A human checks and can correct</strong> any value before it's used.</p>
+        <p class="who">Analyst corrects</p>
+      </div>
+    </div>
+
+    <div class="step" data-kind="ai">
+      <div class="node">5</div>
+      <div class="card">
+        <div class="row1"><span class="title">Draft the write-up</span><span class="tag ai">AI drafts</span></div>
+        <p class="desc"><strong>AI writes a first draft</strong> of the risk write-up for each category, using the policy and facts gathered so far. It stays labeled "AI-drafted" until <strong>a human edits it, asks for a new draft, or approves it as-is</strong>.</p>
+        <p class="who">Analyst reviews</p>
+      </div>
+    </div>
+
+    <div class="step" data-kind="human">
+      <div class="node">6</div>
+      <div class="card">
+        <div class="row1"><span class="title">Score the risk</span><span class="tag human">Human input</span></div>
+        <p class="desc">An analyst rates how risky the change is on its own, and how well existing safeguards reduce that risk. The system then works out the risk that's left over — built so that number can never hit zero, because no safeguard removes risk completely.</p>
+        <p class="who">Analyst</p>
+      </div>
+    </div>
+
+    <div class="step" data-kind="gate">
+      <div class="node">7</div>
+      <div class="card">
+        <div class="row1"><span class="title">Finalize</span><span class="tag gate">Gate</span></div>
+        <p class="desc">Before this can be finalized, every category needs a reviewed write-up, supporting policy, and a score. Once finalized, the assessment is locked — no more edits.</p>
+        <p class="who">Analyst</p>
+      </div>
+    </div>
+
+    <div class="step" data-kind="none">
+      <div class="node">8</div>
+      <div class="card">
+        <div class="row1"><span class="title">Send to committee</span><span class="tag deterministic">No AI</span></div>
+        <p class="desc">A separate step from finalizing — the analyst sends the assessment on for a decision. Until then, it stays out of the committee's queue, even once it's finalized.</p>
+        <p class="who">Analyst</p>
+      </div>
+    </div>
+
+    <div class="step" data-kind="human">
+      <div class="node">9</div>
+      <div class="card">
+        <div class="row1"><span class="title">Committee decides</span><span class="tag human">Human decides</span></div>
+        <p class="desc">Each committee member votes independently — Approve, Reject, Defer, or Approve with Conditions — giving a reason for anything other than a plain approve. Once enough members have voted, the system works out the final outcome (a Reject or Defer always outweighs an Approve).</p>
+        <p class="who">Committee</p>
+      </div>
+    </div>
+
+    <div class="step" data-kind="none">
+      <div class="node">10</div>
+      <div class="card">
+        <div class="row1"><span class="title">Outcome &amp; full history</span><span class="tag deterministic">Permanent record</span></div>
+        <p class="desc">The Product Owner is told the outcome. Every AI suggestion, every human edit, and every vote is permanently recorded and can never be changed — so anyone can trace exactly how and why a decision was reached.</p>
+        <p class="who">System</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="principle">
+    <p><strong>The rule that holds the whole thing together:</strong> AI can suggest, extract, and draft — but a human always reviews and can override, and the committee always makes the final call. Nothing is ever auto-approved or auto-rejected.</p>
+  </div>
+</div>

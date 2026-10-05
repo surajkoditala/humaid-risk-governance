@@ -1,0 +1,30 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/api/Scoring/Config",
+    "body": {
+      "riskCategoryId": "22222222-2222-2222-2222-222222222222",
+      "maxMitigationFactor": 1,
+      "reason": "QA boundary test",
+      "actorUserId": "374a3158-6dfa-41f2-9a4d-3d1091dffacf"
+    }
+  },
+  "response": {
+    "status": 400,
+    "durationMs": 734,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:23:43 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": false,
+      "isBadRequest": true,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": "00000000-0000-0000-0000-000000000000",
+      "message": "max_mitigation_factor must be in [0, 1.0) - a value of 1.0 or more would let residual risk reach zero."
+    }
+  }
+}

@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.VisualStudio.JavaScript.Sdk/1.0.4902498">
+  <PropertyGroup>
+    <StartupCommand>npm run dev</StartupCommand>
+    <BuildCommand>npm run build</BuildCommand>
+    <ProductionPath>$(MSBuildProjectDirectory)\dist</ProductionPath>
+    <StartupPage>index.html</StartupPage>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="**" Exclude="node_modules\**;dist\**" />
+  </ItemGroup>
+</Project>

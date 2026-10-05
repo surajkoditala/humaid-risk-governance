@@ -1,0 +1,18 @@
+# Keeps the Docker build context small and avoids leaking local-only files into an image.
+# Nested bin/obj (any depth) matter most: a copied-in obj/project.assets.json from a Windows host
+# `dotnet build` references Windows-only NuGet fallback folders (e.g. "C:\Program Files (x86)\...
+# \NuGetPackages") and breaks `dotnet publish` inside the Linux build stage - so these must be
+# excluded at every depth, not just the repo root.
+**/bin/
+**/obj/
+.vs/
+*.user
+
+node_modules/
+webapp/dist/
+
+# Never bake local secrets into an image - config is injected via env vars at runtime instead.
+appsettings.Development.json
+webapp/.env.local
+
+.git/

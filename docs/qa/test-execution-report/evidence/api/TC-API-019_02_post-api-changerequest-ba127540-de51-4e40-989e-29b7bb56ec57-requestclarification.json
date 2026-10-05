@@ -1,0 +1,28 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/api/ChangeRequest/ba127540-de51-4e40-989e-29b7bb56ec57/RequestClarification",
+    "body": {
+      "requestedByUserId": "4fa322d3-2245-44ef-b664-1a804442db23",
+      "question": "Which target countries exactly?"
+    }
+  },
+  "response": {
+    "status": 200,
+    "durationMs": 280,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:22:16 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": true,
+      "isBadRequest": false,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": "7be6b406-d0e6-4907-aa52-7afc7ea12b65",
+      "message": null
+    }
+  }
+}
