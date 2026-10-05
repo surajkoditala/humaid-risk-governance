@@ -34,6 +34,16 @@ query someone has to remember to run: `DbMigrationRunner` logs the `func_*` rout
 couple of key seed-table row counts (`risk_category`, `app_user`) after applying everything above -
 see the deployed environment's own logs/Application Insights trace for the current numbers.
 
+## SLA tracking (Epic 19)
+
+`schema/015_sla.sql` (and its mirror `migrations/0008_epic19_sla_tracking.sql` for already-deployed databases) adds the SLA tables and two thin triggers on `change_request`; `functions/sla/` holds the logic, and `seed/seed_sla_config.sql` seeds the confirmed defaults (2 / 8 / 5 / 15 business days, 80% warning) and backfills requests that existed before the epic.
+
+- **One capture point.** `change_request.status` is changed by several functions, so a trigger calls `fn_sla_record_transition` on every status change: it closes the open stage (freezing its charged duration and whether it met the SLA, never recomputed) and opens the next. A new request is pinned to the SLA version active at submission.
+- **Read-time state.** Due date, elapsed business days and On track / At risk / Breached are computed on read by `fn_sla_open_status()` from recorded timestamps, the pinned version and the holiday calendar - there is no job to keep running and nothing to drift. Time waiting on the Product Owner (an Open clarification) is shown separately and, by default, not charged to the analyst stage.
+- **Backfilled stage times are approximate.** Requests created before this epic have no stage history; their current stage is opened at the best timestamp available (assessment created / finalized, else submission) and only decided requests get an end-to-end result.
+- **Keep the trigger functions in the schema file thin.** A change to them needs a new migration; the logic they call lives in `functions/` and can change freely.
+- Informational only: nothing here changes a request's status, blocks a transition or decides anything. No AI is involved.
+
 ## Apply against local Postgres — one shot
 
 `deploy_all.sql` is every schema, function, and seed file concatenated in apply order, wrapped in
