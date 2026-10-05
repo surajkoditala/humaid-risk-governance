@@ -25,11 +25,23 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Scoring
         {
             // Defaults every test to an actor allowed to change configuration and a not-yet-
             // finalized assessment, so only the DEF-002/DEF-007-specific tests need to override this.
-            _userRepo.Setup(u => u.GetRoleAsync(It.IsAny<Guid>())).ReturnsAsync("Analyst");
+            SetUpActorRole("Analyst");
             _assessmentRepo.Setup(r => r.GetByIdAsync(It.IsAny<Guid>()))
                 .ReturnsAsync(new Infrastructure.Models.Assessment.Assessment { Status = "Draft" });
             _sut = new ScoringService(_repo.Object, _userRepo.Object, _assessmentRepo.Object);
         }
+
+        /// <summary>A user can hold more than one role (Epic 11 follow-up), so HasRoleAsync is a
+        /// membership check, not equality - these mock "the actor's only role is <paramref
+        /// name="role"/>" for tests that only care about a single one, for any actor id or one
+        /// specific id (overriding the any-id default for just that actor).</summary>
+        private void SetUpActorRole(string role) =>
+            _userRepo.Setup(u => u.HasRoleAsync(It.IsAny<Guid>(), It.IsAny<string>()))
+                .ReturnsAsync((Guid _, string checkedRole) => checkedRole == role);
+
+        private void SetUpActorRole(Guid userId, string role) =>
+            _userRepo.Setup(u => u.HasRoleAsync(userId, It.IsAny<string>()))
+                .ReturnsAsync((Guid _, string checkedRole) => checkedRole == role);
 
         [Fact]
         public async Task CalculateAsync_RejectsWhenAssessmentIsFinalized()
@@ -59,7 +71,7 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Scoring
         public async Task UpsertConfigAsync_RejectsNonAnalystActor()
         {
             var actorId = Guid.NewGuid();
-            _userRepo.Setup(u => u.GetRoleAsync(actorId)).ReturnsAsync("ProductOwner");
+            SetUpActorRole(actorId, "ProductOwner");
             var input = new UpsertScoringConfigInput { RiskCategoryId = Guid.NewGuid(), MaxMitigationFactor = 0.5m, Reason = "test", ActorUserId = actorId };
 
             await Assert.ThrowsAsync<ValidationException>(() => _sut.UpsertConfigAsync(input));

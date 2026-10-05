@@ -47,8 +47,11 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Committee
                 NullLogger<CommitteeService>.Instance);
 
             // DEF-002: every test below votes as a valid CommitteeMember by default, so only the
-            // role-guard test itself needs to set up a different role.
-            _userRepo.Setup(u => u.GetRoleAsync(It.IsAny<Guid>())).ReturnsAsync("CommitteeMember");
+            // role-guard test itself needs to set up a different role. HasRoleAsync is a
+            // membership check, not equality - a user can hold more than one role (Epic 11
+            // follow-up) - so this mocks "the actor's only role is CommitteeMember".
+            _userRepo.Setup(u => u.HasRoleAsync(It.IsAny<Guid>(), It.IsAny<string>()))
+                .ReturnsAsync((Guid _, string role) => role == "CommitteeMember");
 
             _assessmentRepo.Setup(r => r.GetByIdAsync(_assessmentId))
                 .ReturnsAsync(new Infrastructure.Models.Assessment.Assessment { Id = _assessmentId, ChangeRequestId = _changeRequestId, Status = "Finalized" });
@@ -78,7 +81,8 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Committee
         public async Task CastVoteAsync_RejectsVoterWhoIsNotACommitteeMember()
         {
             var voterId = Guid.NewGuid();
-            _userRepo.Setup(u => u.GetRoleAsync(voterId)).ReturnsAsync("ProductOwner");
+            _userRepo.Setup(u => u.HasRoleAsync(voterId, It.IsAny<string>()))
+                .ReturnsAsync((Guid _, string role) => role == "ProductOwner");
 
             var input = new CastCommitteeVoteInput { AssessmentId = _assessmentId, CommitteeMemberUserId = voterId, Vote = "Approve" };
 

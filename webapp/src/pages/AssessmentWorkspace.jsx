@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { useAuth0 } from '@auth0/auth0-react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
@@ -9,7 +8,6 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
-import { isAuth0Configured } from '../auth/authConfig.js'
 import { useDevUser } from '../auth/DevUserContext.jsx'
 import { RequiredMark } from '../components/RequiredMark.jsx'
 import { Endpoints, apiFetch, downloadFile } from '../lib/api.js'
@@ -779,16 +777,13 @@ function summarizeAuditJson(json) {
 
 function AuditTab({ changeRequest, bump }) {
   const { data: trail } = useFetch(Endpoints.audit.trail(changeRequest.id), [bump])
-  const { getAccessTokenSilently } = useAuth0()
 
   const handleExportPdf = async () => {
     try {
       // A plain <a href> can't attach a Bearer token, so this goes through the same auth path
       // as every other request instead - see downloadFile's comment in lib/api.js.
-      const token = isAuth0Configured ? await getAccessTokenSilently() : null
       await downloadFile(
         Endpoints.audit.exportPdf(changeRequest.id),
-        token,
         `audit-trail-${changeRequest.requestNumber}.pdf`,
       )
     } catch (err) {

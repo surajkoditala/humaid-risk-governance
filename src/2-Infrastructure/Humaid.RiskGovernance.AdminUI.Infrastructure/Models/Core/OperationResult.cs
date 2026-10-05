@@ -14,6 +14,10 @@ namespace Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Core
 
         public bool IsConflict { get; private init; }
 
+        /// <summary>The caller is authenticated and holds a permitted role, but is not allowed to
+        /// touch this particular record (e.g. a Product Owner reading another owner's request).</summary>
+        public bool IsForbidden { get; private init; }
+
         public T? Data { get; private init; }
 
         public string? Message { get; private init; }
@@ -32,5 +36,8 @@ namespace Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Core
 
         public static OperationResult<T> Conflict(string message) =>
             new() { IsSuccessful = false, IsConflict = true, Message = message };
+
+        public static OperationResult<T> Forbidden(string message) =>
+            new() { IsSuccessful = false, IsForbidden = true, Message = message };
     }
 }

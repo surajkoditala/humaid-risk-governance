@@ -7,11 +7,18 @@ corporate firewall, etc.). Your Windows host already trusts that proxy's root ce
 Linux container `dotnet build` runs in does not — so any outbound HTTPS call inside the build
 (NuGet included) fails.
 
-**Fix:** export your machine's proxy root CA and drop it here as a `.crt` file (PEM format). Both
-Dockerfiles copy everything in this folder into the build image's trust store before restoring
-packages. This folder is gitignored except for this README and `.gitkeep` — never commit an actual
+The same interception also breaks the **running app's own** outbound HTTPS calls once it's up -
+Auth0's JWKS endpoint (JWT signature validation fails with "the signature key was not found") and
+the Anthropic API. Both Dockerfiles trust this folder's certs in the runtime image too, not just the
+build stage, for exactly that reason.
+
+**Fix:** export your machine's proxy root CA and drop it here as a `.crt` file (PEM format), directly
+in this folder - not a subfolder. `update-ca-certificates` does not recurse into subdirectories, so a
+cert placed anywhere but directly here is silently ignored ("0 added", no error). Both Dockerfiles
+copy everything in this folder into the image's trust store, in both the build and runtime stages.
+This folder is gitignored except for this README and `.gitkeep` — never commit an actual
 certificate, and nothing here affects the real deployment pipeline (there's no corporate proxy
-between Azure Container Apps and NuGet).
+between Azure Container Apps and Auth0/NuGet/Anthropic).
 
 ## How to export it (Windows, PowerShell)
 

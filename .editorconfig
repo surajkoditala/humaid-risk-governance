@@ -1,0 +1,53 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = crlf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+[*.cs]
+indent_size = 4
+# Match harness/coding-standards.md: var when the type is obvious, collection expressions
+# preferred, nullable reference types taken seriously.
+csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_style_var_for_built_in_types = true:suggestion
+csharp_style_var_elsewhere = false:suggestion
+csharp_prefer_simple_using_statement = true:suggestion
+csharp_style_namespace_declarations = file_scoped:suggestion
+csharp_new_line_before_open_brace = all
+dotnet_style_prefer_collection_expression = true:suggestion
+dotnet_style_qualification_for_field = false:suggestion
+dotnet_style_qualification_for_property = false:suggestion
+dotnet_style_qualification_for_method = false:suggestion
+
+# CancellationToken forwarding (harness/review-rules.md "Async Standards") - CA2016 flags a
+# method that accepts a CancellationToken parameter but doesn't forward it to an inner async call.
+dotnet_diagnostic.CA2016.severity = warning
+# VSTHRD103 / avoid blocking calls - closest analyzer equivalent to the ".Result/.Wait()" ban;
+# enable if Microsoft.VisualStudio.Threading.Analyzers is ever added to a project.
+dotnet_diagnostic.CA1849.severity = suggestion
+
+# Naming: interfaces start with I (IDE1006 covers general naming style violations)
+dotnet_naming_rule.interfaces_start_with_i.severity = warning
+dotnet_naming_rule.interfaces_start_with_i.symbols = interface_symbol
+dotnet_naming_rule.interfaces_start_with_i.style = prefix_i_style
+dotnet_naming_symbols.interface_symbol.applicable_kinds = interface
+dotnet_naming_style.prefix_i_style.required_prefix = I
+dotnet_naming_style.prefix_i_style.capitalization = pascal_case
+
+[*.{json,yml,yaml}]
+indent_size = 2
+
+[*.{ts,tsx,js,jsx}]
+indent_size = 2
+quote_type = double
+
+[*.md]
+trim_trailing_whitespace = false
+
+[*.py]
+indent_size = 4
+max_line_length = 100

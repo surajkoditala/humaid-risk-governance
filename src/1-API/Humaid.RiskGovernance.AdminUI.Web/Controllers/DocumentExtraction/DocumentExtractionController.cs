@@ -3,12 +3,13 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.DocumentExtraction
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.DocumentExtraction;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Core;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.DocumentExtraction;
+    using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Users;
     using Humaid.RiskGovernance.AdminUI.Web.Controllers.Core;
     using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
 
     /// <summary>Epic 4 - AI-Assisted Document Extraction.</summary>
-    [Authorize]
+    [Authorize(Roles = AppRoles.Analyst)]
     [Route("api/[controller]")]
     public class DocumentExtractionController : BaseApiController
     {
@@ -48,6 +49,8 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.DocumentExtraction
         public Task<IActionResult> Correct([FromBody] CorrectRequest request) =>
             ExecuteAsync(async () =>
             {
+                if (RequireSelf<Guid>(request.Input.ActorUserId) is { } forbidden) return forbidden;
+
                 try
                 {
                     var id = await _documentExtractionService.CorrectAsync(request.Input, request.IsMaterialChange);

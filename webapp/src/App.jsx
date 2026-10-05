@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { useAuth0 } from '@auth0/auth0-react'
-import { ClipboardList, Gavel, LayoutList, Menu, ShieldCheck, Sliders, X } from 'lucide-react'
+import { ClipboardList, Gavel, LayoutList, Menu, ShieldCheck, Sliders, Users, X } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { isAuth0Configured } from './auth/authConfig.js'
 import { useDevUser } from './auth/DevUserContext.jsx'
@@ -11,6 +13,7 @@ import MyRequests from './pages/MyRequests.jsx'
 import AnalystInbox from './pages/AnalystInbox.jsx'
 import CommitteeQueue from './pages/CommitteeQueue.jsx'
 import Configuration from './pages/Configuration.jsx'
+import AdminUsers from './pages/AdminUsers.jsx'
 
 const NAV_ITEMS = [
   { key: 'intake', label: 'Submit Request', icon: ClipboardList, roles: ['ProductOwner'] },
@@ -18,6 +21,7 @@ const NAV_ITEMS = [
   { key: 'assessments', label: 'Assessments', icon: ShieldCheck, roles: ['Analyst'] },
   { key: 'committee', label: 'Committee Queue', icon: Gavel, roles: ['CommitteeMember'] },
   { key: 'configuration', label: 'Configuration', icon: Sliders, roles: ['Admin'] },
+  { key: 'users', label: 'Users', icon: Users, roles: ['Admin'] },
 ]
 
 function initialsOf(name) {
@@ -42,8 +46,8 @@ function DevUserSwitcher() {
       <SelectTrigger className="w-auto max-w-[240px] min-w-40 sm:min-w-56" size="sm">
         <SelectValue placeholder="Acting as…">
           {currentUser && (
-            <span className="truncate" title={`${currentUser.displayName} — ${currentUser.role}`}>
-              {currentUser.displayName} — {currentUser.role}
+            <span className="truncate" title={`${currentUser.displayName} — ${currentUser.roles.join(', ')}`}>
+              {currentUser.displayName} — {currentUser.roles.join(', ')}
             </span>
           )}
         </SelectValue>
@@ -51,11 +55,89 @@ function DevUserSwitcher() {
       <SelectContent>
         {users.map((u) => (
           <SelectItem key={u.id} value={u.id}>
-            {u.displayName} — {u.role}
+            {u.displayName} — {u.roles.join(', ')}
           </SelectItem>
         ))}
       </SelectContent>
     </Select>
+  )
+}
+
+// Real Auth0 login: there's nothing to switch to (DevUserContext's selectUser is a no-op here),
+// so unlike DevUserSwitcher above this isn't a picker - a badge naming the one real logged-in
+// person, opening their own read-only profile on click instead of looking like a dropdown that
+// does nothing when clicked.
+function UserProfileBadge({ onManageUsers }) {
+  const { currentUser } = useDevUser()
+  const [open, setOpen] = useState(false)
+
+  if (!currentUser) return null
+
+  const isAdmin = currentUser.roles.includes('Admin')
+
+  return (
+    <>
+      <Badge
+        variant="secondary"
+        className="h-7 cursor-pointer px-2.5 text-sm"
+        onClick={() => setOpen(true)}
+      >
+        {currentUser.displayName}
+      </Badge>
+      {open && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => setOpen(false)}
+          aria-hidden="true"
+        >
+          <Card className="w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+            <CardHeader>
+              <CardTitle>Logged-in User Profile</CardTitle>
+              <CardAction>
+                <Button variant="ghost" size="icon-sm" onClick={() => setOpen(false)}>
+                  <X />
+                </Button>
+              </CardAction>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Avatar size="lg" className="mx-auto">
+                <AvatarFallback>{initialsOf(currentUser.displayName)}</AvatarFallback>
+              </Avatar>
+              <dl className="space-y-1.5 text-sm">
+                <div className="flex gap-2">
+                  <dt className="w-14 shrink-0 font-medium">Name</dt>
+                  <dd className="text-muted-foreground">{currentUser.displayName}</dd>
+                </div>
+                <div className="flex gap-2">
+                  <dt className="w-14 shrink-0 font-medium">Email</dt>
+                  <dd className="text-muted-foreground">{currentUser.email}</dd>
+                </div>
+                <div className="flex gap-2">
+                  <dt className="w-14 shrink-0 font-medium">Roles</dt>
+                  <dd className="text-muted-foreground">{currentUser.roles.join(', ')}</dd>
+                </div>
+              </dl>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" size="sm" onClick={() => setOpen(false)}>
+                  Close
+                </Button>
+                {isAdmin && (
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setOpen(false)
+                      onManageUsers()
+                    }}
+                  >
+                    Edit Profile
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+    </>
   )
 }
 
@@ -65,7 +147,9 @@ export default function App() {
   const [screen, setScreen] = useState(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
-  const visibleNavItems = NAV_ITEMS.filter((item) => !currentUser || item.roles.includes(currentUser.role))
+  const visibleNavItems = NAV_ITEMS.filter(
+    (item) => !currentUser || item.roles.some((r) => currentUser.roles.includes(r)),
+  )
   const activeScreen = screen && visibleNavItems.some((i) => i.key === screen) ? screen : visibleNavItems[0]?.key
 
   const signOut = () => {
@@ -83,6 +167,7 @@ export default function App() {
     assessments: <AnalystInbox />,
     committee: <CommitteeQueue />,
     configuration: <Configuration />,
+    users: <AdminUsers />,
   }
 
   return (
@@ -140,7 +225,7 @@ export default function App() {
             <Button variant="ghost" size="icon-sm" className="shrink-0 md:hidden" onClick={() => setSidebarOpen(true)}>
               <Menu />
             </Button>
-            <DevUserSwitcher />
+            {isAuth0Configured ? <UserProfileBadge onManageUsers={() => goTo('users')} /> : <DevUserSwitcher />}
             <div className="ml-auto flex items-center gap-2 sm:gap-3">
               {currentUser && (
                 <Avatar size="sm">

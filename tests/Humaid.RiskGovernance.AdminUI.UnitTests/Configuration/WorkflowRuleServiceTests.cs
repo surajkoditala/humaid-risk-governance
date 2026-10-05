@@ -18,9 +18,16 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Configuration
 
         public WorkflowRuleServiceTests()
         {
-            _userRepo.Setup(u => u.GetRoleAsync(It.IsAny<Guid>())).ReturnsAsync("Analyst");
+            SetUpActorRole("Analyst");
             _sut = new WorkflowRuleService(_repo.Object, _userRepo.Object);
         }
+
+        /// <summary>A user can hold more than one role (Epic 11 follow-up), so HasRoleAsync is a
+        /// membership check, not equality - this mocks "the actor's only role is <paramref
+        /// name="role"/>" for tests that only care about a single one.</summary>
+        private void SetUpActorRole(string role) =>
+            _userRepo.Setup(u => u.HasRoleAsync(It.IsAny<Guid>(), It.IsAny<string>()))
+                .ReturnsAsync((Guid _, string checkedRole) => checkedRole == role);
 
         private static UpsertWorkflowRuleInput ValidInput() => new()
         {
@@ -35,7 +42,7 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Configuration
         [InlineData("CommitteeMember")]
         public async Task UpsertAsync_RejectsActorWithoutConfigurationPrivileges(string role)
         {
-            _userRepo.Setup(u => u.GetRoleAsync(It.IsAny<Guid>())).ReturnsAsync(role);
+            SetUpActorRole(role);
 
             await Assert.ThrowsAsync<ValidationException>(() => _sut.UpsertAsync(ValidInput()));
             _repo.Verify(r => r.UpsertAsync(It.IsAny<UpsertWorkflowRuleInput>()), Times.Never);

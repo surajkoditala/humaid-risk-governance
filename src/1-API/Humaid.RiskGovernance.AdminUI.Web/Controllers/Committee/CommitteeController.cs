@@ -3,6 +3,7 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.Committee
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.Committee;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Committee;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Core;
+    using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Users;
     using Humaid.RiskGovernance.AdminUI.Web.Controllers.Core;
     using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
@@ -24,9 +25,12 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.Committee
 
         /// <summary>US-8.1: assessment must already be Finalized (func_routeToCommittee enforces this).</summary>
         [HttpPost("Route")]
+        [Authorize(Roles = AppRoles.Analyst)]
         public Task<IActionResult> Route([FromBody] RouteRequest request) =>
             ExecuteAsync(async () =>
             {
+                if (RequireSelf<string>(request.ActorUserId) is { } forbidden) return forbidden;
+
                 // "must be Finalized" is func_routeToCommittee's own RAISE EXCEPTION - a
                 // PostgresException (RaiseException), not a C# exception - so BaseApiController's
                 // own Postgres handling already maps it to a clean 400. The catch this used to
@@ -37,6 +41,7 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.Committee
             }, "Failed to route assessment to committee.");
 
         [HttpGet("Queue")]
+        [Authorize(Roles = AppRoles.CommitteeMember)]
         public Task<IActionResult> GetQueue([FromQuery] GridQuery query) =>
             ExecuteAsync(async () =>
             {
@@ -45,11 +50,16 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.Committee
             }, "Failed to fetch committee queue.");
 
         /// <summary>US-8.2: approve-with-conditions/reject/defer text requirements are enforced by
-        /// committee_vote's own CHECK constraints.</summary>
+        /// committee_vote's own CHECK constraints. Closes DEF-002 (Critical): only a Committee Member
+        /// may cast a vote, and only as themselves - a Product Owner's vote can no longer reach the
+        /// quorum count.</summary>
         [HttpPost("Vote")]
+        [Authorize(Roles = AppRoles.CommitteeMember)]
         public Task<IActionResult> Vote([FromBody] CastCommitteeVoteInput input) =>
             ExecuteAsync(async () =>
             {
+                if (RequireSelf<Guid>(input.CommitteeMemberUserId) is { } forbidden) return forbidden;
+
                 try
                 {
                     var id = await _committeeService.CastVoteAsync(input);
@@ -67,6 +77,7 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.Committee
             }, "Failed to cast committee vote.");
 
         [HttpGet("{assessmentId:guid}/Votes")]
+        [Authorize(Roles = AppRoles.AnalystOrCommittee)]
         public Task<IActionResult> GetVotes(Guid assessmentId) =>
             ExecuteAsync(async () =>
             {
@@ -77,6 +88,7 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.Committee
         /// <summary>US-8.3: resolved automatically once quorum is met (see CastVote); this just
         /// reads the outcome, if any, for the Product Owner / audit view.</summary>
         [HttpGet("{assessmentId:guid}/Decision")]
+        [Authorize(Roles = AppRoles.AnalystOrCommittee)]
         public Task<IActionResult> GetDecision(Guid assessmentId) =>
             ExecuteAsync(async () =>
             {

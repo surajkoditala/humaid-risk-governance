@@ -3,11 +3,12 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.Assessment
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.Assessment;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Assessment;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Core;
+    using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Users;
     using Humaid.RiskGovernance.AdminUI.Web.Controllers.Core;
     using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
 
-    [Authorize]
+    [Authorize(Roles = AppRoles.Analyst)]
     [Route("api/[controller]")]
     public class AssessmentController : BaseApiController
     {
@@ -51,6 +52,8 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.Assessment
         public Task<IActionResult> Finalize(Guid assessmentId, [FromBody] FinalizeBody body) =>
             ExecuteAsync(async () =>
             {
+                if (RequireSelf<string>(body.ActorUserId) is { } forbidden) return forbidden;
+
                 try
                 {
                     await _assessmentService.FinalizeAsync(assessmentId, body.ActorUserId);

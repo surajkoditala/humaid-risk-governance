@@ -3,13 +3,14 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.PolicyResearch
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.PolicyResearch;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Core;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.PolicyResearch;
+    using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Users;
     using Humaid.RiskGovernance.AdminUI.Web.Controllers.Core;
     using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
 
     /// <summary>Epic 3 - AI-Assisted Policy Research. Search is deterministic full-text search,
     /// not an LLM call - see docs/governance/human-in-the-loop-gates.md.</summary>
-    [Authorize]
+    [Authorize(Roles = AppRoles.Analyst)]
     [Route("api/[controller]")]
     public class PolicyResearchController : BaseApiController
     {
@@ -33,6 +34,8 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.PolicyResearch
         public Task<IActionResult> RecordReliance([FromBody] RecordPolicyRelianceInput input) =>
             ExecuteAsync(async () =>
             {
+                if (RequireSelf<Guid>(input.DecidedByUserId) is { } forbidden) return forbidden;
+
                 var id = await _policyResearchService.RecordRelianceAsync(input);
                 return OperationResult<Guid>.Success(id);
             }, "Failed to record policy reliance.");

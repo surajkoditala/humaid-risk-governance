@@ -1,0 +1,108 @@
+namespace Humaid.RiskGovernance.AdminUI.Web.Auth
+{
+    using System.Security.Claims;
+    using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.Users;
+    using Microsoft.AspNetCore.Authentication;
+
+    /// <summary>
+    /// Epic 11 - turns "this request carries a valid Auth0 access token" into "this request is user X
+    /// holding roles Y". Runs after authentication on every request: it looks the caller's Auth0
+    /// subject up in <c>app_user</c> and adds that row's id and every <c>app_user_role</c> grant as
+    /// claims.
+    /// <para>
+    /// The database rows are the only source of role. Any role claim already on the incoming
+    /// identity (from a token, a proxy, anything) is discarded first, so a role can be granted or
+    /// revoked only by changing <c>app_user_role</c> - and does take effect on the very next request.
+    /// A caller with no active <c>app_user</c> row, or no role grants at all, stays authenticated but
+    /// gets no role, so every role-protected endpoint refuses them with 403.
+    /// </para>
+    /// </summary>
+    public class AppUserClaimsTransformation : IClaimsTransformation
+    {
+        private readonly IUserService _userService;
+        private readonly IAuth0UserInfoClient _auth0UserInfoClient;
+        private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly ILogger<AppUserClaimsTransformation> _logger;
+
+        public AppUserClaimsTransformation(
+            IUserService userService,
+            IAuth0UserInfoClient auth0UserInfoClient,
+            IHttpContextAccessor httpContextAccessor,
+            ILogger<AppUserClaimsTransformation> logger)
+        {
+            _userService = userService;
+            _auth0UserInfoClient = auth0UserInfoClient;
+            _httpContextAccessor = httpContextAccessor;
+            _logger = logger;
+        }
+
+        public async Task<ClaimsPrincipal> TransformAsync(ClaimsPrincipal principal)
+        {
+            // Can be invoked more than once per request; the added claims make it a no-op afterwards.
+            if (principal.Identity?.IsAuthenticated != true || principal.HasClaim(c => c.Type == AppClaimTypes.UserId))
+                return principal;
+
+            var user = await ResolveUserAsync(principal);
+
+            var clone = new ClaimsPrincipal();
+            foreach (var identity in principal.Identities)
+            {
+                var copy = identity.Clone();
+                foreach (var roleClaim in copy.FindAll(copy.RoleClaimType).ToList())
+                    copy.RemoveClaim(roleClaim);
+                clone.AddIdentity(copy);
+            }
+
+            if (user is null)
+            {
+                _logger.LogWarning(
+                    "Authenticated caller {Subject} has no active app_user row; no role granted.",
+                    principal.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "(no subject)");
+                return clone;
+            }
+
+            var appIdentity = new ClaimsIdentity();
+            appIdentity.AddClaim(new Claim(AppClaimTypes.UserId, user.Id.ToString()));
+            foreach (var role in user.Roles)
+                appIdentity.AddClaim(new Claim(ClaimTypes.Role, role));
+            appIdentity.AddClaim(new Claim(ClaimTypes.Name, user.DisplayName));
+            clone.AddIdentity(appIdentity);
+            return clone;
+        }
+
+        private async Task<Infrastructure.Models.Users.AppUser?> ResolveUserAsync(ClaimsPrincipal principal)
+        {
+            // Local development only: DevBypassAuthHandler names the seeded user to act as.
+            var devUserId = principal.FindFirst(AppClaimTypes.DevUserId)?.Value;
+            if (devUserId is not null)
+                return Guid.TryParse(devUserId, out var id) ? await _userService.GetByIdAsync(id) : null;
+
+            var subject = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrWhiteSpace(subject))
+                return null;
+
+            var user = await _userService.GetByAuth0SubjectAsync(subject);
+            if (user is not null)
+                return user;
+
+            // Epic 11 follow-up: not yet linked to any app_user row by subject. Fall back to matching
+            // an existing, not-yet-linked row by the verified email Auth0's own /userinfo endpoint
+            // returns for this exact access token - closes the chicken-and-egg gap where an Admin
+            // can't run "Link Auth0" for a real teammate until that person has already logged in once
+            // and been refused everything. Self-limiting: once linked, every later request matches by
+            // subject above and never reaches this fallback again for that person.
+            return await TryLinkByEmailAsync(subject);
+        }
+
+        private async Task<Infrastructure.Models.Users.AppUser?> TryLinkByEmailAsync(string subject)
+        {
+            var authHeader = _httpContextAccessor.HttpContext?.Request.Headers.Authorization.ToString();
+            if (string.IsNullOrWhiteSpace(authHeader) || !authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+                return null;
+
+            var accessToken = authHeader["Bearer ".Length..];
+            var email = await _auth0UserInfoClient.GetEmailAsync(accessToken);
+            return string.IsNullOrWhiteSpace(email) ? null : await _userService.LinkAuth0ByEmailAsync(email, subject);
+        }
+    }
+}

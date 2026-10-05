@@ -19,8 +19,8 @@ for exact commands.
 
 The rest of this file is the **target deployment shape** agreed on the 2026-09-09 architecture sync
 (`Genius hacks - Q3 sync up.vtt`), written so the actual Terraform/Bicep pipeline has a spec to
-build against. **No IaC files live here yet** — provisioning Azure resources and the deploy
-pipeline is DevOps' explicit ownership (CLAUDE.md's team table), not written as part of this pass.
+build against. **No IaC files live here** — provisioning Azure resources is DevOps' ownership; the
+Terraform (`iac/`) and its pipelines live on the `main` branch, not on `release/1.00`.
 
 ## Target Azure resources
 
@@ -92,7 +92,7 @@ local dev to Azure, only where each value comes from.
 | Variable | Local dev value | Azure |
 |---|---|---|
 | `AZURE_POSTGRESQL_CONNECTIONSTRING` | Docker Postgres, port 5433 | Flexible Server connection string (Key Vault) |
-| `AUTH0_DOMAIN` / `AUTH0_AUDIENCE` | blank (DevBypassAuthHandler active) | real Auth0 tenant values once configured |
+| `AUTH0_DOMAIN` / `AUTH0_AUDIENCE` | blank (DevBypassAuthHandler active) | real Auth0 tenant values once configured - read at runtime, ordinary Container App env vars |
 | `CORS_ALLOWED_ORIGINS` | `["http://localhost:3000"]` | the deployed webapp's origin |
 | `AI_PROVIDER` | `Anthropic` | `AzureFoundry` once the Foundry project exists |
 | `ANTHROPIC_API_KEY` / `ANTHROPIC_MODEL` | dev key, if using the Anthropic path | Key Vault reference, if still using the Anthropic path |
@@ -110,10 +110,23 @@ local dev to Azure, only where each value comes from.
 | `CORS_ALLOWED_ORIGINS` | `["http://localhost:5210"]` | the Workbench Container App's internal URL - Mock Systems is only ever called by the Workbench, never the browser directly |
 | `APPLICATIONINSIGHTS_CONNECTION_STRING` | blank | same Application Insights resource as the Workbench, or its own - either works, cost is the only real deciding factor |
 
+## Frontend Auth0 config is a build-time value, not a runtime one
+
+Unlike every variable in the table above, the webapp's three `VITE_AUTH0_*` values (`webapp/.env.example`)
+are inlined into the JavaScript bundle by Vite **when the image is built**, not read at container
+start. Since PR #49 baked the webapp into the Workbench image's `wwwroot`, setting them as a
+Container App env var later has no effect - the bundle already shipped without them. They reach
+the build as Docker `--build-arg`s instead: `frontendAuth0Domain` / `frontendAuth0ClientId` /
+`frontendAuth0Audience` in `.azure-pipelines/workbench/templates/variables.yml`, consumed by the
+`docker build` step in `workbench/environments/dev.yml` and the three `ARG`/`ENV` pairs in the
+Dockerfile's `webapp-build` stage. All three default to empty, which keeps the built frontend in
+today's "Auth0 not configured" dev-bypass mode - filling them in (once the tenant exists) is a
+one-time edit to that one variables file, not a code change.
+
 ## Open items for the actual IaC pass
 
 - Exact Terraform module layout - not decided; this README is the spec, not the implementation.
 - Whether the two Container Apps sit in the same Container Apps environment (cheaper, simpler
   internal networking) or separate ones - leaning toward same environment given the cost
   constraint raised on the call.
-- Auth0 tenant setup for production (currently dev-bypass only, both frontend and backend).
+- Auth0 tenant setup for production - see `docs/architecture/auth0-setup.md` for the step-by-step.
