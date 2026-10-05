@@ -56,7 +56,7 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.ChangeRequests
                 var request = await _changeRequestService.GetByIdAsync(changeRequestId);
                 if (request is null)
                     return OperationResult<ChangeRequest>.NotFound("Change request not found.");
-                if (User.IsInRole(AppRoles.ProductOwner) && request.SubmittedByUserId != User.GetAppUserId())
+                if (IsOwnershipRestricted() && request.SubmittedByUserId != User.GetAppUserId())
                     return OperationResult<ChangeRequest>.Forbidden("You can only view your own change requests.");
 
                 return OperationResult<ChangeRequest>.Success(request);
@@ -132,7 +132,7 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.ChangeRequests
         public Task<IActionResult> GetAttachments(Guid changeRequestId) =>
             ExecuteAsync(async () =>
             {
-                if (User.IsInRole(AppRoles.ProductOwner) &&
+                if (IsOwnershipRestricted() &&
                     await OwnershipCheckAsync<IReadOnlyList<ChangeRequestAttachment>>(changeRequestId) is { } notOwner)
                     return notOwner;
 
@@ -154,6 +154,13 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.ChangeRequests
                 var id = await _changeRequestService.RequestClarificationAsync(changeRequestId, body.RequestedByUserId, body.Question);
                 return OperationResult<Guid>.Success(id);
             }, "Failed to request clarification.");
+
+        /// <summary>True only when the caller is a Product Owner and not also an Analyst - a
+        /// multi-role user (e.g. the seeded "QA Full Access" account, or any real user holding
+        /// both roles) should get the Analyst-level "see everything" behavior, not be scoped down
+        /// to their own submissions just because they also happen to hold ProductOwner.</summary>
+        private bool IsOwnershipRestricted() =>
+            User.IsInRole(AppRoles.ProductOwner) && !User.IsInRole(AppRoles.Analyst);
 
         private async Task<OperationResult<T>?> OwnershipCheckAsync<T>(Guid changeRequestId)
         {

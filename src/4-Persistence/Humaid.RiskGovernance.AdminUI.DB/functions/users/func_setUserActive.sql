@@ -20,6 +20,19 @@ BEGIN
         RAISE EXCEPTION 'User % not found', p_user_id;
     END IF;
 
+    -- Guard against the last active Admin locking everyone out: deactivating would leave no one
+    -- able to manage users/configuration without going straight to SQL.
+    IF p_is_active = FALSE AND EXISTS (
+        SELECT 1 FROM app_user_role WHERE user_id = p_user_id AND role = 'Admin'
+    ) AND NOT EXISTS (
+        SELECT 1
+        FROM app_user_role r
+        JOIN app_user u ON u.id = r.user_id
+        WHERE r.role = 'Admin' AND u.is_active = TRUE AND u.id <> p_user_id
+    ) THEN
+        RAISE EXCEPTION 'Cannot deactivate the last active Admin';
+    END IF;
+
     UPDATE app_user SET is_active = p_is_active WHERE id = p_user_id;
 
     INSERT INTO audit_event (entity_type, entity_id, action, actor_user_id, actor_label, before_value, after_value, reason)

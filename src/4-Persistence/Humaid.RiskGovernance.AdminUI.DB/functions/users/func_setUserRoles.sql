@@ -21,6 +21,17 @@ BEGIN
 
     SELECT array_agg(role ORDER BY role) INTO v_before FROM app_user_role WHERE user_id = p_user_id;
 
+    -- Guard against stripping the last active Admin's Admin role: would leave no one able to
+    -- manage users/configuration without going straight to SQL.
+    IF 'Admin' = ANY(v_before) AND NOT ('Admin' = ANY(p_roles)) AND NOT EXISTS (
+        SELECT 1
+        FROM app_user_role r
+        JOIN app_user u ON u.id = r.user_id
+        WHERE r.role = 'Admin' AND u.is_active = TRUE AND u.id <> p_user_id
+    ) THEN
+        RAISE EXCEPTION 'Cannot remove the Admin role from the last active Admin';
+    END IF;
+
     DELETE FROM app_user_role WHERE user_id = p_user_id AND role NOT IN (SELECT unnest(p_roles));
 
     FOREACH v_role IN ARRAY p_roles LOOP

@@ -40,7 +40,15 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Auth
                     return null;
                 }
                 var profile = await response.Content.ReadFromJsonAsync<Auth0UserInfo>(cancellationToken: cancellationToken);
-                return profile?.Email;
+                // Only trust this email for auto-linking if Auth0 itself has verified it. Without
+                // this check, an attacker could self-signup with a pending user's (unverified)
+                // email and get auto-linked to that user's pre-created row - including any Admin
+                // role already granted on it.
+                if (profile is null || !profile.EmailVerified)
+                {
+                    return null;
+                }
+                return profile.Email;
             }
             catch (HttpRequestException ex)
             {
@@ -49,8 +57,18 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Auth
                 _logger.LogWarning(ex, "Could not reach Auth0's /userinfo endpoint to resolve the caller's email.");
                 return null;
             }
+            catch (Exception ex) when (ex is TaskCanceledException or System.Text.Json.JsonException)
+            {
+                // Same best-effort contract as the HttpRequestException case above: a timeout or a
+                // malformed /userinfo body should degrade to "stays unprovisioned this request", not
+                // a 500 for the whole request.
+                _logger.LogWarning(ex, "Could not resolve the caller's email from Auth0's /userinfo endpoint.");
+                return null;
+            }
         }
 
-        private record Auth0UserInfo([property: JsonPropertyName("email")] string? Email);
+        private record Auth0UserInfo(
+            [property: JsonPropertyName("email")] string? Email,
+            [property: JsonPropertyName("email_verified")] bool EmailVerified);
     }
 }
