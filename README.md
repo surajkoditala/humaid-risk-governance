@@ -37,7 +37,9 @@ PostgreSQL  <-----------------------------------------------  (.NET 10 API, port
   Layer is the only thing that calls it, and only over HTTP. See its own README.
 - **webapp** (`5-Presentation`) is included in `Humaid.RiskGovernance.AdminUI.slnx` as a real,
   build-integrated project (`webapp/webapp.esproj`, the `Microsoft.VisualStudio.JavaScript.Sdk`) —
-  `dotnet build` on the whole solution runs `npm run build` for it too.
+  `dotnet build` on the whole solution runs `npm run build` for it too. Locally it runs on the Vite
+  dev server; in Azure the Workbench image builds it and serves it from its own `wwwroot`, so the
+  UI and API ship as one container app.
 
 ## Folder guide
 
@@ -51,17 +53,20 @@ PostgreSQL  <-----------------------------------------------  (.NET 10 API, port
 | `src/4-Persistence/Humaid.RiskGovernance.AdminUI.DB/` | The schema's single source of truth — `schema/`, `functions/`, `seed/`, plus a generated one-shot `deploy_all.sql`. |
 | `src/6-MockExternalSystems/Humaid.RiskGovernance.MockSystems/` | Mock CRM/Core Banking/Vendor Management — deliberately outside the Workbench. |
 | `webapp/` (`5-Presentation`) | Frontend. Single-page Vite app. `webapp.esproj` makes it a real project in the solution. |
+| `tests/Humaid.RiskGovernance.AdminUI.UnitTests/` | xUnit + Moq unit tests. |
 | `evals/` | The evaluation framework — see `evals/README.md`. |
-| `ai/` | AI orchestration docs, mirrored prompts, and `data-generation/` (how synthetic seed data was produced). |
-| `ops/` | Local dev (`docker-compose.yml` — Postgres + Azurite; `docker-compose.app.yml` — the full app in containers) and the target Azure deployment shape (`README.md`). Terraform lives on `main` under `iac/`, not on this branch. |
-| `.azure-pipelines/` | Azure DevOps PR-review pipelines for the Workbench and Mock API (build, tests, dependency audit, AI code review). Image build/scan/deploy runs on push to `release/*` (see `.azure-pipelines/README.md`). |
+| `ai/` | AI orchestration docs, mirrored prompts, research, `data-generation/` (how synthetic seed data was produced), and the `langgraph/` demonstrator. |
+| `ops/` | Local dev (`docker-compose.yml` — Postgres + Azurite; `docker-compose.app.yml` — the full app in containers; `setup-local-db.sh`), corporate-proxy certs (`certs/`), and how the app runs in Azure (`README.md`). |
+| `ops/iac/` | Terraform: `modules/` (10 reusable Azure modules) and `environments/dev/` (the dev environment built from them, including the Azure Monitor alert rules). |
+| `.azure-pipelines/` | Azure DevOps pipelines: PR review for the Workbench and Mock API (build, tests, dependency audit, AI code review); image build/scan/deploy to dev on push to `release/*`; Terraform PR review and deploy (`iac/`); the scheduled SRE watchdog (`observability/`). See `.azure-pipelines/README.md`. |
 | `harness/` | Dev tooling that governs how the repo itself is built: `dev_harness/` (LangGraph CLI that reviews a local diff against our standards), `ba_harness/` (epics/stories against Azure Boards), `test_case_harness/`. See `harness/README.md`. |
+| `docs/` | Requirements (`requirements/user-stories.md`), architecture, governance (human-in-the-loop gates, access control), and QA reports. |
 
 ## Prerequisites
 
 - Node.js (LTS)
 - .NET 10 SDK
-- A local PostgreSQL instance for this project's own schema
+- Docker (runs the local Postgres + Azurite)
 
 ## First-time setup
 
@@ -158,7 +163,20 @@ caller is auto-linked to a pre-created user row by verified email. See
 `docs/governance/access-control-matrix.md` and `docs/architecture/auth0-setup.md`. The
 Development-only `DevBypassAuthHandler` only applies when no Auth0 domain is configured.
 
-Not yet wired: the Azure AI Foundry project itself (the `IChatCompletionClient` abstraction is
-ready, but no Foundry project has been provisioned yet — `AI_PROVIDER` defaults to calling
-Anthropic directly); and the Terraform for the target deployment shape (`iac/` on `main`,
-documented in `ops/README.md`, not on this branch).
+**Deployment and operations** (Epics 15–18) are delivered too:
+- **Terraform** (`ops/iac/`) — ten reusable modules and the dev environment built from them:
+  VNet with private endpoints, Key Vault, Storage, PostgreSQL Flexible Server, Log Analytics +
+  Application Insights, container registry, and a Container Apps environment running the
+  Workbench (with the webapp) and the Mock API. The apps reach Postgres, Storage, and Key Vault
+  through managed identities — no passwords.
+- **AI in Azure** — the dev container apps run with `AI_PROVIDER=AzureFoundry` against the
+  portal-managed Foundry project; the API key comes from Key Vault. Locally, `Anthropic` stays the
+  default.
+- **Pipelines** (`.azure-pipelines/`) — PR review with AI code review for the app and the
+  Terraform; image build, Trivy scan, and deploy to dev on push to `release/*`; Terraform plan +
+  apply to dev on push to `main`.
+- **Monitoring** — Azure Monitor alerts (Smart Detection plus failed-request and
+  unhandled-exception rules) email the team, and a scheduled SRE watchdog pipeline turns the same
+  telemetry into one AI-narrated GitHub issue per open condition.
+
+See `ops/README.md` for how the app is configured in Azure.

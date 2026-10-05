@@ -243,7 +243,7 @@ provider response rather than swallowing it.
 ## 5. Deployment Diagram
 
 Two views, because both are real and currently in use: the Azure target (what Terraform in
-`iac/environments/dev` actually provisions) and the local Docker Compose stack (what every
+`ops/iac/environments/dev` actually provisions) and the local Docker Compose stack (what every
 contributor, including this session, develops and tests against day to day).
 
 ### 5a. Azure (target / dev environment)

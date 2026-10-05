@@ -1,15 +1,15 @@
 # =============================================================================
-# Deploy pipeline for iac/environments/dev
+# Deploy pipeline for ops/iac/environments/dev
 # =============================================================================
 # Repo lives in GitHub; pipeline runs in Azure DevOps.
 #
 # Triggers ONLY on push to `main` when the push touches
-# iac/environments/dev/**. This repo also holds application code, so the
+# ops/iac/environments/dev/**. This repo also holds application code, so the
 # path filter keeps app-only merges from triggering a terraform apply.
 #
 # Safety net: dev-pr-review.yml is wired up as a required GitHub status
 # check on `main` (branch protection), so nothing lands on main under
-# iac/environments/dev/** without having passed fmt/lint/Trivy/Checkov/plan
+# ops/iac/environments/dev/** without having passed fmt/lint/Trivy/Checkov/plan
 # review first. This pipeline trusts that gate and applies automatically —
 # no manual approval step.
 #
@@ -26,7 +26,7 @@ trigger:
       - main
   paths:
     include:
-      - iac/environments/dev/*
+      - ops/iac/environments/dev/*
 
 # Not a PR pipeline — deploy only runs after merge.
 pr: none
@@ -62,7 +62,7 @@ steps:
       scriptType: bash
       scriptLocation: inlineScript
       addSpnToEnvironment: true
-      workingDirectory: $(System.DefaultWorkingDirectory)/iac/environments/dev
+      workingDirectory: $(System.DefaultWorkingDirectory)/ops/iac/environments/dev
       inlineScript: |
         set -euo pipefail
         STAGING="$(Build.ArtifactStagingDirectory)"
