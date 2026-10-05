@@ -15,13 +15,17 @@ guard, not Verisk data guardrails).
 | Sub-harness | Purpose | Status |
 |---|---|---|
 | [`dev_harness/`](dev_harness/) | Coding standards + human-in-the-loop policy + LangGraph CLI that reviews a local git diff | Active |
-| [`epic_and_story_harness/`](epic_and_story_harness/) | Rules/standards for writing epics, stories, bugs, and issues | Standards only (no tooling yet) |
+| [`ba_harness/`](ba_harness/) | Standards for epics/stories + LangGraph CLI that reviews, validates, and creates work items directly in Azure Boards | Active |
 | [`test_case_harness/`](test_case_harness/) | Rules/standards for writing automated, unit, and manual test cases | Standards only (no tooling yet) |
 
 Each sub-harness folder has its own `README.md` describing what it covers in detail.
 
 See [`docs/architecture/dev-harness.md`](../docs/architecture/dev-harness.md) for the full
 architecture writeup of the `dev_harness` CLI, including node-by-node flow diagrams.
+
+See [`docs/architecture/ba-harness.md`](../docs/architecture/ba-harness.md) for the full
+architecture writeup of the `ba_harness` CLI — how review and create flows work, the Azure
+Boards integration, and the AI-pairing safeguard.
 
 ## How this differs from the product's own AI harness
 

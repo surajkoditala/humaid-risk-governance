@@ -36,3 +36,7 @@ harness/dev_harness/__pycache__/
 harness/*.md.bak
 harness/last-report.md
 harness/dev_harness/last-report.md
+
+# Python bytecode
+__pycache__/
+*.pyc
