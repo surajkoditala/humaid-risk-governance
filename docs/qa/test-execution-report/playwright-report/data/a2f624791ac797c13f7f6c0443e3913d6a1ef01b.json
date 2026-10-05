@@ -1,0 +1,23 @@
+[
+  {
+    "id": "button-name",
+    "impact": "critical",
+    "help": "Buttons must have discernible text",
+    "nodes": 2,
+    "sample": [
+      "#base-ui-_r_8_",
+      "#base-ui-_r_d_"
+    ]
+  },
+  {
+    "id": "label",
+    "impact": "critical",
+    "help": "Form elements must have labels",
+    "nodes": 4,
+    "sample": [
+      "#base-ui-_r_b_",
+      "#base-ui-_r_c_",
+      "textarea"
+    ]
+  }
+]

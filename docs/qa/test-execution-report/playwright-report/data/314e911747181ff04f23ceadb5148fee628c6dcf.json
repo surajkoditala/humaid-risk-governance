@@ -1,0 +1,17 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/api/ChangeRequest/not-a-guid",
+    "body": null
+  },
+  "response": {
+    "status": 404,
+    "durationMs": 269,
+    "headers": {
+      "content-length": "0",
+      "date": "Fri, 25 Sep 2026 07:22:07 GMT",
+      "server": "Kestrel"
+    },
+    "body": ""
+  }
+}

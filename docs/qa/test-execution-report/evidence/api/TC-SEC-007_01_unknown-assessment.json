@@ -1,0 +1,31 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/api/Scoring/Calculate",
+    "body": {
+      "assessmentId": "00000000-0000-0000-0000-00000000dead",
+      "riskCategoryId": "22222222-2222-2222-2222-222222222222",
+      "inherentRating": 3,
+      "controlIdsCredited": [],
+      "controlEffectiveness": 0.5
+    }
+  },
+  "response": {
+    "status": 500,
+    "durationMs": 269,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:24:07 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": false,
+      "isBadRequest": false,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": null,
+      "message": "Failed to calculate risk score."
+    }
+  }
+}

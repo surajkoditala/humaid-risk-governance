@@ -78,7 +78,7 @@ function VotePanel({ item, onBack }) {
       <Card>
         <CardHeader>
           <CardTitle>{item.requestNumber} — {item.title}</CardTitle>
-          <CardDescription>US-8.2 — every member's vote is recorded individually, never anonymized.</CardDescription>
+          <CardDescription>Every member's vote is recorded individually, never anonymized.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-3 rounded-md border p-3">
@@ -122,7 +122,7 @@ function VotePanel({ item, onBack }) {
             <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
               <Select value={vote} onValueChange={setVote}>
                 <SelectTrigger className="w-full sm:w-56">
-                  <SelectValue placeholder="Cast your vote" />
+                  <SelectValue placeholder="Cast your vote *" />
                 </SelectTrigger>
                 <SelectContent>
                   {VOTE_OPTIONS.map((v) => (
@@ -136,7 +136,7 @@ function VotePanel({ item, onBack }) {
                 <Textarea
                   className="sm:flex-1"
                   rows={2}
-                  placeholder={needsConditions ? 'Conditions' : 'Rationale'}
+                  placeholder={needsConditions ? 'Conditions *' : 'Rationale *'}
                   value={text}
                   onChange={(e) => setText(e.target.value)}
                 />

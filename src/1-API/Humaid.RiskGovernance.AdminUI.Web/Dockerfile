@@ -77,6 +77,11 @@ RUN dotnet publish src/1-API/Humaid.RiskGovernance.AdminUI.Web/Humaid.RiskGovern
     -c Release -o /app/publish --no-restore
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
+# The base image's OS packages can lag behind their own upstream security fixes (e.g.
+# CVE-2026-84782 in openssl/libssl3t64) even on an unpinned "latest for this tag" pull - the
+# Trivy HIGH/CRITICAL gate in the deploy pipeline catches this. Patch at build time rather than
+# pinning a digest, which would just go stale again the next time a CVE lands.
+RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 
 # Same corporate-proxy trust as the build stage above (see ops/certs/README.md) - but this one

@@ -1,0 +1,46 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/api/DataIngestion/MockProducts",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "durationMs": 279,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:21:55 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": true,
+      "isBadRequest": false,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": [
+        {
+          "id": "b2222222-0000-0000-0000-000000000004",
+          "label": "Correspondent Settlement Account"
+        },
+        {
+          "id": "b2222222-0000-0000-0000-000000000001",
+          "label": "Cross-Border Wire Transfer Plus"
+        },
+        {
+          "id": "b2222222-0000-0000-0000-000000000002",
+          "label": "Mobile App UI Refresh"
+        },
+        {
+          "id": "b2222222-0000-0000-0000-000000000003",
+          "label": "Prepaid Travel Card"
+        },
+        {
+          "id": "b2222222-0000-0000-0000-000000000005",
+          "label": "Private Banking Trade Finance Line"
+        }
+      ],
+      "message": null
+    }
+  }
+}

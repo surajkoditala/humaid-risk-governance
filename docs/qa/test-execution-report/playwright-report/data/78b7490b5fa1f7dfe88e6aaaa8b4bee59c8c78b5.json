@@ -1,0 +1,32 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/api/ChangeRequest/AttachDocumentFile",
+    "body": {
+      "changeRequestId": "ef797803-aaf9-4a7a-b7af-a86f6f010f9a",
+      "uploadedByUserId": "a6a709a7-65e7-4a90-9b58-cbbaec1d651a",
+      "file": "<file vendor-due-diligence.pdf>"
+    }
+  },
+  "response": {
+    "status": 200,
+    "durationMs": 297,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:22:20 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": true,
+      "isBadRequest": false,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": {
+        "id": "bec64b5e-fcf3-4dfb-9805-490a757c5a5c",
+        "version": 1
+      },
+      "message": null
+    }
+  }
+}

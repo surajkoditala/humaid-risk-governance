@@ -1,0 +1,36 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/api/Narrative/Draft",
+    "body": {
+      "assessmentId": "eba39f9c-a4ba-40cf-946d-fa0a3da1bb98",
+      "riskCategoryId": "22222222-2222-2222-2222-222222222222",
+      "regenerationFeedback": "Mention the Malta jurisdiction and cardholder PII explicitly; keep it under 120 words."
+    }
+  },
+  "response": {
+    "status": 200,
+    "durationMs": 2559,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:23:06 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": true,
+      "isBadRequest": false,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": {
+        "id": "a4483065-c1c3-4d27-8aa8-421a0a6dff45",
+        "riskCategoryId": "22222222-2222-2222-2222-222222222222",
+        "categoryName": "Customers & Entities",
+        "narrativeText": "The onboarding of the Malta-based settlement vendor, QA corrected value, introduces specific risks related to the handling of cardholder PII and settlement files, accessed via an API-based, non-face-to-face delivery channel. Given the vendor's jurisdiction and the involvement of retail cardholders and MSB merchants, this change requires careful assessment under the FFIEC BSA/AML Manual's guidance on risks associated with customers and entities. Consistent with the policy section on Products and Services, the vendor's role facilitates rapid movement of funds and limited face-to-face interaction, both factors increasing money laundering vulnerability. The bank must ensure it has identified, measured, and implemented adequate risk mitigation controls before onboarding this service to address these inherent risks.",
+        "status": "AiDrafted",
+        "unsupportedClaimFlagsJson": "[]"
+      },
+      "message": null
+    }
+  }
+}

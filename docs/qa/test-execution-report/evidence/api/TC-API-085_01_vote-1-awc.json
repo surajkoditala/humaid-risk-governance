@@ -1,0 +1,30 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/api/Committee/Vote",
+    "body": {
+      "assessmentId": "eba39f9c-a4ba-40cf-946d-fa0a3da1bb98",
+      "committeeMemberUserId": "083ecfe5-aa01-4703-9168-762f0065078f",
+      "vote": "ApproveWithConditions",
+      "conditionsText": "Annual on-site audit of the vendor; PII encrypted at rest"
+    }
+  },
+  "response": {
+    "status": 200,
+    "durationMs": 438,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:23:37 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": true,
+      "isBadRequest": false,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": "3a49fa0e-830d-4b3b-ae75-977b8d77c818",
+      "message": null
+    }
+  }
+}

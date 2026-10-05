@@ -1,0 +1,34 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/api/PolicyResearch/50f965f9-70e5-4c4d-bec5-36017302898e/Reliance",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "durationMs": 319,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:22:44 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": true,
+      "isBadRequest": false,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": [
+        {
+          "id": "fa89511e-927e-4f91-b3a4-1168a983f4ba",
+          "riskCategoryId": "22222222-2222-2222-2222-222222222222",
+          "policyChunkId": "3f171e93-f2ca-40a4-af6a-18ede9021c9b",
+          "decision": "ReliedUpon",
+          "sectionRef": "Risks Associated with Money Laundering and Terrorist Financing - Products and Services",
+          "chunkText": "Certain products and services are inherently vulnerable to money laundering because they involve rapid movement of funds or limited face-to-face contact, including electronic funds transfers, correspondent banking, private banking, trade finance, and prepaid access products. Examiners assess whether a bank has identified, measured, and mitigated the risks these offerings present before launch."
+        }
+      ],
+      "message": null
+    }
+  }
+}

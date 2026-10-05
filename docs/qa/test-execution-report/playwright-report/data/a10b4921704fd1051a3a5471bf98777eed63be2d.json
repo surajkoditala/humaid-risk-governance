@@ -1,0 +1,32 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/api/ChangeRequest/AttachDocumentFile",
+    "body": {
+      "changeRequestId": "7a6ea15a-41be-4f29-9882-0921a6ffbe48",
+      "uploadedByUserId": "a6a709a7-65e7-4a90-9b58-cbbaec1d651a",
+      "file": "<file malicious.exe>"
+    }
+  },
+  "response": {
+    "status": 200,
+    "durationMs": 294,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:22:14 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": true,
+      "isBadRequest": false,
+      "isNotFound": false,
+      "isConflict": false,
+      "data": {
+        "id": "6aaa2f77-6005-46ec-a4ed-4b47a76a5d83",
+        "version": 1
+      },
+      "message": null
+    }
+  }
+}

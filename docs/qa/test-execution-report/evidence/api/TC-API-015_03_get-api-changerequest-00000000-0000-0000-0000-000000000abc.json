@@ -1,0 +1,25 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/api/ChangeRequest/00000000-0000-0000-0000-000000000abc",
+    "body": null
+  },
+  "response": {
+    "status": 404,
+    "durationMs": 299,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "date": "Fri, 25 Sep 2026 07:22:07 GMT",
+      "server": "Kestrel",
+      "transfer-encoding": "chunked"
+    },
+    "body": {
+      "isSuccessful": false,
+      "isBadRequest": false,
+      "isNotFound": true,
+      "isConflict": false,
+      "data": null,
+      "message": "Change request not found."
+    }
+  }
+}
