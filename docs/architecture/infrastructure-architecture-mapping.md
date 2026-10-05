@@ -1,6 +1,6 @@
 # Infrastructure Architecture — Risk Assessment Workbench
 
-**Status:** current as of 2026-09-23, reflects the Terraform in [`iac/environments/dev`](../../iac/environments/dev). See [`architecture-mapping.md`](architecture-mapping.md) for the application-layer decisions and [`ecosystem-diagram.md`](ecosystem-diagram.md) for the functional/data ecosystem this infrastructure hosts.
+**Status:** current as of 2026-09-23, reflects the Terraform in [`ops/iac/environments/dev`](../../ops/iac/environments/dev). See [`architecture-mapping.md`](architecture-mapping.md) for the application-layer decisions and [`ecosystem-diagram.md`](ecosystem-diagram.md) for the functional/data ecosystem this infrastructure hosts.
 
 ---
 
@@ -113,4 +113,4 @@ flowchart LR
 
 ## Revision log
 
-- **2026-09-23** — initial version, authored directly from the shipped Terraform in `iac/environments/dev`.
+- **2026-09-23** — initial version, authored directly from the shipped Terraform in `ops/iac/environments/dev`.

@@ -52,7 +52,7 @@ Claude's verification was concrete: `bash -n` on the inline scripts, an 18-case 
 
 | AI did | Human decided |
 |---|---|
-| Wrote the pipeline YAML (plan step, deploy pipeline, hard gates, notifications) and onboarded 10 Terraform modules into `iac/environments/dev` | Which pipelines exist, their triggers and paths, and that dev apply is **fully automatic on merge**, with branch protection as the gate |
+| Wrote the pipeline YAML (plan step, deploy pipeline, hard gates, notifications) and onboarded 10 Terraform modules into `ops/iac/environments/dev` | Which pipelines exist, their triggers and paths, and that dev apply is **fully automatic on merge**, with branch protection as the gate |
 | Proposed the review prompt, a verdict parser that fails closed, and the read-step/post-step token separation | That a merged PR is the approval: no manual approval stage, a required check `gh-infra-dev-pr-review`, and Checkov soft-fail at first |
 | Diagnosed every failed ADO run from logs (403, 409, 400, region and version errors) and proposed the fix | Cost and region trade-offs: Consumption plan only, PostgreSQL in `centralus`, no HA or geo-backup in dev |
 | Reviewed its own pipeline and suggested improvements (hard gates, auto-merge, `succeededOrFailed()` artifacts) | **Accepted** hard gates. **Rejected** blanket `succeededOrFailed()` as wasted runtime, so pipelines are fail-fast. **Reverted auto-merge** after Claude had built it, because one repo holds app and infra and humans must merge |
@@ -71,8 +71,8 @@ Claude's verification was concrete: `bash -n` on the inline scripts, an 18-case 
 | Pipeline (Azure DevOps name) | File | Branch | Trigger | What it does |
 |---|---|---|---|---|
 | `gh-sre-watchdog-dev` | [`observability/sre-watchdog.yml`](../../.azure-pipelines/observability/sre-watchdog.yml) | `main` | Schedule — every 30 min | Queries Log Analytics for failure signals, has Claude classify them, opens/closes GitHub issues |
-| `gh-infra-dev-pr-review` | [`iac/dev-pr-review.yml`](../../.azure-pipelines/iac/dev-pr-review.yml) | `main` | PR → `main`, paths `iac/environments/dev/**` | fmt/validate/lint/scan/plan gates + AI review; required GitHub check |
-| `gh-infra-dev-deploy` | [`iac/dev-tf-deploy.yml`](../../.azure-pipelines/iac/dev-tf-deploy.yml) | `main` | Push → `main`, paths `iac/environments/dev/**` | `terraform apply` to dev, no manual approval |
+| `gh-infra-dev-pr-review` | [`iac/dev-pr-review.yml`](../../.azure-pipelines/iac/dev-pr-review.yml) | `main` | PR → `main`, paths `ops/iac/environments/dev/**` | fmt/validate/lint/scan/plan gates + AI review; required GitHub check |
+| `gh-infra-dev-deploy` | [`iac/dev-tf-deploy.yml`](../../.azure-pipelines/iac/dev-tf-deploy.yml) | `main` | Push → `main`, paths `ops/iac/environments/dev/**` | `terraform apply` to dev, no manual approval |
 | `gh-workbench-dev-pr-review` | `workbench/pr-review.yml` | `release/1.00` | PR → `release/1.00`, always runs | build, unit tests, webapp build, vuln audit, AI review; required GitHub check |
 | `gh-workbench-dev-deploy` | `workbench/workbench.yml` | `release/1.00` | Push → `release/*` (excl. `release/dev`), paths `src/1..4/*`, `tests/*`, `webapp/*` | Build/push image, Trivy scan, deploy to dev Container App |
 | `gh-mock-api-dev-pr-review` | `mock-api/pr-review.yml` | `release/1.00` | PR → `release/1.00`, always runs | generated-SQL drift check, build, vuln audit, AI review; required GitHub check |
@@ -84,7 +84,7 @@ All seven run in Azure DevOps against a GitHub-hosted repo. The IaC/observabilit
 
 ## 2. SRE Watchdog (`gh-sre-watchdog-dev`)
 
-Runs unconditionally every 30 minutes — not push/PR triggered — as a leading indicator ahead of the native scheduled-query email alerts in [`main.monitor.tf`](../../iac/environments/dev/main.monitor.tf).
+Runs unconditionally every 30 minutes — not push/PR triggered — as a leading indicator ahead of the native scheduled-query email alerts in [`main.monitor.tf`](../../ops/iac/environments/dev/main.monitor.tf).
 
 **Steps:**
 1. **`query.sh`** — read-only `az monitor log-analytics query` calls for four signals against the dev Log Analytics workspace:
@@ -106,7 +106,7 @@ Runs unconditionally every 30 minutes — not push/PR triggered — as a leading
 
 ## 3. IaC PR Review (`gh-infra-dev-pr-review`)
 
-Required GitHub status check on `main` for any PR touching `iac/environments/dev/**`. Hard gates run cheapest-first so a bad PR fails fast:
+Required GitHub status check on `main` for any PR touching `ops/iac/environments/dev/**`. Hard gates run cheapest-first so a bad PR fails fast:
 
 `terraform fmt` → `init` → `validate` → TFLint (error-severity) → Trivy (HIGH/CRITICAL) → `terraform plan` → AI verdict (`BLOCKING_ISSUES`).
 
