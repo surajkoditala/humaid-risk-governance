@@ -1,24 +1,24 @@
 # =============================================================================
-# PR validation pipeline for iac/environments/dev
+# PR validation pipeline for ops/iac/environments/dev
 # =============================================================================
 # Repo lives in GitHub; pipeline runs in Azure DevOps (GitHub service
 # connection required on the pipeline).
 #
 # Triggers ONLY when: a PR targets `main` AND the PR contains changes under
-# iac/environments/dev/**.
+# ops/iac/environments/dev/**.
 # =============================================================================
 
 # Disable push triggers — this pipeline is PR-only
 trigger: none
 
-# Trigger only for PRs targeting main that touch iac/environments/dev
+# Trigger only for PRs targeting main that touch ops/iac/environments/dev
 pr:
   branches:
     include:
       - main
   paths:
     include:
-      - iac/environments/dev/*
+      - ops/iac/environments/dev/*
 
 # Variable groups: checkov-secrets (existing) + one holding CLAUDE_CODE_OAUTH_TOKEN
 # (from `claude setup-token`, uses your Claude Pro/Max subscription — no API billing)
@@ -44,7 +44,7 @@ steps:
   - script: |
       terraform fmt -check -recursive # Check if any files are not properly formatted
     displayName: 'Terraform Format Check'
-    workingDirectory: $(System.DefaultWorkingDirectory)/iac/environments/dev
+    workingDirectory: $(System.DefaultWorkingDirectory)/ops/iac/environments/dev
 
   # ---------------------------------------------------------------------------
   # Hard gates (fail-fast): a failing gate fails the build and skips the steps
@@ -63,7 +63,7 @@ steps:
         -input=false \
         -no-color
     displayName: 'Terraform Init'
-    workingDirectory: $(System.DefaultWorkingDirectory)/iac/environments/dev
+    workingDirectory: $(System.DefaultWorkingDirectory)/ops/iac/environments/dev
 
   # HARD GATE: static validation. Fast, needs no cloud credentials, and catches
   # undeclared variables/data sources, bad module output references, and stale
@@ -71,7 +71,7 @@ steps:
   - script: |
       terraform validate -no-color
     displayName: 'Terraform Validate'
-    workingDirectory: $(System.DefaultWorkingDirectory)/iac/environments/dev
+    workingDirectory: $(System.DefaultWorkingDirectory)/ops/iac/environments/dev
 
   # Install and Run TFLint to check for issues in Terraform code
   - script: |
@@ -98,7 +98,7 @@ steps:
         exit "${TFLINT_EXIT_CODE}"
       fi
     displayName: 'Terraform Lint (TFLint)'
-    workingDirectory: $(System.DefaultWorkingDirectory)/iac/environments/dev
+    workingDirectory: $(System.DefaultWorkingDirectory)/ops/iac/environments/dev
 
   # Install Trivy
   - script: |
@@ -138,7 +138,7 @@ steps:
         exit "${TRIVY_EXIT_CODE}"
       fi
     displayName: 'Terraform Security Scan (Trivy)'
-    workingDirectory: $(System.DefaultWorkingDirectory)/iac/environments/dev
+    workingDirectory: $(System.DefaultWorkingDirectory)/ops/iac/environments/dev
 
   # HARD GATE: any HIGH or CRITICAL Trivy finding fails the build. Trivy scans
   # the whole config (not just this PR's diff), which is fine for this
@@ -148,7 +148,7 @@ steps:
       set -euo pipefail
       trivy config . --severity HIGH,CRITICAL --exit-code 1
     displayName: 'Terraform Security Gate (Trivy HIGH/CRITICAL)'
-    workingDirectory: $(System.DefaultWorkingDirectory)/iac/environments/dev
+    workingDirectory: $(System.DefaultWorkingDirectory)/ops/iac/environments/dev
 
   # Running Checkov through custom install because the Microsoft DevOps
   # extension doesn't let you pass arbitrary CLI flags.
@@ -165,13 +165,13 @@ steps:
       python -m pip install --quiet checkov==3.2.482
 
       checkov -d . \
-        --config-file ../../../.azure-pipelines/iac/.checkov.yml \
+        --config-file ../../../../.azure-pipelines/iac/.checkov.yml \
         --soft-fail \
         --output cli \
         --output json \
         --output-file-path console,$(Build.ArtifactStagingDirectory)/checkov-results.json
     displayName: 'Terraform Security Scan (Checkov)'
-    workingDirectory: $(System.DefaultWorkingDirectory)/iac/environments/dev
+    workingDirectory: $(System.DefaultWorkingDirectory)/ops/iac/environments/dev
 
   # Terraform Plan — authenticates via Workload Identity Federation using the
   # 'azure-cloud' Azure DevOps service connection (no client secret / storage
@@ -190,7 +190,7 @@ steps:
       scriptType: bash
       scriptLocation: inlineScript
       addSpnToEnvironment: true
-      workingDirectory: $(System.DefaultWorkingDirectory)/iac/environments/dev
+      workingDirectory: $(System.DefaultWorkingDirectory)/ops/iac/environments/dev
       inlineScript: |
         set -euo pipefail
         STAGING="$(Build.ArtifactStagingDirectory)"
@@ -260,7 +260,7 @@ steps:
 
         PROMPT_FILE=$(mktemp)
         cat > "$PROMPT_FILE" <<PROMPT_EOF
-        You are reviewing Trivy and Checkov scan results plus a Terraform plan for a pull request under iac/environments/dev, before it merges to main.
+        You are reviewing Trivy and Checkov scan results plus a Terraform plan for a pull request under ops/iac/environments/dev, before it merges to main.
 
         Repo context: this is a cost-conscious hackathon dev environment (single region for most resources, Standard/Burstable SKUs, minimal replicas, Premium-only features intentionally skipped, diagnostic settings mostly disabled to avoid cost). Don't flag these as risks by themselves -- they're deliberate tradeoffs for this environment, not oversights. One known exception: the PostgreSQL server intentionally runs in centralus while everything else is in eastus2 (this subscription is blocked from provisioning PostgreSQL Flexible Server in eastus2 -- a Free Trial subscription restriction) -- do not flag this region split as an anomaly.
 

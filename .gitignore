@@ -41,7 +41,7 @@ harness/dev_harness/last-report.md
 __pycache__/
 *.pyc
 
-# --- Terraform (iac/) ---
+# --- Terraform (ops/iac/) ---
 # Local .terraform directories
 **/.terraform/*
 

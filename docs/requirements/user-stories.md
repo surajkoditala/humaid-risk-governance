@@ -9,7 +9,7 @@
 ## How to read this document
 
 - Stories are grouped into epics. Epics 1–10 map to the functional requirements in the problem statement. Epics 11–13 (Access Control, Deployment and Operations, Non-Functional Requirements) and US-9.3 (examiner-ready audit export) were raised by QA on 17 Sep 2026 after reviewing the built increment, and are cross-cutting rather than feature epics. Epic 14 (mock external systems and data ingestion) was added from the Platform Ecosystem Diagram (`docs/architecture/ecosystem-diagram.md`) and is deterministic integration, not an AI touchpoint.
-- Epics 15–18 (Terraform modules, dev environment infrastructure, CI/CD pipelines, and observability) were added from the infrastructure-as-code and pipeline work in `iac/` and `.azure-pipelines/`. They are engineering-delivery epics written for the DevOps Engineer, and none of them changes what the product does for its users. US-17.4 and US-17.8 are tagged **[AI]** because AI reviews pull requests in the delivery pipeline (not in the product); a human still decides whether a pull request merges. Epic 18's application-telemetry story (US-18.1) is delivered; its SRE-agent story (US-18.2) is still open, with its scope to be refined.
+- Epics 15–18 (Terraform modules, dev environment infrastructure, CI/CD pipelines, and observability) were added from the infrastructure-as-code and pipeline work in `ops/iac/` and `.azure-pipelines/`. They are engineering-delivery epics written for the DevOps Engineer, and none of them changes what the product does for its users. US-17.4 and US-17.8 are tagged **[AI]** because AI reviews pull requests in the delivery pipeline (not in the product); a human still decides whether a pull request merges. Epic 18's application-telemetry story (US-18.1) is delivered; its SRE-agent story (US-18.2) is still open, with its scope to be refined.
 - Numbering note: Epic 14 follows Epic 13 because 11–13 were already taken in Azure Boards when the mock-systems epic was written up. The IDs here match the Boards work items one-to-one, and Epics 15–18 continue the same numbering. Epic 19 is reserved for Shanthi's SLA Tracking epic, which exists in Azure Boards (ids 93–98) but is not yet written up here — Epic 20 is numbered to leave that gap rather than collide with it.
 - Each story follows: *As a [actor], I want [capability], so that [outcome].*
 - Acceptance criteria use **Given / When / Then** so they're directly testable.
@@ -436,7 +436,7 @@
 
 **Goal:** Build reusable, versioned Terraform modules for the Azure resources the Workbench and Mock API platform will run on, so that every environment can be provisioned from the same reviewed building blocks instead of hand-built or copy-pasted resources.
 
-This epic delivers ten modules, each in its own folder under `iac/modules`: Resource Group, Virtual Network, Private DNS Zone, Key Vault, Storage Account, PostgreSQL Flexible Server, Log Analytics Workspace, Container Registry, Container Apps Environment, and Container Apps. Each module must be self-contained and documented (README, Intro, CHANGELOG), take its configuration through variables, and expose the outputs that other modules and environments need.
+This epic delivers ten modules, each in its own folder under `ops/iac/modules`: Resource Group, Virtual Network, Private DNS Zone, Key Vault, Storage Account, PostgreSQL Flexible Server, Log Analytics Workspace, Container Registry, Container Apps Environment, and Container Apps. Each module must be self-contained and documented (README, Intro, CHANGELOG), take its configuration through variables, and expose the outputs that other modules and environments need.
 
 ### US-15.1 — Create a terraform module for Azure Resource Group
 *As a DevOps Engineer, I want to create a reusable Terraform module for the Azure Resource Group, so that every environment can get a consistently named, tagged, and optionally lock-protected resource group from one reviewed definition.*
@@ -447,7 +447,7 @@ This epic delivers ten modules, each in its own folder under `iac/modules`: Reso
 - Given a name is supplied, when the module is applied, then it overrides the default naming convention.
 - Given the lock is enabled, when the module is applied, then a management lock at the configured lock level is placed on the resource group; given it is disabled, then no lock is created.
 - Given the module is consumed by an environment, when it is applied, then the resource group ID, name, and location are available as outputs for other modules to reference.
-- Given the module is delivered, when I review `iac/modules/terraform-azure-resourcegroup`, then it contains a README, an Intro, and a CHANGELOG recording the v1.0.0 release, and pins the supported Terraform and azurerm provider versions.
+- Given the module is delivered, when I review `ops/iac/modules/terraform-azure-resourcegroup`, then it contains a README, an Intro, and a CHANGELOG recording the v1.0.0 release, and pins the supported Terraform and azurerm provider versions.
 
 ### US-15.2 — Create a terraform module for Azure Virtual Network
 *As a DevOps Engineer, I want to create a reusable Terraform module for the Azure Virtual Network, its subnets, network security groups, and route tables, so that every environment can get its network layout from one reviewed definition, with subnet isolation and traffic rules declared as configuration instead of hand-built in the portal.*
@@ -458,7 +458,7 @@ This epic delivers ten modules, each in its own folder under `iac/modules`: Reso
 - Given route table definitions and a subnet-to-route-table map, when the module is applied, then each route table is created with its optional routes and associated with the mapped subnet; given none are supplied, then none are created.
 - Given custom DNS servers, a DDoS protection plan, or VNet peerings are supplied, when the module is applied, then they are configured on the virtual network; given they are omitted, then none are configured.
 - Given the module is consumed by an environment, when it is applied, then the VNet ID and name, the subnet IDs, the NSG IDs, and the route table IDs are available as outputs for other modules to reference.
-- Given the module is delivered, when I review `iac/modules/terraform-azure-virtualnetwork`, then it contains a README, an Intro, and a CHANGELOG recording the v1.0.0 release, and pins the supported Terraform and azurerm provider versions.
+- Given the module is delivered, when I review `ops/iac/modules/terraform-azure-virtualnetwork`, then it contains a README, an Intro, and a CHANGELOG recording the v1.0.0 release, and pins the supported Terraform and azurerm provider versions.
 
 ### US-15.3 — Create a terraform module for Azure Private DNS Zone
 *As a DevOps Engineer, I want to create a reusable Terraform module for the Azure Private DNS Zone with virtual network links, so that private endpoints resolve to private IP addresses inside the linked networks, and one definition can serve every service zone such as `privatelink.vaultcore.azure.net`.*
@@ -469,7 +469,7 @@ This epic delivers ten modules, each in its own folder under `iac/modules`: Reso
 - Given a lock is requested, when the module is applied, then a management lock of kind CanNotDelete or ReadOnly is placed on the zone; given any other kind, then validation fails with a message stating the allowed kinds.
 - Given role assignments are supplied, when the module is applied, then they are created on the zone; given none are supplied, then none are created.
 - Given the module is consumed by an environment, when it is applied, then the private DNS zone resource ID is available as an output, so private endpoints in other modules can reference it.
-- Given the module is delivered, when I review `iac/modules/terraform-azure-privatednszone`, then it contains a README, an Intro, and a CHANGELOG recording the v1.0.0 release, and pins the supported Terraform and azurerm provider versions.
+- Given the module is delivered, when I review `ops/iac/modules/terraform-azure-privatednszone`, then it contains a README, an Intro, and a CHANGELOG recording the v1.0.0 release, and pins the supported Terraform and azurerm provider versions.
 
 ### US-15.4 — Create a terraform module for Azure Key Vault
 *As a DevOps Engineer, I want to create a reusable Terraform module for the Azure Key Vault with private endpoint, network rules, and monitoring options, so that applications can keep secrets and certificates in a vault that is reachable only over approved networks, with the same hardened defaults in every environment.*
@@ -482,7 +482,7 @@ This epic delivers ten modules, each in its own folder under `iac/modules`: Reso
 - Given monitoring is enabled, when the module is applied, then the configured metric alerts and a vault-deletion activity log alert are created and notify the supplied action group.
 - Given a lock or role assignments are supplied, when the module is applied, then they are created on the vault; given none are supplied, then none are created.
 - Given the module is consumed by an environment, when it is applied, then the vault name, resource ID, URI, private FQDN, and private endpoint details are available as outputs for other modules to reference.
-- Given the module is delivered, when I review `iac/modules/terraform-azure-keyvault`, then it contains a README, an Intro, and a CHANGELOG recording the v1.0.0 release, and pins the supported Terraform and azurerm provider versions.
+- Given the module is delivered, when I review `ops/iac/modules/terraform-azure-keyvault`, then it contains a README, an Intro, and a CHANGELOG recording the v1.0.0 release, and pins the supported Terraform and azurerm provider versions.
 
 ### US-15.5 — Create a terraform module for Azure Storage Account
 *As a DevOps Engineer, I want to create a reusable Terraform module for the Azure Storage Account with private endpoints, network rules, and monitoring options, so that applications can store blobs, files, queues, and tables in an account that is reachable only over approved networks, with the same secure defaults in every environment.*
@@ -496,7 +496,7 @@ This epic delivers ten modules, each in its own folder under `iac/modules`: Reso
 - Given diagnostic settings for the account and the blob service, when the module is applied, then logs and metrics are routed to the chosen destination; given monitoring is enabled, then availability and used-capacity metric alerts are created.
 - Given a lock or role assignments are supplied, when the module is applied, then they are created on the account; given none are supplied, then none are created.
 - Given the module is consumed by an environment, when it is applied, then the account name, resource ID, the public and private FQDNs of the blob, file, queue, and table endpoints, and the private endpoint details are available as outputs.
-- Given the module is delivered, when I review `iac/modules/terraform-azure-storageaccount`, then it contains a README, an Intro, and a CHANGELOG recording the v1.0.0 release, and pins the supported Terraform and azurerm provider versions.
+- Given the module is delivered, when I review `ops/iac/modules/terraform-azure-storageaccount`, then it contains a README, an Intro, and a CHANGELOG recording the v1.0.0 release, and pins the supported Terraform and azurerm provider versions.
 
 ### US-15.6 — Create a terraform module for Azure PostgreSQL Flexible Server
 *As a DevOps Engineer, I want to create a reusable Terraform module for the Azure PostgreSQL Flexible Server with databases, Microsoft Entra administrators, firewall rules, and a private endpoint, so that applications can get a managed relational database, with the same security and availability options declared as configuration in every environment.*
@@ -510,7 +510,7 @@ This epic delivers ten modules, each in its own folder under `iac/modules`: Reso
 - Given a private endpoint definition with a subnet and private DNS zone IDs, when the module is applied, then a private endpoint is created for the server and registered in the DNS zone.
 - Given optional settings such as server configuration parameters, a maintenance window, a customer-managed key, managed identities, diagnostic settings, a lock, or role assignments, when they are supplied, then they are applied; given they are omitted, then none are created.
 - Given the module is consumed by an environment, when it is applied, then the server name, FQDN, resource ID, database names and IDs, and private endpoint details are available as outputs for other modules to reference.
-- Given the module is delivered, when I review `iac/modules/terraform-azure-postgresql`, then it contains a README, an Intro, and a CHANGELOG recording the v1.0.0 release, and pins the supported Terraform and azurerm provider versions.
+- Given the module is delivered, when I review `ops/iac/modules/terraform-azure-postgresql`, then it contains a README, an Intro, and a CHANGELOG recording the v1.0.0 release, and pins the supported Terraform and azurerm provider versions.
 
 ### US-15.7 — Create a terraform module for Azure Log Analytics Workspace
 *As a DevOps Engineer, I want to create a reusable Terraform module for the Azure Log Analytics Workspace with an optional Application Insights instance, so that logs, metrics, and application telemetry can be collected in one workspace, configured the same way in every environment.*
@@ -521,7 +521,7 @@ This epic delivers ten modules, each in its own folder under `iac/modules`: Reso
 - Given managed identities, diagnostic settings, a lock, or role assignments are supplied, when the module is applied, then they are created; given none are supplied, then none are created.
 - Given the tags are missing a required key (`business_unit`, `customer`, `environment`, `product`, `owner`, `region`), when `terraform plan` runs, then validation fails with a message naming the missing tag.
 - Given the module is consumed by an environment, when it is applied, then the workspace resource ID and the Application Insights resource ID, app ID, name, connection string, and instrumentation key are available as outputs for other modules to reference.
-- Given the module is delivered, when I review `iac/modules/terraform-azure-loganalytics-workspace`, then it contains a README, an Intro, and a CHANGELOG recording the v1.0.0 release, and pins the supported Terraform and azurerm provider versions.
+- Given the module is delivered, when I review `ops/iac/modules/terraform-azure-loganalytics-workspace`, then it contains a README, an Intro, and a CHANGELOG recording the v1.0.0 release, and pins the supported Terraform and azurerm provider versions.
 
 ### US-15.8 — Create a terraform module for Azure Container Registry
 *As a DevOps Engineer, I want to create a reusable Terraform module for the Azure Container Registry with private networking, identity, and access controls, so that container images can be stored in a private registry that applications pull from using managed identities, with the same policies in every environment.*
@@ -534,7 +534,7 @@ This epic delivers ten modules, each in its own folder under `iac/modules`: Reso
 - Given system-assigned or user-assigned managed identities and role assignments (for example AcrPull), when they are supplied, then they are created on the registry.
 - Given diagnostic settings or a lock are supplied, when the module is applied, then they are created; given none are supplied, then none are created.
 - Given the module is consumed by an environment, when it is applied, then the registry name, resource ID, login server, system-assigned identity principal ID, and private endpoint details are available as outputs for other modules to reference.
-- Given the module is delivered, when I review `iac/modules/terraform-azure-containerregistry`, then it contains a README, an Intro, and a CHANGELOG recording the v1.0.0 release, and pins the supported Terraform and azurerm provider versions.
+- Given the module is delivered, when I review `ops/iac/modules/terraform-azure-containerregistry`, then it contains a README, an Intro, and a CHANGELOG recording the v1.0.0 release, and pins the supported Terraform and azurerm provider versions.
 
 ### US-15.9 — Create a terraform module for Azure Container Apps Environment
 *As a DevOps Engineer, I want to create a reusable Terraform module for the Azure Container Apps Environment with workload profiles, virtual network integration, and logging, so that container apps can share one managed hosting environment that is integrated with the virtual network and configured the same way in every environment.*
@@ -546,7 +546,7 @@ This epic delivers ten modules, each in its own folder under `iac/modules`: Reso
 - Given a Log Analytics workspace ID, when the module is applied, then the environment sends its logs there; given the module is asked to create a workspace, then it creates one; Dapr Application Insights and mutual TLS are optional.
 - Given managed identities, a lock, or role assignments are supplied, when the module is applied, then they are created; given none are supplied, then none are created.
 - Given the module is consumed by an environment, when it is applied, then the environment ID, name, default domain, static IP address, and Log Analytics workspace ID are available as outputs for other modules to reference.
-- Given the module is delivered, when I review `iac/modules/terraform-azure-containerappsenvironment`, then it contains a README, an Intro, and a CHANGELOG recording the v1.0.0 release, and pins the supported Terraform and azurerm provider versions.
+- Given the module is delivered, when I review `ops/iac/modules/terraform-azure-containerappsenvironment`, then it contains a README, an Intro, and a CHANGELOG recording the v1.0.0 release, and pins the supported Terraform and azurerm provider versions.
 
 ### US-15.10 — Create a terraform module for Azure Container Apps
 *As a DevOps Engineer, I want to create a reusable Terraform module for the Azure Container App with ingress, identities, registry access, and secrets, so that each application can be deployed into a container apps environment from one reviewed definition, with its scaling, networking, and access declared as configuration.*
@@ -560,7 +560,7 @@ This epic delivers ten modules, each in its own folder under `iac/modules`: Reso
 - Given role assignments for the app's system-assigned identity (for example on a Key Vault or Storage Account), when they are supplied, then they are created; given none are supplied, then none are created.
 - Given optional probes, scale rules, volumes, init containers, or a lock, when they are supplied, then they are applied.
 - Given the module is consumed by an environment, when it is applied, then the container app ID, name, FQDN, registry, and system-assigned identity principal ID are available as outputs for other modules to reference.
-- Given the module is delivered, when I review `iac/modules/terraform-azure-containerapps`, then it contains a README, an Intro, and a CHANGELOG recording the v1.0.0 release, and pins the supported Terraform and azurerm provider versions.
+- Given the module is delivered, when I review `ops/iac/modules/terraform-azure-containerapps`, then it contains a README, an Intro, and a CHANGELOG recording the v1.0.0 release, and pins the supported Terraform and azurerm provider versions.
 
 ---
 
@@ -568,7 +568,7 @@ This epic delivers ten modules, each in its own folder under `iac/modules`: Reso
 
 **Goal:** To support the Workbench and the Mock API in Azure, provision the platform for the dev environment with Terraform, using the reusable modules delivered in Epic 15: a private network, private DNS, a key vault and file storage, a PostgreSQL database, monitoring, a container registry, and the container apps that host the Workbench UI and the Mock API.
 
-The dev environment is one Terraform configuration (`iac/environments/dev`) with remote state, standard resource tagging, and private endpoints for the data and secret services, so it can be created and changed from code by the deployment pipeline. Stories are ordered by dependency: state and resource group, network, private DNS, secret and data services, then the container platform.
+The dev environment is one Terraform configuration (`ops/iac/environments/dev`) with remote state, standard resource tagging, and private endpoints for the data and secret services, so it can be created and changed from code by the deployment pipeline. Stories are ordered by dependency: state and resource group, network, private DNS, secret and data services, then the container platform.
 
 Done when the infrastructure platform for the dev environment is available and the Workbench and Mock API container apps can start on it.
 
@@ -576,7 +576,7 @@ Done when the infrastructure platform for the dev environment is available and t
 *As a DevOps Engineer, I want the dev Terraform configuration set up with remote state and pinned tool versions, so that every engineer and the pipeline plan and apply against the same shared state, and runs are repeatable.*
 
 **Acceptance Criteria**
-- Given the state resource group, storage account, and `tfstate` container are created ahead of the first run (one-off bootstrap), when `terraform init` runs in `iac/environments/dev`, then state is stored in the azurerm backend under the key `dev/terraform.tfstate` and not on the local machine.
+- Given the state resource group, storage account, and `tfstate` container are created ahead of the first run (one-off bootstrap), when `terraform init` runs in `ops/iac/environments/dev`, then state is stored in the azurerm backend under the key `dev/terraform.tfstate` and not on the local machine.
 - Given two runs start at the same time, when both try to change state, then the second waits or fails on the state lock instead of overwriting the first.
 - Given a Terraform CLI outside ~> 1.8 or an azurerm provider outside >= 4.0 and < 5.0, when `terraform init` runs, then it fails with a version constraint message.
 - Given the common variables, when the environment is planned, then every resource carries the standard tags (`business_unit`, `customer`, `environment`, `product`, `owner`, `region`), and the default region is eastus2 with centralus available for services that must be placed there.
@@ -716,7 +716,7 @@ Done when the infrastructure platform for the dev environment is available and t
 
 ## Epic 17 — Set Up DevOps CI/CD Pipelines
 
-**Goal:** Set up the automated check, build, and deploy pipelines in Azure DevOps for the code in the GitHub repository, so every change is validated before it merges and approved changes reach the dev environment the same way every time: infrastructure changes under `iac/environments/dev`, Workbench changes, and Mock API changes.
+**Goal:** Set up the automated check, build, and deploy pipelines in Azure DevOps for the code in the GitHub repository, so every change is validated before it merges and approved changes reach the dev environment the same way every time: infrastructure changes under `ops/iac/environments/dev`, Workbench changes, and Mock API changes.
 
 Infrastructure pull requests get formatting, validation, lint, and security checks, a Terraform plan, and an AI review, and a merge to main applies to dev automatically.
 
@@ -741,7 +741,7 @@ All pipelines reach Azure through federated, keyless authentication, so no long-
 *As a DevOps Engineer, I want a pull request pipeline that checks the dev Terraform code for formatting, validity, lint errors, and security findings before it can merge, so that broken or insecure infrastructure code is rejected in seconds, before anyone reviews it or a plan is run.*
 
 **Acceptance Criteria**
-- Given a pull request to main that changes files under `iac/environments/dev`, when it is opened or updated, then the pipeline runs; given a pull request that does not touch that path, or targets another branch, or a push to any branch, then it does not run.
+- Given a pull request to main that changes files under `ops/iac/environments/dev`, when it is opened or updated, then the pipeline runs; given a pull request that does not touch that path, or targets another branch, or a push to any branch, then it does not run.
 - Given the checks are ordered cheapest first, when one hard gate fails, then the build fails and the later steps are skipped, so the required check turns red and the pipeline log shows the error.
 - Given unformatted Terraform files, when `terraform fmt -check` runs, then the build fails.
 - Given the configuration, when `terraform init` runs without the remote backend (so it needs no cloud credentials) and `terraform validate` runs, then invalid configuration fails the build.
@@ -777,7 +777,7 @@ All pipelines reach Azure through federated, keyless authentication, so no long-
 *As a DevOps Engineer, I want a deploy pipeline that plans and applies the dev Terraform configuration when a change merges to main, so that approved infrastructure changes reach dev automatically and the same way every time, with a record of what was applied.*
 
 **Acceptance Criteria**
-- Given a push to main that changes files under `iac/environments/dev`, when the push lands, then the pipeline runs; given a merge that changes only application code, or a pull request, then it does not run.
+- Given a push to main that changes files under `ops/iac/environments/dev`, when the push lands, then the pipeline runs; given a merge that changes only application code, or a pull request, then it does not run.
 - Given the pipeline runs, when it deploys, then it authenticates through the `azure-cloud` service connection with a federated token, initializes the remote backend, saves a plan, and applies that saved plan, with no manual approval step because the pull request pipeline is a required check on main.
 - Given the pull request pipeline and this pipeline, when they install Terraform, then both use the same pinned version.
 - Given the run ends, when it succeeds or fails, then the plan and the apply output are published as build artifacts for the audit trail.
@@ -850,7 +850,7 @@ All pipelines reach Azure through federated, keyless authentication, so no long-
 *As a DevOps Engineer, I want the pull request pipelines made required checks on the protected branches, and the whole pipeline setup documented, so that a red pipeline actually blocks the merge, and a new engineer can understand and change the pipelines without asking.*
 
 **Acceptance Criteria**
-- Given branch protection on main, when a pull request changes `iac/environments/dev`, then the infrastructure PR pipeline must pass before it can merge, which is what lets the deploy pipeline apply without a manual approval.
+- Given branch protection on main, when a pull request changes `ops/iac/environments/dev`, then the infrastructure PR pipeline must pass before it can merge, which is what lets the deploy pipeline apply without a manual approval.
 - Given branch protection on `release/1.00`, when a pull request changes the Workbench or the Mock API, then that component's PR pipeline must pass before it can merge; given a failed or unfinished run, then the merge is blocked.
 - Given the pipelines only run for certain paths, when a pull request touches only one component or no pipeline path at all, then it is not left waiting for a check that will never run.
 - Given the pipeline folder, when a new engineer opens its README, then it lists each pipeline with what triggers it, which gates fail the build and which are informational, the variable groups and service connection it needs, and where to edit what the AI reviewer flags.
@@ -951,8 +951,8 @@ Builds on the dev environment (Epic 16) and the pipelines (Epic 17).
 | Examiner-ready reconstruction of any past rating — *US-9.3 makes the export a story of its own* | Epic 9 (US-9.1, US-9.3) |
 | Retention, data residency, and other non-functional requirements — *raised by QA, 17 Sep 2026* | Epic 13 (with Epics 11 and 12) |
 | Source intake data from, and return decisions to, the bank's existing systems (mock CRM / Core Banking / Vendor Management) — *from the Platform Ecosystem Diagram, not the original brief; the brief's "synthetic data only, no real system" constraint is what requires them to be mocks* | Epic 14 |
-| Reusable, versioned Terraform modules for every Azure resource the platform runs on — *from the `iac/modules` code, not the original brief* | Epic 15 |
-| The dev environment provisioned from code with remote state, private networking, and the container apps — *from the `iac/environments/dev` code, not the original brief* | Epic 16 (builds on Epic 15) |
+| Reusable, versioned Terraform modules for every Azure resource the platform runs on — *from the `ops/iac/modules` code, not the original brief* | Epic 15 |
+| The dev environment provisioned from code with remote state, private networking, and the container apps — *from the `ops/iac/environments/dev` code, not the original brief* | Epic 16 (builds on Epic 15) |
 | Automated check, build, and deploy pipelines for infrastructure and both services — *from the `.azure-pipelines/` code, not the original brief* | Epic 17 (deploys to the Epic 16 environment) |
 | Logs, metrics, and telemetry collected from the resources, and an SRE agent that watches them and notifies of critical issues — *telemetry delivered (US-18.1); SRE agent still open (US-18.2)* | Epic 18 |
 | An explicit, inspectable AI orchestration state and graph, evaluated against the deterministic harness already in place — *raised in the 22 Sep 2026 standup; not in the original brief* | Epic 20 |
