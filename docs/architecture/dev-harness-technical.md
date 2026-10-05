@@ -1,7 +1,7 @@
 # Dev Harness — Technical Deep Dive (LangGraph Implementation)
 
 **Location of the tool itself:** `harness/dev_harness/`
-**Status:** Working, local-only, on-demand (no CI integration yet)
+**Status:** Working locally; draft informational CI pipeline in `.azure-pipelines/harness/dev-harness.yml`
 **Related:** [`harness/README.md`](../../harness/README.md) · [`dev-harness.md`](dev-harness.md) (the
 high-level/non-technical explainer this document expands on) · [`ba-harness.md`](ba-harness.md)
 (sibling harness, same documentation format) · [`langgraph-integration.md`](langgraph-integration.md)

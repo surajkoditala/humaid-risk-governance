@@ -19,8 +19,8 @@ for exact commands.
 
 The rest of this file is the **target deployment shape** agreed on the 2026-09-09 architecture sync
 (`Genius hacks - Q3 sync up.vtt`), written so the actual Terraform/Bicep pipeline has a spec to
-build against. **No IaC files live here yet** — provisioning Azure resources and the deploy
-pipeline is DevOps' explicit ownership (CLAUDE.md's team table), not written as part of this pass.
+build against. **No IaC files live here** — provisioning Azure resources is DevOps' ownership; the
+Terraform (`iac/`) and its pipelines live on the `main` branch, not on `release/1.00`.
 
 ## Target Azure resources
 

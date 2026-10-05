@@ -29,10 +29,17 @@ def main() -> int:
         help="Write the report to this file instead of only printing it.",
     )
 
+    check_parser.add_argument(
+        "--max-diff-bytes",
+        type=int,
+        default=None,
+        help="Truncate the diff sent to the model to this many bytes (CI uses this as a cost guard).",
+    )
+
     args = parser.parse_args()
 
     if args.command == "check":
-        diff = get_diff(args.since)
+        diff = get_diff(args.since, args.max_diff_bytes)
         report = run_harness(diff)
         print(report)
         if args.out:

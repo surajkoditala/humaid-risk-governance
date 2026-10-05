@@ -1,7 +1,7 @@
 # Dev Harness — LangGraph Architecture & Flow
 
 **Location of the tool itself:** `harness/dev_harness/`
-**Status:** Working, local-only, on-demand (no CI integration yet)
+**Status:** Working locally; draft informational CI pipeline in `.azure-pipelines/harness/dev-harness.yml`
 **Related:** [`harness/README.md`](../../harness/README.md) · [`dev_harness/review-rules.md`](../../harness/dev_harness/review-rules.md) · [`langgraph-integration.md`](langgraph-integration.md) (the *product* LangGraph service — unrelated at runtime) · [`langgraph-evaluation.md`](langgraph-evaluation.md)
 
 ---
@@ -168,5 +168,7 @@ $env:SSL_CERT_FILE="$env:USERPROFILE\.azure\corp_cacert.pem"   # only behind TLS
 ## 9. Current limitations (fast-follow candidates)
 
 - Only the diff text is reviewed — the harness doesn't check whether a file *mentioned* as needing an update (e.g. a mirrored prompt doc) was actually changed elsewhere in the repo.
-- No CI integration yet — local/on-demand only, by design for now.
+- CI integration is a draft, informational pipeline (`.azure-pipelines/harness/dev-harness.yml`)
+  that publishes the report as a build artifact; it is not a required check and does not comment
+  on the PR yet.
 - "Gate table sync" (a new epic/AI touchpoint added without a matching row in `docs/governance/human-in-the-loop-gates.md`) and eval-dataset coverage are currently folded loosely into the `database_gate`/`citation_guard` nodes rather than being their own dedicated checks.

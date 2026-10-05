@@ -53,7 +53,9 @@ PostgreSQL  <-----------------------------------------------  (.NET 10 API, port
 | `webapp/` (`5-Presentation`) | Frontend. Single-page Vite app. `webapp.esproj` makes it a real project in the solution. |
 | `evals/` | The evaluation framework — see `evals/README.md`. |
 | `ai/` | AI orchestration docs, mirrored prompts, and `data-generation/` (how synthetic seed data was produced). |
-| `ops/` | Local dev (`docker-compose.yml` — Postgres + Azurite) and the target Azure deployment shape (`README.md`) — no IaC files yet, that's DevOps' pass. |
+| `ops/` | Local dev (`docker-compose.yml` — Postgres + Azurite; `docker-compose.app.yml` — the full app in containers) and the target Azure deployment shape (`README.md`). Terraform lives on `main` under `iac/`, not on this branch. |
+| `.azure-pipelines/` | Azure DevOps PR-review pipelines for the Workbench and Mock API (build, tests, dependency audit, AI code review). Image build/scan/deploy runs on push to `release/*` (see `.azure-pipelines/README.md`). |
+| `harness/` | Dev tooling that governs how the repo itself is built: `dev_harness/` (LangGraph CLI that reviews a local diff against our standards), `ba_harness/` (epics/stories against Azure Boards), `test_case_harness/`. See `harness/README.md`. |
 
 ## Prerequisites
 
@@ -139,7 +141,7 @@ architecture sync) is also wired:
   whenever `APPLICATIONINSIGHTS_CONNECTION_STRING` is set (blank locally by default, deliberately
   — see `ops/README.md`'s cost note). One registration point instruments every HTTP request,
   outbound call, and existing `ILogger` call already in the codebase.
-- **Unit tests** (`tests/Humaid.RiskGovernance.AdminUI.UnitTests/`) — xUnit + Moq, 50 tests
+- **Unit tests** (`tests/Humaid.RiskGovernance.AdminUI.UnitTests/`) — xUnit + Moq, 100+ tests
   covering the invariants the rest of this README talks about (residual-risk-never-zero, the
   committee quorum resolution rule, the citation-fabrication guard, the feedback loop's
   best-effort error handling). `dotnet test tests/Humaid.RiskGovernance.AdminUI.UnitTests`.
@@ -149,9 +151,14 @@ Database schema/functions/seed data live in `src/4-Persistence/Humaid.RiskGovern
 `schema/`/`functions/`/`seed/` files, against `ops/docker-compose.yml`'s local Postgres. AI
 orchestration lives in `src/3-Service/Humaid.RiskGovernance.AdminUI.AI/` — see `ai/README.md`.
 
-Not yet wired: Auth0 tenant configuration (endpoints are `[Authorize]`-protected, but a
-Development-only bypass — `DevBypassAuthHandler` on the backend, matching `RequireAuth.jsx` on the
-frontend — stands in until a real tenant exists); the Azure AI Foundry project itself (the
-`IChatCompletionClient` abstraction is ready, but no Foundry project has been provisioned yet —
-`AI_PROVIDER` defaults to calling Anthropic directly); and the actual Terraform/Bicep for the
-target deployment shape documented in `ops/README.md` (DevOps' explicit ownership, not started).
+**Access control** (Epic 11) is delivered: roles are resolved from the `app_user` /
+`app_user_role` tables on every request (never from token claims), every controller action is
+role-restricted, and Admins manage users and roles from the Users screen. A first-time Auth0
+caller is auto-linked to a pre-created user row by verified email. See
+`docs/governance/access-control-matrix.md` and `docs/architecture/auth0-setup.md`. The
+Development-only `DevBypassAuthHandler` only applies when no Auth0 domain is configured.
+
+Not yet wired: the Azure AI Foundry project itself (the `IChatCompletionClient` abstraction is
+ready, but no Foundry project has been provisioned yet — `AI_PROVIDER` defaults to calling
+Anthropic directly); and the Terraform for the target deployment shape (`iac/` on `main`,
+documented in `ops/README.md`, not on this branch).
