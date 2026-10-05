@@ -84,22 +84,36 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.Sla
                 }
             }, "Failed to remove the holiday.");
 
-        /// <summary>US-19.5 AC1: open requests grouped by SLA state, most urgent first.</summary>
+        /// <summary>US-19.5 AC1: open requests, most urgent first by default - paged, sortable and
+        /// filterable (stage, type, state, search).</summary>
         [HttpGet("View")]
-        public Task<IActionResult> GetView(
-            [FromQuery] Guid actorUserId, [FromQuery] string? stage, [FromQuery] string? changeType, [FromQuery] string? state) =>
+        public Task<IActionResult> GetView([FromQuery] SlaViewQuery query) =>
             ExecuteAsync(async () =>
             {
                 try
                 {
-                    return OperationResult<IReadOnlyList<SlaViewRow>>.Success(
-                        await _slaService.GetViewAsync(actorUserId, stage, changeType, state));
+                    return OperationResult<PagedResult<SlaViewRow>>.Success(await _slaService.GetViewAsync(query));
                 }
                 catch (ValidationException ex)
                 {
-                    return OperationResult<IReadOnlyList<SlaViewRow>>.BadRequest(ex.Message);
+                    return OperationResult<PagedResult<SlaViewRow>>.BadRequest(ex.Message);
                 }
             }, "Failed to fetch the SLA view.");
+
+        /// <summary>Counts per SLA state for the grid's current stage / type / search filters.</summary>
+        [HttpGet("Summary")]
+        public Task<IActionResult> GetSummary([FromQuery] SlaViewQuery query) =>
+            ExecuteAsync(async () =>
+            {
+                try
+                {
+                    return OperationResult<IReadOnlyList<SlaStateCount>>.Success(await _slaService.GetSummaryAsync(query));
+                }
+                catch (ValidationException ex)
+                {
+                    return OperationResult<IReadOnlyList<SlaStateCount>>.BadRequest(ex.Message);
+                }
+            }, "Failed to fetch the SLA summary.");
 
         /// <summary>US-19.5 AC2-AC3: median / 90th-percentile cycle time and the share meeting their SLA.</summary>
         [HttpGet("Performance")]

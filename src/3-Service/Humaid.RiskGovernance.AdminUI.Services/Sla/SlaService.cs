@@ -90,11 +90,32 @@ namespace Humaid.RiskGovernance.AdminUI.Services.Sla
             await _slaRepo.RemoveHolidayAsync(holidayId, input);
         }
 
-        public async Task<IReadOnlyList<SlaViewRow>> GetViewAsync(Guid actorUserId, string? stage, string? changeType, string? state)
+        public async Task<PagedResult<SlaViewRow>> GetViewAsync(SlaViewQuery query)
         {
-            await RequireRoleAsync(actorUserId, "view SLA reporting", "Analyst", "Admin");
-            return await _slaRepo.GetViewAsync(NullIfBlank(stage), NullIfBlank(changeType), NullIfBlank(state));
+            await RequireRoleAsync(query.ActorUserId, "view SLA reporting", "Analyst", "Admin");
+            return await _slaRepo.GetViewAsync(Normalize(query));
         }
+
+        public async Task<IReadOnlyList<SlaStateCount>> GetSummaryAsync(SlaViewQuery query)
+        {
+            await RequireRoleAsync(query.ActorUserId, "view SLA reporting", "Analyst", "Admin");
+            return await _slaRepo.GetSummaryAsync(Normalize(query));
+        }
+
+        /// <summary>Blank filters mean "no filter", and paging is kept to a sane range - the database
+        /// clamps the same way, this just keeps the echoed page and page size honest.</summary>
+        private static SlaViewQuery Normalize(SlaViewQuery query) => new()
+        {
+            ActorUserId = query.ActorUserId,
+            Stage = NullIfBlank(query.Stage),
+            State = NullIfBlank(query.State),
+            ChangeType = NullIfBlank(query.ChangeType),
+            Search = NullIfBlank(query.Search),
+            SortBy = NullIfBlank(query.SortBy),
+            SortDir = NullIfBlank(query.SortDir),
+            Page = Math.Max(query.Page, 1),
+            PageSize = Math.Clamp(query.PageSize, 1, 200),
+        };
 
         public async Task<IReadOnlyList<SlaPerformanceRow>> GetPerformanceAsync(Guid actorUserId, string? changeType)
         {

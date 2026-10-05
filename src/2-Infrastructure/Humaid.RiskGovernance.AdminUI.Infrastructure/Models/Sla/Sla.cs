@@ -1,5 +1,7 @@
 namespace Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Sla
 {
+    using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Core;
+
     /// <summary>Epic 19 - the workflow stages an SLA is measured against. <c>EndToEnd</c> is
     /// submission to committee decision. See schema/015_sla.sql.</summary>
     public static class SlaStages
@@ -91,6 +93,31 @@ namespace Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Sla
     {
         public string Reason { get; set; } = string.Empty;
         public Guid ActorUserId { get; set; }
+    }
+
+    /// <summary>
+    /// US-19.5 AC1 - the SLA grid's paging / sorting / filtering, on top of the shared grid contract.
+    /// Search matches title and request number; <see cref="GridQuery.SortBy"/> is one of requestNumber,
+    /// title, changeType, stage, progress or dueAt (blank = most urgent first). The shared
+    /// <c>Status</c> filter is not used here - SLA state is <see cref="State"/>.
+    /// </summary>
+    public class SlaViewQuery : GridQuery
+    {
+        /// <summary>The acting user - the server checks they may see SLA reporting.</summary>
+        public Guid ActorUserId { get; set; }
+
+        /// <summary>Submitted | InAssessment | PendingCommittee.</summary>
+        public string? Stage { get; set; }
+
+        /// <summary>OnTrack | AtRisk | Breached.</summary>
+        public string? State { get; set; }
+    }
+
+    /// <summary>How many open requests are in one SLA state (null state = no target configured).</summary>
+    public class SlaStateCount
+    {
+        public string? OverallState { get; set; }
+        public int RequestCount { get; set; }
     }
 
     /// <summary>US-19.5 AC1 - one open request and where it stands against its SLA.</summary>

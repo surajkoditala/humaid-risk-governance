@@ -1,23 +1,26 @@
 import { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import ClampedText from '../components/ClampedText.jsx'
+import GridPagination from '../components/GridPagination.jsx'
 import SlaBadge from '../components/SlaBadge.jsx'
+import SortableHeader from '../components/SortableHeader.jsx'
 import { useDevUser } from '../auth/DevUserContext.jsx'
 import { Endpoints } from '../lib/api.js'
 import { CHANGE_TYPES } from '../lib/constants.js'
-import { BASELINE_DAYS, SLA_STAGE_LABEL, SLA_STAGES, formatDate } from '../lib/sla.js'
+import { BASELINE_DAYS, SLA_STAGE_LABEL, SLA_STAGES, SLA_STATE_LABEL, formatDate } from '../lib/sla.js'
+import { useDebouncedValue } from '../lib/useDebouncedValue.js'
 import { useFetch } from '../lib/useFetch.js'
+import { useGridQuery } from '../lib/useGridQuery.js'
 
-// Most urgent first. A request with no target configured is listed last, as "Not tracked".
-const GROUPS = [
-  { key: 'Breached', title: 'Overdue' },
-  { key: 'AtRisk', title: 'At risk' },
-  { key: 'OnTrack', title: 'On track' },
-  { key: 'none', title: 'No target set' },
-]
+// The stages a request can currently be in (the overall start-to-decision figure is not one of them).
+const OPEN_STAGES = SLA_STAGES.filter((s) => s !== 'EndToEnd')
+
+// State filter chips, most urgent first. Counts come from the server for the current filters.
+const STATE_CHIPS = ['Breached', 'AtRisk', 'OnTrack']
 
 function FilterSelect({ value, onChange, allLabel, options, width = 'w-52' }) {
   return (
@@ -39,35 +42,71 @@ function FilterSelect({ value, onChange, allLabel, options, width = 'w-52' }) {
   )
 }
 
+function StateChip({ label, count, active, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+        active ? 'border-primary bg-primary text-primary-foreground' : 'bg-background hover:bg-muted'
+      }`}
+    >
+      {label} <span className={active ? '' : 'text-muted-foreground'}>({count})</span>
+    </button>
+  )
+}
+
 function OpenRequests({ actorId }) {
-  const [stage, setStage] = useState('')
-  const [changeType, setChangeType] = useState('')
-  const { data: rows, loading, error } = useFetch(
-    actorId ? Endpoints.sla.view(actorId, { stage, changeType }) : null,
+  // Most urgent first until the user picks a column to sort by (blank sortBy = urgency, server side).
+  const { query, toggleSort, setFilter, setPage } = useGridQuery({ sortDir: 'asc' })
+  const debouncedSearch = useDebouncedValue(query.search)
+  const filters = { stage: query.stage, changeType: query.changeType, search: debouncedSearch }
+
+  const { data, loading, error } = useFetch(
+    actorId ? Endpoints.sla.view(actorId, { ...query, search: debouncedSearch }) : null,
     [actorId],
   )
+  const { data: counts } = useFetch(actorId ? Endpoints.sla.summary(actorId, filters) : null, [actorId])
 
-  const grouped = GROUPS.map((g) => ({
-    ...g,
-    rows: (rows || []).filter((r) => (r.overallState || 'none') === g.key),
-  }))
+  const rows = data?.items
+  const countOf = (state) => counts?.find((c) => c.overallState === state)?.requestCount ?? 0
+  const totalOpen = (counts || []).reduce((sum, c) => sum + c.requestCount, 0)
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
-        <FilterSelect
-          value={stage}
-          onChange={setStage}
-          allLabel="All stages"
-          options={SLA_STAGES.filter((s) => s !== 'EndToEnd').map((s) => ({ value: s, label: SLA_STAGE_LABEL[s] }))}
+        <Input
+          placeholder="Search title or request #…"
+          className="w-full sm:w-64"
+          value={query.search}
+          onChange={(e) => setFilter('search', e.target.value)}
         />
         <FilterSelect
-          value={changeType}
-          onChange={setChangeType}
+          value={query.stage}
+          onChange={(v) => setFilter('stage', v)}
+          allLabel="All stages"
+          options={OPEN_STAGES.map((s) => ({ value: s, label: SLA_STAGE_LABEL[s] }))}
+        />
+        <FilterSelect
+          value={query.changeType}
+          onChange={(v) => setFilter('changeType', v)}
           allLabel="All types"
           width="w-44"
           options={CHANGE_TYPES.map((t) => ({ value: t, label: t }))}
         />
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        <StateChip label="All" count={totalOpen} active={!query.state} onClick={() => setFilter('state', '')} />
+        {STATE_CHIPS.map((state) => (
+          <StateChip
+            key={state}
+            label={SLA_STATE_LABEL[state]}
+            count={countOf(state)}
+            active={query.state === state}
+            onClick={() => setFilter('state', query.state === state ? '' : state)}
+          />
+        ))}
       </div>
 
       {loading && <p className="text-sm text-muted-foreground">Loading…</p>}
@@ -76,92 +115,100 @@ function OpenRequests({ actorId }) {
         <p className="text-sm text-muted-foreground">No open requests match these filters.</p>
       )}
 
-      {grouped
-        .filter((g) => g.rows.length > 0)
-        .map((g) => (
-          <Card key={g.key}>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                {g.title}
-                <span className="text-sm font-normal text-muted-foreground">({g.rows.length})</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Table className="table-fixed">
-                <colgroup>
-                  <col className="w-28" />
-                  <col />
-                  <col className="w-40" />
-                  <col className="w-28" />
-                  <col className="w-32" />
-                </colgroup>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Request #</TableHead>
-                    <TableHead>Title</TableHead>
-                    <TableHead>Where it is</TableHead>
-                    <TableHead>Progress</TableHead>
-                    <TableHead>Due</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {g.rows.map((r) => (
-                    <TableRow key={r.changeRequestId}>
-                      <TableCell className="whitespace-normal break-words font-medium">{r.requestNumber}</TableCell>
-                      <TableCell>
-                        <ClampedText text={r.title} />
-                        <p className="text-xs text-muted-foreground">{r.changeType}</p>
-                      </TableCell>
-                      <TableCell className="whitespace-normal break-words">{SLA_STAGE_LABEL[r.stage] || r.stage}</TableCell>
-                      <TableCell className="whitespace-normal">
-                        {r.targetDays != null ? `${r.elapsedDays} of ${r.targetDays} days` : `${r.elapsedDays} days`}
-                        {r.waitingDays > 0 && (
-                          <p className="text-xs text-muted-foreground">+{r.waitingDays} waiting on requester</p>
-                        )}
-                      </TableCell>
-                      <TableCell className="whitespace-normal">
-                        {formatDate(r.dueAt)}
-                        {r.daysOverdue > 0 && (
-                          <p className="text-xs text-red-700">
-                            {r.daysOverdue} business day{r.daysOverdue === 1 ? '' : 's'} overdue
-                          </p>
-                        )}
-                        {g.key !== 'none' && (
-                          <div className="mt-1">
-                            <SlaBadge state={r.overallState} />
-                          </div>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        ))}
+      {rows?.length > 0 && (
+        <>
+          <Table className="table-fixed">
+            <colgroup>
+              <col className="w-28" />
+              <col />
+              <col className="w-40" />
+              <col className="w-32" />
+              <col className="w-36" />
+            </colgroup>
+            <TableHeader>
+              <TableRow>
+                <SortableHeader column="requestNumber" label="Request #" query={query} onSort={toggleSort} />
+                <SortableHeader column="title" label="Title" query={query} onSort={toggleSort} />
+                <SortableHeader column="stage" label="Where it is" query={query} onSort={toggleSort} />
+                <SortableHeader column="progress" label="Progress" query={query} onSort={toggleSort} />
+                <SortableHeader column="dueAt" label="Due" query={query} onSort={toggleSort} />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rows.map((r) => (
+                <TableRow key={r.changeRequestId}>
+                  <TableCell className="whitespace-normal break-words font-medium">{r.requestNumber}</TableCell>
+                  <TableCell>
+                    <ClampedText text={r.title} />
+                    <p className="text-xs text-muted-foreground">{r.changeType}</p>
+                  </TableCell>
+                  <TableCell className="whitespace-normal break-words">{SLA_STAGE_LABEL[r.stage] || r.stage}</TableCell>
+                  <TableCell className="whitespace-normal">
+                    {r.targetDays != null ? `${r.elapsedDays} of ${r.targetDays} days` : `${r.elapsedDays} days`}
+                    {r.waitingDays > 0 && (
+                      <p className="text-xs text-muted-foreground">+{r.waitingDays} waiting on requester</p>
+                    )}
+                  </TableCell>
+                  <TableCell className="whitespace-normal">
+                    {formatDate(r.dueAt)}
+                    {r.daysOverdue > 0 && (
+                      <p className="text-xs text-red-700">
+                        {r.daysOverdue} business day{r.daysOverdue === 1 ? '' : 's'} overdue
+                      </p>
+                    )}
+                    <div className="mt-1">
+                      <SlaBadge state={r.overallState} />
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          <GridPagination page={data.page} pageSize={data.pageSize} totalCount={data.totalCount} onPageChange={setPage} />
+        </>
+      )}
     </div>
   )
 }
 
+const CYCLE_PAGE_SIZE = 10
+
 function CycleTime({ actorId }) {
   const [changeType, setChangeType] = useState('')
+  const [stage, setStage] = useState('')
+  const [page, setPage] = useState(1)
   const { data: rows, loading, error } = useFetch(
     actorId ? Endpoints.sla.performance(actorId, { changeType }) : null,
     [actorId],
   )
 
   const overall = (rows || []).find((r) => r.changeType === 'All')
-  const perType = (rows || []).filter((r) => r.changeType !== 'All')
+  const perType = (rows || []).filter((r) => r.changeType !== 'All' && (!stage || r.stage === stage))
+  const pageRows = perType.slice((page - 1) * CYCLE_PAGE_SIZE, page * CYCLE_PAGE_SIZE)
+
+  // Any filter change goes back to the first page.
+  const changeFilter = (setter) => (value) => {
+    setter(value)
+    setPage(1)
+  }
 
   return (
     <div className="space-y-4">
-      <FilterSelect
-        value={changeType}
-        onChange={setChangeType}
-        allLabel="All types"
-        width="w-44"
-        options={CHANGE_TYPES.map((t) => ({ value: t, label: t }))}
-      />
+      <div className="flex flex-wrap items-center gap-2">
+        <FilterSelect
+          value={changeType}
+          onChange={changeFilter(setChangeType)}
+          allLabel="All types"
+          width="w-44"
+          options={CHANGE_TYPES.map((t) => ({ value: t, label: t }))}
+        />
+        <FilterSelect
+          value={stage}
+          onChange={changeFilter(setStage)}
+          allLabel="All stages"
+          options={SLA_STAGES.map((s) => ({ value: s, label: SLA_STAGE_LABEL[s] }))}
+        />
+      </div>
 
       {loading && <p className="text-sm text-muted-foreground">Loading…</p>}
       {error && <p className="text-sm text-destructive">{error}</p>}
@@ -188,39 +235,46 @@ function CycleTime({ actorId }) {
         </Card>
       )}
 
-      {perType.length > 0 && (
+      {(rows || []).some((r) => r.changeType !== 'All') && (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">By request type and stage</CardTitle>
             <CardDescription>All durations are in business days.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Stage</TableHead>
-                  <TableHead className="text-right">Finished</TableHead>
-                  <TableHead className="text-right">Target</TableHead>
-                  <TableHead className="text-right">Typical</TableHead>
-                  <TableHead className="text-right">9 in 10 within</TableHead>
-                  <TableHead className="text-right">Met target</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {perType.map((r) => (
-                  <TableRow key={`${r.changeType}-${r.stage}`}>
-                    <TableCell className="font-medium">{r.changeType}</TableCell>
-                    <TableCell className="whitespace-normal">{SLA_STAGE_LABEL[r.stage] || r.stage}</TableCell>
-                    <TableCell className="text-right">{r.sampleCount}</TableCell>
-                    <TableCell className="text-right">{r.targetDays ?? '—'}</TableCell>
-                    <TableCell className="text-right">{r.medianDays}</TableCell>
-                    <TableCell className="text-right">{r.p90Days}</TableCell>
-                    <TableCell className="text-right">{r.metPercent != null ? `${r.metPercent}%` : '—'}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            {perType.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No figures for this stage yet.</p>
+            ) : (
+              <>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Stage</TableHead>
+                      <TableHead className="text-right">Finished</TableHead>
+                      <TableHead className="text-right">Target</TableHead>
+                      <TableHead className="text-right">Typical</TableHead>
+                      <TableHead className="text-right">9 in 10 within</TableHead>
+                      <TableHead className="text-right">Met target</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {pageRows.map((r) => (
+                      <TableRow key={`${r.changeType}-${r.stage}`}>
+                        <TableCell className="font-medium">{r.changeType}</TableCell>
+                        <TableCell className="whitespace-normal">{SLA_STAGE_LABEL[r.stage] || r.stage}</TableCell>
+                        <TableCell className="text-right">{r.sampleCount}</TableCell>
+                        <TableCell className="text-right">{r.targetDays ?? '—'}</TableCell>
+                        <TableCell className="text-right">{r.medianDays}</TableCell>
+                        <TableCell className="text-right">{r.p90Days}</TableCell>
+                        <TableCell className="text-right">{r.metPercent != null ? `${r.metPercent}%` : '—'}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                <GridPagination page={page} pageSize={CYCLE_PAGE_SIZE} totalCount={perType.length} onPageChange={setPage} />
+              </>
+            )}
           </CardContent>
         </Card>
       )}

@@ -131,6 +131,7 @@ export const Endpoints = {
     addHoliday: () => api('Sla/Holiday'),
     removeHoliday: (id) => api(`Sla/Holiday/${id}/Remove`),
     view: (actorUserId, query) => api(`Sla/View${toQueryString({ actorUserId, ...query })}`),
+    summary: (actorUserId, query) => api(`Sla/Summary${toQueryString({ actorUserId, ...query })}`),
     performance: (actorUserId, query) => api(`Sla/Performance${toQueryString({ actorUserId, ...query })}`),
     forRequest: (changeRequestId, actorUserId) => api(`Sla/Request/${changeRequestId}?actorUserId=${actorUserId}`),
   },

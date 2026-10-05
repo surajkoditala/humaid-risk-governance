@@ -1,5 +1,6 @@
 namespace Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.Sla
 {
+    using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Core;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Sla;
 
     public interface ISlaRepo
@@ -14,7 +15,8 @@ namespace Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.S
         Task<Guid> AddHolidayAsync(AddSlaHolidayInput input);
         Task RemoveHolidayAsync(Guid holidayId, RemoveSlaHolidayInput input);
 
-        Task<IReadOnlyList<SlaViewRow>> GetViewAsync(string? stage, string? changeType, string? state);
+        Task<PagedResult<SlaViewRow>> GetViewAsync(SlaViewQuery query);
+        Task<IReadOnlyList<SlaStateCount>> GetSummaryAsync(SlaViewQuery query);
         Task<IReadOnlyList<SlaPerformanceRow>> GetPerformanceAsync(string? changeType);
         Task<IReadOnlyList<RequestSlaRow>> GetRequestSlaAsync(Guid changeRequestId);
     }

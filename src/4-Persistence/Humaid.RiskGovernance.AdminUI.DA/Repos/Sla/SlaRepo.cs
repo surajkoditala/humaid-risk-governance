@@ -2,6 +2,7 @@ namespace Humaid.RiskGovernance.AdminUI.DA.Repos.Sla
 {
     using Dapper;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.Sla;
+    using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Core;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Sla;
 
     public class SlaRepo : ISlaRepo
@@ -67,12 +68,35 @@ namespace Humaid.RiskGovernance.AdminUI.DA.Repos.Sla
                 new { holidayId, input.Reason, input.ActorUserId });
         }
 
-        public async Task<IReadOnlyList<SlaViewRow>> GetViewAsync(string? stage, string? changeType, string? state)
+        public async Task<PagedResult<SlaViewRow>> GetViewAsync(SlaViewQuery query)
         {
             await using var conn = await _connectionFactory.OpenAsync();
-            var rows = await conn.QueryAsync<SlaViewRow>(
-                "SELECT * FROM func_getSlaView(@stage, @changeType, @state)", new { stage, changeType, state });
+            var rows = (await conn.QueryAsync<SlaViewDbRow>(
+                "SELECT * FROM func_getSlaView(@Stage, @ChangeType, @State, @Search, @SortBy, @SortDir, @Page, @PageSize)",
+                new { query.Stage, query.ChangeType, query.State, query.Search, query.SortBy, query.SortDir, query.Page, query.PageSize })).AsList();
+            return new PagedResult<SlaViewRow>
+            {
+                Items = rows,
+                TotalCount = rows.Count > 0 ? (int)rows[0].TotalCount : 0,
+                Page = query.Page,
+                PageSize = query.PageSize,
+            };
+        }
+
+        public async Task<IReadOnlyList<SlaStateCount>> GetSummaryAsync(SlaViewQuery query)
+        {
+            await using var conn = await _connectionFactory.OpenAsync();
+            var rows = await conn.QueryAsync<SlaStateCount>(
+                "SELECT * FROM func_getSlaSummary(@Stage, @ChangeType, @Search)",
+                new { query.Stage, query.ChangeType, query.Search });
             return rows.AsList();
+        }
+
+        /// <summary>Widens SlaViewRow with the window-function total_count column the paged
+        /// func_get* functions return alongside every row.</summary>
+        private class SlaViewDbRow : SlaViewRow
+        {
+            public long TotalCount { get; set; }
         }
 
         public async Task<IReadOnlyList<SlaPerformanceRow>> GetPerformanceAsync(string? changeType)

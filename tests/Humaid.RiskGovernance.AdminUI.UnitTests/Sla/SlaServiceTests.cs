@@ -227,21 +227,85 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Sla
             _userRepo.Setup(u => u.GetRoleAsync(It.IsAny<Guid>())).ReturnsAsync(role);
             var actor = Guid.NewGuid();
 
-            await Assert.ThrowsAsync<ValidationException>(() => _sut.GetViewAsync(actor, null, null, null));
+            await Assert.ThrowsAsync<ValidationException>(() => _sut.GetViewAsync(new SlaViewQuery { ActorUserId = actor }));
+            await Assert.ThrowsAsync<ValidationException>(() => _sut.GetSummaryAsync(new SlaViewQuery { ActorUserId = actor }));
             await Assert.ThrowsAsync<ValidationException>(() => _sut.GetPerformanceAsync(actor, null));
             await Assert.ThrowsAsync<ValidationException>(() => _sut.GetRequestSlaAsync(actor, Guid.NewGuid()));
-            _repo.Verify(r => r.GetViewAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<string?>()), Times.Never);
+            _repo.Verify(r => r.GetViewAsync(It.IsAny<SlaViewQuery>()), Times.Never);
+            _repo.Verify(r => r.GetSummaryAsync(It.IsAny<SlaViewQuery>()), Times.Never);
         }
 
         [Fact]
-        public async Task GetViewAsync_TreatsBlankFiltersAsNoFilter()
+        public async Task GetViewAsync_TreatsBlankFiltersAsNoFilterAndKeepsPagingInRange()
         {
             _userRepo.Setup(u => u.GetRoleAsync(It.IsAny<Guid>())).ReturnsAsync("Analyst");
-            _repo.Setup(r => r.GetViewAsync(null, null, null)).ReturnsAsync([]);
+            SlaViewQuery? sent = null;
+            _repo.Setup(r => r.GetViewAsync(It.IsAny<SlaViewQuery>()))
+                .Callback<SlaViewQuery>(q => sent = q)
+                .ReturnsAsync(new PagedResult<SlaViewRow>());
 
-            await _sut.GetViewAsync(Guid.NewGuid(), "", " ", null);
+            await _sut.GetViewAsync(new SlaViewQuery
+            {
+                ActorUserId = Guid.NewGuid(),
+                Stage = "",
+                ChangeType = " ",
+                State = null,
+                Search = "  ",
+                Page = 0,
+                PageSize = 5000,
+            });
 
-            _repo.Verify(r => r.GetViewAsync(null, null, null), Times.Once);
+            Assert.NotNull(sent);
+            Assert.Null(sent!.Stage);
+            Assert.Null(sent.ChangeType);
+            Assert.Null(sent.Search);
+            Assert.Equal(1, sent.Page);
+            Assert.Equal(200, sent.PageSize);
+        }
+
+        [Fact]
+        public async Task GetViewAsync_PassesRealFiltersSortAndPagingThrough()
+        {
+            _userRepo.Setup(u => u.GetRoleAsync(It.IsAny<Guid>())).ReturnsAsync("Admin");
+            SlaViewQuery? sent = null;
+            _repo.Setup(r => r.GetViewAsync(It.IsAny<SlaViewQuery>()))
+                .Callback<SlaViewQuery>(q => sent = q)
+                .ReturnsAsync(new PagedResult<SlaViewRow>());
+
+            await _sut.GetViewAsync(new SlaViewQuery
+            {
+                ActorUserId = Guid.NewGuid(),
+                Stage = "InAssessment",
+                ChangeType = "Vendor",
+                State = "Breached",
+                Search = "payments",
+                SortBy = "dueAt",
+                SortDir = "desc",
+                Page = 3,
+                PageSize = 25,
+            });
+
+            Assert.NotNull(sent);
+            Assert.Equal("InAssessment", sent!.Stage);
+            Assert.Equal("Vendor", sent.ChangeType);
+            Assert.Equal("Breached", sent.State);
+            Assert.Equal("payments", sent.Search);
+            Assert.Equal("dueAt", sent.SortBy);
+            Assert.Equal("desc", sent.SortDir);
+            Assert.Equal(3, sent.Page);
+            Assert.Equal(25, sent.PageSize);
+        }
+
+        [Fact]
+        public async Task GetSummaryAsync_ReturnsTheCountsForAnAnalyst()
+        {
+            _userRepo.Setup(u => u.GetRoleAsync(It.IsAny<Guid>())).ReturnsAsync("Analyst");
+            IReadOnlyList<SlaStateCount> counts = [new SlaStateCount { OverallState = "Breached", RequestCount = 2 }];
+            _repo.Setup(r => r.GetSummaryAsync(It.IsAny<SlaViewQuery>())).ReturnsAsync(counts);
+
+            var result = await _sut.GetSummaryAsync(new SlaViewQuery { ActorUserId = Guid.NewGuid() });
+
+            Assert.Equal(2, Assert.Single(result).RequestCount);
         }
     }
 }
