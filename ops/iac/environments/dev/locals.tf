@@ -7,7 +7,8 @@ locals {
   PEP_KEY_VAULT                         = module.keyvault.key_vault_uri                                #URI is used as alias for the private FQDN - this is used in the CAs to access the Key Vault
   BLOB_STORAGE_SERVICE_URI              = "https://${module.storage.storage_account_blob_public_fqdn}" #Azure will resolve this to the private IP via the Private DNS Zone using the private endpoint;this way DNS name matches the certificate and traffic still routes privately
   ASPNETCORE_ENVIRONMENT                = var.ASPNETCORE_ENVIRONMENT
-  AI_PROVIDER                           = "AzureFoundry"
+  AI_PROVIDER                           = "Anthropic" #"AzureFoundry"
+  ANTHROPIC_WORKSPACE_ID                = "wrkspc_01HwxvHoGR8YbpUrNZr1bYSM"
   FOUNDRY_PROJECT_ENDPOINT              = "https://proj-gh.services.ai.azure.com/api/projects/proj-gh"
   FOUNDRY_MODEL_DEPLOYMENT              = "gpt-4.1-mini"
   ANTHROPIC_MODEL                       = "claude-sonnet-5"
