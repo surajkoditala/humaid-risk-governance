@@ -1,0 +1,1 @@
+Does this diff use .Result or .Wait() anywhere, or fail to forward a CancellationToken through a new async service/persistence call? Does any new AI-adjacent or external-integration config silently default instead of failing loudly when missing?

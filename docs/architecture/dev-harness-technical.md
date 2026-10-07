@@ -126,15 +126,16 @@ def _make_check_node(name: str, instruction: str):
 ```
 
 - **Input:** the current `_State` (specifically `state["diff"]` and `state["rules"]`).
-- **Work:** `_run_check()` builds a system prompt scoped to exactly one concern (e.g.
-  `architecture`, `citation_guard`), calls `get_chat_model().invoke([...])`, and returns the
-  model's text response.
+- **Work:** `_run_check()` pairs the shared system prompt (`prompts/system.prompt.md`) with the
+  one concern this node owns (e.g. `architecture`, `citation_guard` - its instruction text comes
+  from `prompts/checks/<node>.prompt.md`), calls `get_chat_model().invoke([...])`, and returns
+  the model's text response.
 - **Output:** a *partial* state update — `{"findings": {name: result}}` — never the full state.
   Returning only the delta is what lets six of these run side by side safely (combined with the
   reducer in section 4).
 
-There are seven node functions total: six built by `_make_check_node()` (one per entry in the
-`_CHECKS` dict — `architecture`, `database_gate`, `citation_guard`, `no_llm_where_unjustified`,
+There are seven node functions total: six built by `_make_check_node()` (one per file in
+`prompts/checks/`, loaded into the `_CHECKS` dict — `architecture`, `database_gate`, `citation_guard`, `no_llm_where_unjustified`,
 `async_and_config`, `coding_standards`), plus `_compile_report`, which is hand-written because its
 job (merge + format) is different in kind from the other six (review + report one concern).
 

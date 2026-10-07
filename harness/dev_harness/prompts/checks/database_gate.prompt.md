@@ -1,0 +1,1 @@
+If this diff adds or changes a method that overrides an AI-generated or calculated value, does it take a mandatory 'reason' parameter, and does the underlying stored function/func_ write an audit_event row in the same transaction? Also flag any schema change made by hand-editing a generated deploy script instead of the SQL project's source function/table definitions.
