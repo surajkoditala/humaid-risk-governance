@@ -1,0 +1,51 @@
+---
+formatter: markdown table
+
+settings:
+  required: false
+
+output:
+  file: README.md
+  mode: inject
+  sort-by: name
+  header-from: README.md
+  output-values: true
+  output-variables: true
+  output-providers: true
+  output-requirements: true
+  output-resources: true
+ 
+content: |-
+  {{ .Header }}
+
+  {{ include "Intro.md" }}
+
+  #Examples
+
+  ```hcl
+  {{ include "examples/basic/main.tf" }}
+
+  {{ include "examples/basic/variables.tf" }}
+
+  {{ include "examples/basic/outputs.tf" }}
+
+  {{ include "examples/basic/terraform.tf" }}
+
+  {{ include "examples/basic/providers.tf" }}
+  ```
+
+  {{ .Requirements }}
+
+  {{ .Providers }}
+
+  {{ .Modules }}
+
+  {{ .Resources }}
+
+  {{ .Inputs }}
+
+  {{ .Outputs }}
+
+  {{ include "CHANGELOG.md" }}
+
+  {{ .Footer }}

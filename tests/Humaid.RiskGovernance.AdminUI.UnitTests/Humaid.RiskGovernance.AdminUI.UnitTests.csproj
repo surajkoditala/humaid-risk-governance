@@ -21,6 +21,10 @@
     <ProjectReference Include="..\..\src\2-Infrastructure\Humaid.RiskGovernance.AdminUI.Infrastructure\Humaid.RiskGovernance.AdminUI.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\3-Service\Humaid.RiskGovernance.AdminUI.Services\Humaid.RiskGovernance.AdminUI.Services.csproj" />
     <ProjectReference Include="..\..\src\3-Service\Humaid.RiskGovernance.AdminUI.AI\Humaid.RiskGovernance.AdminUI.AI.csproj" />
+    <!-- Epic 11 - Auth/AccessControlMatrixTests.cs reflects over every controller action in the Web
+         project to assert it declares a role/policy restriction. Types-only reference: nothing here
+         runs Program.cs or starts the host. -->
+    <ProjectReference Include="..\..\src\1-API\Humaid.RiskGovernance.AdminUI.Web\Humaid.RiskGovernance.AdminUI.Web.csproj" />
   </ItemGroup>
 
 </Project>

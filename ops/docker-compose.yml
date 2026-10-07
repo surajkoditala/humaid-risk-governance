@@ -26,7 +26,12 @@ services:
     image: mcr.microsoft.com/azure-storage/azurite:latest
     container_name: risk-governance-azurite
     restart: unless-stopped
-    command: "azurite-blob --blobHost 0.0.0.0 --blobPort 10000"
+    # --skipApiVersionCheck: this Azurite build (3.35.0, from the "latest" tag) rejects requests
+    # from a newer Azure.Storage.Blobs SDK client that ask for an API version it predates
+    # ("2026-06-06") - "InvalidHeaderValue", the app's document attach failing outright. Azurite's
+    # own error message names this flag as the fix; newer/older API version skew like this is
+    # expected between an emulator pinned by image tag and whatever SDK version NuGet resolves.
+    command: "azurite-blob --blobHost 0.0.0.0 --blobPort 10000 --skipApiVersionCheck"
     ports:
       - "10000:10000"
     volumes:

@@ -15,6 +15,11 @@ branch protection), so a red run blocks the merge. Don't merge until both have f
 
 Semgrep runs too but is informational (JSON is published as a build artifact).
 
+`harness/dev-harness.yml` (draft) is a separate, **non-required** PR pipeline that runs the dev
+harness (`harness/dev_harness`, a LangGraph review against `review-rules.md`) over the PR diff and
+publishes its report as a build artifact. It never fails the build and skips itself if there is no
+`ANTHROPIC_API_KEY` in the `ai-review-secrets` group. Register it in Azure DevOps before it runs.
+
 ## Image build, scan, and deploy to dev
 
 `workbench/workbench.yml` and `mock-api/mock-api.yml` build the Docker image, push it
@@ -47,6 +52,8 @@ variables in each component's `templates/variables.yml`.
     mock-api.yml
     environments/dev.yml
     templates/deploy.yml  templates/variables.yml
+  harness/
+    dev-harness.yml                      # informational dev-harness report on PRs (draft, not required)
   templates/ai-review.yml                # the 2 AI-review steps, shared (PR pipelines only)
   scripts/dotnet-vuln-check.sh           # fails on vulnerable NuGet packages
   scripts/ai-review/

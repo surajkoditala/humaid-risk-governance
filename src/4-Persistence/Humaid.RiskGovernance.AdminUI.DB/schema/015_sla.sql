@@ -4,7 +4,7 @@
 -- INFORMS: nothing in this file (or functions/sla/) ever changes a request's status, skips a review
 -- gate, or auto-decides anything.
 --
--- Written with IF NOT EXISTS / DROP TRIGGER IF EXISTS so migrations/0008_epic19_sla_tracking.sql
+-- Written with IF NOT EXISTS / DROP TRIGGER IF EXISTS so migrations/0010_epic19_sla_tracking.sql
 -- (which carries the same DDL for databases deployed before this epic) can safely mirror it.
 --
 -- Targets are in BUSINESS days (weekends + the sla_holiday calendar excluded). SLA configuration

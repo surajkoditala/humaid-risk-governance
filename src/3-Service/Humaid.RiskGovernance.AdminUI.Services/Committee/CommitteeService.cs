@@ -77,8 +77,7 @@ namespace Humaid.RiskGovernance.AdminUI.Services.Committee
             // This doesn't replace deriving identity from a validated token (see DevBypassAuthHandler.cs,
             // DEF-010) - it closes the concrete exploit: even a forged id must belong to a real
             // CommitteeMember, or the vote is refused.
-            var voterRole = await _userRepo.GetRoleAsync(input.CommitteeMemberUserId);
-            if (voterRole != "CommitteeMember")
+            if (!await _userRepo.HasRoleAsync(input.CommitteeMemberUserId, "CommitteeMember"))
             {
                 throw new ValidationException("Only a Risk Committee Member may cast a committee vote.");
             }

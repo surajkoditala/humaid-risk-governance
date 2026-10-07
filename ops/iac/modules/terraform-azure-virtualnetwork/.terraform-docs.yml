@@ -1,0 +1,93 @@
+---
+formatter: markdown table
+
+settings:
+  required: false
+
+output:
+  file: README.md
+  mode: inject
+  sort-by: name
+  header-from: README.md
+  output-values: true
+  output-variables: true
+  output-providers: true
+  output-requirements: true
+  output-resources: true
+ 
+content: |-
+  {{ .Header }}
+
+  {{ include "Intro.md" }}
+
+  #Basic Example
+
+  ```hcl
+  {{ include "examples/basic/main.tf" }}
+
+  {{ include "examples/basic/variables.tf" }}
+
+  {{ include "examples/basic/outputs.tf" }}
+
+  {{ include "examples/basic/terraform.tf" }}
+
+  {{ include "examples/basic/providers.tf" }}
+  ```
+
+  #VNet with DNS servers and subnets delegation Example
+
+  ```hcl
+  {{ include "examples/custom-dns-and-delegation/main.tf" }}
+
+  {{ include "examples/custom-dns-and-delegation/variables.tf" }}
+
+  {{ include "examples/custom-dns-and-delegation/outputs.tf" }}
+
+  {{ include "examples/custom-dns-and-delegation/terraform.tf" }}
+
+  {{ include "examples/custom-dns-and-delegation/providers.tf" }}
+  ```
+
+  #Complete Example with NSG and RT
+
+  ```hcl
+  {{ include "examples/nsg-and-rt/main.tf" }}
+
+  {{ include "examples/nsg-and-rt/variables.tf" }}
+
+  {{ include "examples/nsg-and-rt/outputs.tf" }}
+
+  {{ include "examples/nsg-and-rt/terraform.tf" }}
+
+  {{ include "examples/nsg-and-rt/providers.tf" }}
+  ```
+
+  #VNET Peering
+
+  ```hcl
+  {{ include "examples/vnet-peering/main.tf" }}
+
+  {{ include "examples/vnet-peering/variables.tf" }}
+
+  {{ include "examples/vnet-peering/outputs.tf" }}
+
+  {{ include "examples/vnet-peering/terraform.tf" }}
+
+  {{ include "examples/vnet-peering/providers.tf" }}
+  ```
+
+  {{ .Requirements }}
+
+  {{ .Providers }}
+
+  {{ .Modules }}
+
+  {{ .Resources }}
+
+  {{ .Inputs }}
+
+  {{ .Outputs }}
+
+  {{ include "CHANGELOG.md" }}
+
+  {{ .Footer }}

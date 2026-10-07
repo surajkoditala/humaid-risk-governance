@@ -82,12 +82,25 @@ CREATE TABLE change_request_type_category_map (
 
 CREATE TABLE app_user (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    auth0_subject TEXT NOT NULL UNIQUE, -- Auth0 'sub' claim (synthetic 'seed|...' values for seeded dev users)
+    auth0_subject TEXT UNIQUE, -- Auth0 'sub' claim; null until an Admin-created user's real login is
+                                -- linked (func_setUserAuth0Subject) - synthetic 'seed|...' values for seeded dev users
     email TEXT NOT NULL,
     display_name TEXT NOT NULL,
-    role TEXT NOT NULL CHECK (role IN ('ProductOwner','Analyst','CommitteeMember','Admin')),
     is_active BOOLEAN NOT NULL DEFAULT true,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Epic 11 follow-up: a user can hold more than one role, so role membership is a join table, not a
+-- single app_user.role column - each grant gets its own actor and reason, audited the same way
+-- workflow_rule/scoring_config already are (schema/010_scoring.sql, schema/012_configuration.sql),
+-- rather than being an opaque diff of an array column. See docs/governance/user-roles-and-screens.md.
+CREATE TABLE app_user_role (
+    user_id UUID NOT NULL REFERENCES app_user(id),
+    role TEXT NOT NULL CHECK (role IN ('ProductOwner','Analyst','CommitteeMember','Admin')),
+    granted_by_user_id UUID REFERENCES app_user(id), -- null for a seed/system grant, same convention as audit_event.actor_user_id
+    reason TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (user_id, role)
 );
 
 -- ---- schema/004_change_requests.sql ----
@@ -406,7 +419,7 @@ CREATE TABLE change_request_external_snapshot (
 -- INFORMS: nothing in this file (or functions/sla/) ever changes a request's status, skips a review
 -- gate, or auto-decides anything.
 --
--- Written with IF NOT EXISTS / DROP TRIGGER IF EXISTS so migrations/0008_epic19_sla_tracking.sql
+-- Written with IF NOT EXISTS / DROP TRIGGER IF EXISTS so migrations/0010_epic19_sla_tracking.sql
 -- (which carries the same DDL for databases deployed before this epic) can safely mirror it.
 --
 -- Targets are in BUSINESS days (weekends + the sla_holiday calendar excluded). SLA configuration
@@ -2323,27 +2336,295 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- ---- functions/users/func_createUser.sql ----
+-- Admin user-management screen: creates an app_user row and its initial role grant(s) in one
+-- transaction, so a user is never left with zero roles between the two inserts. auth0_subject
+-- starts null - this person hasn't logged in yet (func_setUserAuth0Subject links it later).
+CREATE OR REPLACE FUNCTION func_createUser(
+    p_email TEXT,
+    p_display_name TEXT,
+    p_roles TEXT[],
+    p_reason TEXT,
+    p_actor_user_id UUID
+) RETURNS UUID AS $$
+DECLARE
+    v_id UUID := gen_random_uuid();
+    v_role TEXT;
+BEGIN
+    IF p_reason IS NULL OR btrim(p_reason) = '' THEN
+        RAISE EXCEPTION 'A reason is required to create a user';
+    END IF;
+    IF p_roles IS NULL OR array_length(p_roles, 1) IS NULL THEN
+        RAISE EXCEPTION 'A user must be created with at least one role';
+    END IF;
+
+    INSERT INTO app_user (id, auth0_subject, email, display_name)
+    VALUES (v_id, NULL, p_email, p_display_name);
+
+    FOREACH v_role IN ARRAY p_roles LOOP
+        INSERT INTO app_user_role (user_id, role, granted_by_user_id, reason)
+        VALUES (v_id, v_role, p_actor_user_id, p_reason);
+    END LOOP;
+
+    INSERT INTO audit_event (entity_type, entity_id, action, actor_user_id, actor_label, after_value, reason)
+    VALUES ('AppUser', v_id, 'Created', p_actor_user_id, 'human',
+            jsonb_build_object('email', p_email, 'displayName', p_display_name, 'roles', p_roles), p_reason);
+
+    RETURN v_id;
+END;
+$$ LANGUAGE plpgsql;
+
 -- ---- functions/users/func_getAllUsers.sql ----
 -- Dev-only convenience: lets the frontend simulate "acting as" a given seeded user/role since
 -- there's no real Auth0 login wired up yet (see DevBypassAuthHandler.cs). Not meant to survive
 -- real auth being wired in - a real deployment derives identity from the access token, not a
 -- public user-listing endpoint.
+--
+-- A user with no role grants at all is excluded (inner join) - same "not provisioned" treatment as
+-- func_getUserByAuth0Subject/func_getUserById below.
 CREATE OR REPLACE FUNCTION func_getAllUsers()
-RETURNS TABLE (id UUID, display_name TEXT, email TEXT, role TEXT) AS $$
-    SELECT id, display_name, email, role
-    FROM app_user
-    WHERE is_active = true
-    ORDER BY role, display_name;
+RETURNS TABLE (id UUID, display_name TEXT, email TEXT, roles TEXT[]) AS $$
+    SELECT u.id, u.display_name, u.email, array_agg(ur.role ORDER BY ur.role)
+    FROM app_user u
+    JOIN app_user_role ur ON ur.user_id = u.id
+    WHERE u.is_active = true
+    GROUP BY u.id, u.display_name, u.email
+    ORDER BY u.display_name;
 $$ LANGUAGE sql STABLE;
 
--- ---- functions/users/func_getUserRole.sql ----
+-- ---- functions/users/func_getAllUsersForAdmin.sql ----
+-- Admin user-management screen: every user, active or not, with every role and the raw
+-- auth0_subject (null if that person has never logged in yet) - unlike func_getAllUsers/
+-- func_getUserById/func_getUserByAuth0Subject, which exist to resolve a caller's own identity and
+-- so deliberately exclude anyone inactive or roleless.
+CREATE OR REPLACE FUNCTION func_getAllUsersForAdmin()
+RETURNS TABLE (
+    id UUID, auth0_subject TEXT, email TEXT, display_name TEXT,
+    roles TEXT[], is_active BOOLEAN, created_at TIMESTAMPTZ
+) AS $$
+    SELECT
+        u.id, u.auth0_subject, u.email, u.display_name,
+        coalesce(array_agg(ur.role ORDER BY ur.role) FILTER (WHERE ur.role IS NOT NULL), '{}'),
+        u.is_active, u.created_at
+    FROM app_user u
+    LEFT JOIN app_user_role ur ON ur.user_id = u.id
+    GROUP BY u.id, u.auth0_subject, u.email, u.display_name, u.is_active, u.created_at
+    ORDER BY u.display_name;
+$$ LANGUAGE sql STABLE;
+
+-- ---- functions/users/func_getUserByAuth0Subject.sql ----
+-- Epic 11: resolves the caller's app_user from the Auth0 'sub' claim of the validated access
+-- token. The app_user_role rows are the single source of truth for the caller's roles, so a role
+-- grant/revoke takes effect on the caller's next request - no token refresh. Inactive users, and
+-- users with no role grants at all, resolve to nothing (treated as not provisioned).
+CREATE OR REPLACE FUNCTION func_getUserByAuth0Subject(p_auth0_subject TEXT)
+RETURNS TABLE (id UUID, display_name TEXT, email TEXT, roles TEXT[]) AS $$
+    SELECT u.id, u.display_name, u.email, array_agg(ur.role ORDER BY ur.role)
+    FROM app_user u
+    JOIN app_user_role ur ON ur.user_id = u.id
+    WHERE u.auth0_subject = p_auth0_subject
+      AND u.is_active = true
+    GROUP BY u.id, u.display_name, u.email;
+$$ LANGUAGE sql STABLE;
+
+-- ---- functions/users/func_getUserById.sql ----
+-- Epic 11: resolves an app_user by its own id. Used only by the local-development "acting as"
+-- identity (DevBypassAuthHandler), where the caller names a seeded user directly instead of
+-- presenting an Auth0 token. Inactive users, and users with no role grants at all, resolve to
+-- nothing.
+CREATE OR REPLACE FUNCTION func_getUserById(p_id UUID)
+RETURNS TABLE (id UUID, display_name TEXT, email TEXT, roles TEXT[]) AS $$
+    SELECT u.id, u.display_name, u.email, array_agg(ur.role ORDER BY ur.role)
+    FROM app_user u
+    JOIN app_user_role ur ON ur.user_id = u.id
+    WHERE u.id = p_id
+      AND u.is_active = true
+    GROUP BY u.id, u.display_name, u.email;
+$$ LANGUAGE sql STABLE;
+
+-- ---- functions/users/func_linkUserAuth0ByEmail.sql ----
+-- Epic 11 follow-up: closes the chicken-and-egg gap where an Admin-created user (auth0_subject
+-- still NULL) can't be linked until an Admin knows their real Auth0 subject - which nobody learns
+-- until that person has logged in once and been refused every role-gated endpoint. Called only as
+-- a fallback from AppUserClaimsTransformation when func_getUserByAuth0Subject finds nothing, using
+-- the email Auth0's own /userinfo endpoint returned for that exact access token (never a
+-- client-supplied value). Only ever claims a row not already linked to someone else - a row whose
+-- auth0_subject is already set is left alone, so this can't hijack an existing, distinct login.
+-- Case-insensitive: Auth0's stored email casing doesn't always match what an Admin typed at
+-- creation time.
+CREATE OR REPLACE FUNCTION func_linkUserAuth0ByEmail(p_email TEXT, p_auth0_subject TEXT)
+RETURNS TABLE (id UUID, display_name TEXT, email TEXT, roles TEXT[]) AS $$
+DECLARE
+    v_user_id UUID;
+BEGIN
+    SELECT u.id INTO v_user_id
+    FROM app_user u
+    WHERE lower(u.email) = lower(p_email)
+      AND u.auth0_subject IS NULL
+      AND u.is_active = true;
+
+    IF v_user_id IS NULL THEN
+        RETURN;
+    END IF;
+
+    UPDATE app_user SET auth0_subject = p_auth0_subject WHERE id = v_user_id;
+
+    INSERT INTO audit_event (entity_type, entity_id, action, actor_label, after_value, reason)
+    VALUES ('AppUser', v_user_id, 'Auth0SubjectLinked', 'system',
+            jsonb_build_object('auth0Subject', p_auth0_subject),
+            'Auto-linked via verified email match on first login');
+
+    RETURN QUERY
+    SELECT u.id, u.display_name, u.email, array_agg(ur.role ORDER BY ur.role)
+    FROM app_user u
+    JOIN app_user_role ur ON ur.user_id = u.id
+    WHERE u.id = v_user_id
+    GROUP BY u.id, u.display_name, u.email;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ---- functions/users/func_setUserActive.sql ----
+-- Admin user-management screen: deactivate/reactivate. A deactivated user's role grants stay in
+-- app_user_role untouched - is_active is what every identity-resolution function already filters
+-- on (func_getUserById/func_getUserByAuth0Subject), so reactivating restores exactly the same
+-- roles without re-granting them.
+CREATE OR REPLACE FUNCTION func_setUserActive(
+    p_user_id UUID,
+    p_is_active BOOLEAN,
+    p_reason TEXT,
+    p_actor_user_id UUID
+) RETURNS VOID AS $$
+DECLARE
+    v_before BOOLEAN;
+BEGIN
+    IF p_reason IS NULL OR btrim(p_reason) = '' THEN
+        RAISE EXCEPTION 'A reason is required to deactivate or reactivate a user';
+    END IF;
+
+    SELECT is_active INTO v_before FROM app_user WHERE id = p_user_id;
+    IF v_before IS NULL THEN
+        RAISE EXCEPTION 'User % not found', p_user_id;
+    END IF;
+
+    -- Guard against the last active Admin locking everyone out: deactivating would leave no one
+    -- able to manage users/configuration without going straight to SQL.
+    IF p_is_active = FALSE AND EXISTS (
+        SELECT 1 FROM app_user_role WHERE user_id = p_user_id AND role = 'Admin'
+    ) AND NOT EXISTS (
+        SELECT 1
+        FROM app_user_role r
+        JOIN app_user u ON u.id = r.user_id
+        WHERE r.role = 'Admin' AND u.is_active = TRUE AND u.id <> p_user_id
+    ) THEN
+        RAISE EXCEPTION 'Cannot deactivate the last active Admin';
+    END IF;
+
+    UPDATE app_user SET is_active = p_is_active WHERE id = p_user_id;
+
+    INSERT INTO audit_event (entity_type, entity_id, action, actor_user_id, actor_label, before_value, after_value, reason)
+    VALUES ('AppUser', p_user_id, CASE WHEN p_is_active THEN 'Reactivated' ELSE 'Deactivated' END,
+            p_actor_user_id, 'human', jsonb_build_object('isActive', v_before), jsonb_build_object('isActive', p_is_active), p_reason);
+END;
+$$ LANGUAGE plpgsql;
+
+-- ---- functions/users/func_setUserAuth0Subject.sql ----
+-- Admin user-management screen: links (or re-links) a real Auth0 login to a user row - the UI
+-- form for what auth0-setup.md's step 4 previously required a raw SQL UPDATE for. app_user's own
+-- UNIQUE constraint on auth0_subject rejects linking the same real login to two different rows.
+CREATE OR REPLACE FUNCTION func_setUserAuth0Subject(
+    p_user_id UUID,
+    p_auth0_subject TEXT,
+    p_reason TEXT,
+    p_actor_user_id UUID
+) RETURNS VOID AS $$
+DECLARE
+    v_before TEXT;
+BEGIN
+    IF p_reason IS NULL OR btrim(p_reason) = '' THEN
+        RAISE EXCEPTION 'A reason is required to link an Auth0 login';
+    END IF;
+    IF p_auth0_subject IS NULL OR btrim(p_auth0_subject) = '' THEN
+        RAISE EXCEPTION 'An Auth0 subject is required';
+    END IF;
+
+    SELECT auth0_subject INTO v_before FROM app_user WHERE id = p_user_id;
+
+    UPDATE app_user SET auth0_subject = p_auth0_subject WHERE id = p_user_id;
+
+    INSERT INTO audit_event (entity_type, entity_id, action, actor_user_id, actor_label, before_value, after_value, reason)
+    VALUES ('AppUser', p_user_id, 'Auth0SubjectLinked', p_actor_user_id, 'human',
+            jsonb_build_object('auth0Subject', v_before), jsonb_build_object('auth0Subject', p_auth0_subject), p_reason);
+END;
+$$ LANGUAGE plpgsql;
+
+-- ---- functions/users/func_setUserRoles.sql ----
+-- Admin user-management screen: replaces a user's entire role set in one call (the UI presents
+-- a fixed multi-select, not one grant/revoke click at a time) - removes whichever roles are no
+-- longer selected, adds whichever are newly selected, and audits the before/after set together so
+-- the change reads as one edit rather than N separate grant/revoke rows.
+CREATE OR REPLACE FUNCTION func_setUserRoles(
+    p_user_id UUID,
+    p_roles TEXT[],
+    p_reason TEXT,
+    p_actor_user_id UUID
+) RETURNS VOID AS $$
+DECLARE
+    v_before TEXT[];
+    v_role TEXT;
+BEGIN
+    IF p_reason IS NULL OR btrim(p_reason) = '' THEN
+        RAISE EXCEPTION 'A reason is required to change a user''s roles';
+    END IF;
+    IF p_roles IS NULL OR array_length(p_roles, 1) IS NULL THEN
+        RAISE EXCEPTION 'A user must hold at least one role';
+    END IF;
+
+    SELECT array_agg(role ORDER BY role) INTO v_before FROM app_user_role WHERE user_id = p_user_id;
+
+    -- Guard against stripping the last active Admin's Admin role: would leave no one able to
+    -- manage users/configuration without going straight to SQL.
+    IF 'Admin' = ANY(v_before) AND NOT ('Admin' = ANY(p_roles)) AND NOT EXISTS (
+        SELECT 1
+        FROM app_user_role r
+        JOIN app_user u ON u.id = r.user_id
+        WHERE r.role = 'Admin' AND u.is_active = TRUE AND u.id <> p_user_id
+    ) THEN
+        RAISE EXCEPTION 'Cannot remove the Admin role from the last active Admin';
+    END IF;
+
+    DELETE FROM app_user_role WHERE user_id = p_user_id AND role NOT IN (SELECT unnest(p_roles));
+
+    FOREACH v_role IN ARRAY p_roles LOOP
+        INSERT INTO app_user_role (user_id, role, granted_by_user_id, reason)
+        VALUES (p_user_id, v_role, p_actor_user_id, p_reason)
+        ON CONFLICT (user_id, role) DO NOTHING;
+    END LOOP;
+
+    INSERT INTO audit_event (entity_type, entity_id, action, actor_user_id, actor_label, before_value, after_value, reason)
+    VALUES ('AppUser', p_user_id, 'RolesChanged', p_actor_user_id, 'human',
+            jsonb_build_object('roles', v_before), jsonb_build_object('roles', p_roles), p_reason);
+END;
+$$ LANGUAGE plpgsql;
+
+-- ---- functions/users/func_userHasRole.sql ----
 -- DEF-002: lets a service validate that an actor id the caller supplied actually holds the role
 -- an action requires (e.g. CastVoteAsync requires CommitteeMember), instead of trusting the id at
 -- face value. Not a substitute for deriving identity from a validated token - see DevBypassAuthHandler.cs
 -- and DEF-010 for why that isn't wired up in this pass.
-CREATE OR REPLACE FUNCTION func_getUserRole(p_user_id UUID)
-RETURNS TEXT AS $$
-    SELECT role FROM app_user WHERE id = p_user_id AND is_active = true;
+--
+-- A membership check against app_user_role, not "what is the role" - a user can hold more than
+-- one (Epic 11 follow-up), so equality against a single returned role would wrongly reject an
+-- actor who holds the required role alongside others.
+CREATE OR REPLACE FUNCTION func_userHasRole(p_user_id UUID, p_role TEXT)
+RETURNS BOOLEAN AS $$
+    SELECT EXISTS (
+        SELECT 1
+        FROM app_user u
+        JOIN app_user_role ur ON ur.user_id = u.id
+        WHERE u.id = p_user_id
+          AND u.is_active = true
+          AND ur.role = p_role
+    );
 $$ LANGUAGE sql STABLE;
 
 -- ============================== seed ==================================================
@@ -2351,14 +2632,37 @@ $$ LANGUAGE sql STABLE;
 -- ---- seed/seed_dev_users.sql ----
 -- Synthetic users for local dev (100% synthetic per the hackathon's own constraint - never
 -- connects to a real system or real identities).
-INSERT INTO app_user (auth0_subject, email, display_name, role) VALUES
-    ('seed|product-owner-1', 'po1@example.bank', 'Priya Owens', 'ProductOwner'),
-    ('seed|analyst-1', 'analyst1@example.bank', 'Amara Chen', 'Analyst'),
-    ('seed|analyst-2', 'analyst2@example.bank', 'Sam Okafor', 'Analyst'),
-    ('seed|committee-1', 'committee1@example.bank', 'Jordan Blake', 'CommitteeMember'),
-    ('seed|committee-2', 'committee2@example.bank', 'Riley Voss', 'CommitteeMember'),
-    ('seed|admin-1', 'admin1@example.bank', 'Taylor Finch', 'Admin')
+INSERT INTO app_user (auth0_subject, email, display_name) VALUES
+    ('seed|product-owner-1', 'po1@example.bank', 'Priya Owens'),
+    ('seed|analyst-1', 'analyst1@example.bank', 'Amara Chen'),
+    ('seed|analyst-2', 'analyst2@example.bank', 'Sam Okafor'),
+    ('seed|committee-1', 'committee1@example.bank', 'Jordan Blake'),
+    ('seed|committee-2', 'committee2@example.bank', 'Riley Voss'),
+    ('seed|admin-1', 'admin1@example.bank', 'Taylor Finch'),
+    -- Synthetic, deliberately not any real teammate - holds every role so local testing/demoing
+    -- can exercise the full nav (union of all roles' screens) without switching "acting as" users.
+    -- A real person's own login gets its own app_user row instead, linked via the Admin user-
+    -- management screen's "Link Auth0" action once they've signed in - never this seed row.
+    ('seed|full-access-1', 'qa-full-access@example.bank', 'QA Full Access')
 ON CONFLICT (auth0_subject) DO NOTHING;
+
+INSERT INTO app_user_role (user_id, role, reason)
+SELECT u.id, r.role, 'Initial seed grant'
+FROM app_user u
+JOIN LATERAL (
+    VALUES
+        ('seed|product-owner-1', 'ProductOwner'),
+        ('seed|analyst-1', 'Analyst'),
+        ('seed|analyst-2', 'Analyst'),
+        ('seed|committee-1', 'CommitteeMember'),
+        ('seed|committee-2', 'CommitteeMember'),
+        ('seed|admin-1', 'Admin'),
+        ('seed|full-access-1', 'ProductOwner'),
+        ('seed|full-access-1', 'Analyst'),
+        ('seed|full-access-1', 'CommitteeMember'),
+        ('seed|full-access-1', 'Admin')
+) AS r(auth0_subject, role) ON r.auth0_subject = u.auth0_subject
+ON CONFLICT (user_id, role) DO NOTHING;
 
 -- ---- seed/seed_ffiec_framework.sql ----
 -- The FFIEC BSA/AML risk framework from CLAUDE.md - run after seed_dev_users.sql (scoring_config

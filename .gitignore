@@ -15,7 +15,70 @@ src/6-MockExternalSystems/Humaid.RiskGovernance.MockSystems/appsettings.Developm
 # Eval run artifacts - see evals/README.md. The datasets themselves (evals/datasets/) are checked in.
 evals/results/
 
+# Repo-root .env - docker-compose.app.yml reads AUTH0_DOMAIN/AUTH0_CLIENT_ID/AUTH0_AUDIENCE/
+# ANTHROPIC_API_KEY from here for local container builds.
+/.env
+
 # Local-only corporate root CA certs for Docker builds behind an SSL-inspecting proxy (Netskope,
 # Zscaler, etc.) - see ops/certs/README.md. Never commit an actual cert; only .gitkeep is tracked.
 ops/certs/*.crt
 ops/certs/*.pem
+
+# Python (ai/langgraph/ - see ai/langgraph/README.md)
+ai/langgraph/.venv/
+ai/langgraph/__pycache__/
+ai/langgraph/**/__pycache__/
+ai/langgraph/.env
+ai/langgraph/*.egg-info/
+
+# Dev harness (harness/dev_harness/ - see harness/README.md) - local review output, not an artifact
+harness/dev_harness/__pycache__/
+harness/*.md.bak
+harness/last-report.md
+harness/dev_harness/last-report.md
+
+# Python bytecode
+__pycache__/
+*.pyc
+
+# --- Terraform (ops/iac/) ---
+# Local .terraform directories
+**/.terraform/*
+
+# .tfstate files
+*.tfstate
+*.tfstate.*
+
+# Crash log files
+crash.log
+crash.*.log
+
+# Exclude all .tfvars files, which are likely to contain sentitive data, such as
+# password, private keys, and other secrets. These should not be part of version
+# control as they are data points which are potentially sensitive and subject
+# to change depending on the environment.
+#
+*.tfvars
+!*.auto.tfvars
+*.tfvars.json
+
+# Ignore override files as they are usually used to override resources locally and so
+# are not checked in
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Include override files you do wish to add to version control using negated pattern
+#
+# !example_override.tf
+
+# Include tfplan files to ignore the plan output of command: terraform plan -out=tfplan
+# example: *tfplan*
+
+# Ignore CLI configuration files
+.terraformrc
+terraform.rc
+
+# Lock files
+.terraform.lock.hcl

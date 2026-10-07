@@ -1,0 +1,79 @@
+---
+formatter: markdown table
+
+settings:
+  required: false
+
+output:
+  file: README.md
+  mode: inject
+  sort-by: name
+  header-from: README.md
+  output-values: true
+  output-variables: true
+  output-providers: true
+  output-requirements: true
+  output-resources: true
+ 
+content: |-
+  {{ .Header }}
+
+  {{ include "Intro.md" }}
+
+  #Basic Example
+
+  ```hcl
+  {{ include "examples/basic/main.tf" }}
+
+  {{ include "examples/basic/variables.tf" }}
+
+  {{ include "examples/basic/outputs.tf" }}
+
+  {{ include "examples/basic/terraform.tf" }}
+
+  {{ include "examples/basic/providers.tf" }}
+  ```
+
+  #Default Example (CAE with DNS and Log Analytics ID)
+
+  ```hcl
+  {{ include "examples/default/main.tf" }}
+
+  {{ include "examples/default/variables.tf" }}
+
+  {{ include "examples/default/outputs.tf" }}
+
+  {{ include "examples/default/terraform.tf" }}
+
+  {{ include "examples/default/providers.tf" }}
+  ```
+
+  #CAE with log analytics
+
+  ```hcl
+  {{ include "examples/cae-with-log-analytics-inbuilt/main.tf" }}
+
+  {{ include "examples/cae-with-log-analytics-inbuilt/variables.tf" }}
+
+  {{ include "examples/cae-with-log-analytics-inbuilt/outputs.tf" }}
+
+  {{ include "examples/cae-with-log-analytics-inbuilt/terraform.tf" }}
+
+  {{ include "examples/cae-with-log-analytics-inbuilt/providers.tf" }}
+  ```
+
+  {{ .Requirements }}
+
+  {{ .Providers }}
+
+  {{ .Modules }}
+
+  {{ .Resources }}
+
+  {{ .Inputs }}
+
+  {{ .Outputs }}
+
+  {{ include "CHANGELOG.md" }}
+
+  {{ .Footer }}

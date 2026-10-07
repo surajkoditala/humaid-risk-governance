@@ -3,6 +3,7 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.Scoring
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.Scoring;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Core;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Scoring;
+    using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Users;
     using Humaid.RiskGovernance.AdminUI.Web.Controllers.Core;
     using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
@@ -21,11 +22,15 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.Scoring
             _scoringService = scoringService;
         }
 
-        /// <summary>US-10.1: rejects any config that would let residual risk reach zero.</summary>
+        /// <summary>US-10.1: rejects any config that would let residual risk reach zero. Admin-owned,
+        /// like WorkflowRuleController.Upsert - kept separate from the analyst who scores and votes.</summary>
         [HttpPost("Config")]
+        [Authorize(Roles = AppRoles.Admin)]
         public Task<IActionResult> UpsertConfig([FromBody] UpsertScoringConfigInput input) =>
             ExecuteAsync(async () =>
             {
+                if (RequireSelf<Guid>(input.ActorUserId) is { } forbidden) return forbidden;
+
                 try
                 {
                     var id = await _scoringService.UpsertConfigAsync(input);
@@ -39,6 +44,7 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.Scoring
 
         /// <summary>US-7.1: Residual = Inherent - (Effectiveness x Mitigation), residual always > 0.</summary>
         [HttpPost("Calculate")]
+        [Authorize(Roles = AppRoles.Analyst)]
         public Task<IActionResult> Calculate([FromBody] CalculateRiskScoreInput input) =>
             ExecuteAsync(async () =>
             {
@@ -55,9 +61,12 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.Scoring
 
         /// <summary>US-7.2: reason mandatory; rejects any value &lt;= 0.</summary>
         [HttpPost("Override")]
+        [Authorize(Roles = AppRoles.Analyst)]
         public Task<IActionResult> Override([FromBody] OverrideRiskScoreInput input) =>
             ExecuteAsync(async () =>
             {
+                if (RequireSelf<Guid>(input.ActorUserId) is { } forbidden) return forbidden;
+
                 try
                 {
                     var id = await _scoringService.OverrideAsync(input);
@@ -70,6 +79,7 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.Scoring
             }, "Failed to override risk score.");
 
         [HttpGet("{assessmentId:guid}")]
+        [Authorize(Roles = AppRoles.Analyst)]
         public Task<IActionResult> GetScores(Guid assessmentId) =>
             ExecuteAsync(async () =>
             {
@@ -78,6 +88,7 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.Scoring
             }, "Failed to fetch risk scores.");
 
         [HttpGet("Controls/{riskCategoryId:guid}")]
+        [Authorize(Roles = AppRoles.AnalystOrAdmin)]
         public Task<IActionResult> GetControls(Guid riskCategoryId) =>
             ExecuteAsync(async () =>
             {

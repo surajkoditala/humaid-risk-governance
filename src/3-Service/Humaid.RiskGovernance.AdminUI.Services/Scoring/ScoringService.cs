@@ -36,8 +36,7 @@ namespace Humaid.RiskGovernance.AdminUI.Services.Scoring
         {
             // DEF-002: a Product Owner id changing scoring configuration returned 200 - US-10.1 is
             // explicitly "FCRM Analyst (with configuration privileges)", not any authenticated user.
-            var actorRole = await _userRepo.GetRoleAsync(input.ActorUserId);
-            if (actorRole is not ("Analyst" or "Admin"))
+            if (!await _userRepo.HasRoleAsync(input.ActorUserId, "Analyst") && !await _userRepo.HasRoleAsync(input.ActorUserId, "Admin"))
             {
                 throw new ValidationException("Only an FCRM Analyst may change scoring configuration.");
             }

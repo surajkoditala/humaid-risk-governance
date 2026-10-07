@@ -21,7 +21,7 @@ This file gives Claude Code full context on this hackathon project. Read this be
 | Dev 1 (backend/.NET tech lead) | Core domain, Assessment/Scoring module, AI orchestration layer (`RAW.AI`) |
 | Dev 2 | Intake, Workflow, Committee module, API layer, EF Core setup |
 | QA | `/tests` (unit/integration), `/evals` (AI output quality evaluation — 10% judging weight) |
-| DevOps | `/ops` (Docker, Bicep/Terraform), Azure DevOps CI/CD, monitoring/observability (Operations stage) |
+| DevOps | `/ops` (Terraform in `ops/iac/`, local Docker Compose), Dockerfiles, Azure DevOps CI/CD (`.azure-pipelines/`), monitoring/observability (Operations stage) |
 
 ## The Problem Statement (given, deliberately incomplete — expansion is graded)
 
@@ -61,40 +61,45 @@ Not evaluated: which AI tool used, coding speed, raw output volume, polish witho
 
 **Rationale:** 4-person team, 5-week timeline. Production scalability is only 5% of the score; AI harness/orchestration is 30%. Effort belongs in the AI layer, not distributed-systems overhead. Clean module boundaries make it easy to defend and easy to split later if asked. The one deliberate exception is Mock Systems, which stands in for the bank's external systems and is therefore its own separately deployed service, not part of the Workbench.
 
+The repo as built (5-layer Clean Architecture; `docs/architecture/architecture-mapping.md` maps it onto the originally suggested `RAW.*` layout):
+
 ```
-RiskAssessmentWorkbench.sln
+Humaid.RiskGovernance.AdminUI.slnx
 ├── src/
-│   ├── RAW.Api/                 → Controllers / minimal APIs
-│   ├── RAW.Application/         → Use cases (CQRS-style)
-│   │   ├── ChangeRequests/      → Dev 2
-│   │   ├── Assessments/         → Dev 1
-│   │   ├── Scoring/             → Dev 1
-│   │   ├── Committee/           → Dev 2
-│   │   └── Audit/               → shared, append-only
-│   ├── RAW.Domain/              → Entities, value objects, domain logic — zero external deps
-│   ├── RAW.Infrastructure/      → EF Core, PostgreSQL, external services
-│   └── RAW.AI/                  → Claude API orchestration, RAG, prompts — Dev 1
-├── tests/                       → QA
-│   ├── RAW.UnitTests/
-│   └── RAW.IntegrationTests/
-├── evals/                       → QA — AI output quality measurement against expected outputs
-├── ai/                          → prompts, agent configs (hackathon repo requirement)
+│   ├── 1-API/Humaid.RiskGovernance.AdminUI.Web/                 → ASP.NET Core Web API: controllers, Auth0 JWT validation; serves the built webapp from wwwroot in its image
+│   ├── 2-Infrastructure/Humaid.RiskGovernance.AdminUI.Infrastructure/ → interfaces, models, OperationResult<T> — no implementations
+│   ├── 3-Service/
+│   │   ├── Humaid.RiskGovernance.AdminUI.Services/              → business logic (intake, assessment, scoring, committee, audit, config, document processing)
+│   │   └── Humaid.RiskGovernance.AdminUI.AI/                    → AI orchestration — IChatCompletionClient (Anthropic or Azure AI Foundry)
+│   ├── 4-Persistence/
+│   │   ├── Humaid.RiskGovernance.AdminUI.DA/                    → Dapper repos — every query calls a stored routine
+│   │   └── Humaid.RiskGovernance.AdminUI.DB/                    → schema/functions/seed + generated deploy_all.sql
+│   └── 6-MockExternalSystems/Humaid.RiskGovernance.MockSystems/ → mock CRM/Core Banking/Vendor Mgmt — separate service, own schema
+├── webapp/                      → 5-Presentation: React + Vite SPA (webapp.esproj, built with the solution)
+├── tests/Humaid.RiskGovernance.AdminUI.UnitTests/  → QA — xUnit + Moq
+├── evals/                       → QA — AI output quality measurement against fixed datasets
+├── ai/                          → prompts, agent docs, research, data-generation, langgraph/ demonstrator
+├── harness/                     → dev tooling: dev_harness (LangGraph diff review), ba_harness, test_case_harness
 ├── docs/
-│   ├── requirements/            → user-stories.md lives here, plus risk-framework.md
-│   ├── architecture/
-│   └── governance/               → review gates + rationale for each
-├── ops/                         → DevOps — Dockerfile, docker-compose, Bicep/Terraform, monitoring
-└── README.md                    → setup, walkthrough, decision log
+│   ├── requirements/            → user-stories.md
+│   ├── architecture/            → architecture / infrastructure / pipeline mappings, C4, diagrams, Auth0 setup
+│   ├── governance/              → human-in-the-loop gates, access-control matrix, roles and screens
+│   └── qa/                      → requirement coverage, test execution report
+├── ops/                         → local Docker Compose, setup-local-db.sh, proxy certs, Azure deployment notes (README.md)
+│   └── iac/                     → Terraform: modules/ (10 reusable modules) + environments/dev/
+├── .azure-pipelines/            → Azure DevOps pipelines: iac, workbench, mock-api, observability, harness
+└── README.md                    → setup, walkthrough, current state
 ```
 
 **Audit trail requirement:** must be write-once/append-only at the data layer (not just app-level permissions) — this is a technical/architecture constraint, not just a UI feature. Factor this into the Audit module's data store design from day one.
 
 ## Tech Stack
-- Backend: C# / .NET Web API
-- Frontend: React or Angular (team's choice — no hackathon restriction)
-- Database: PostgreSQL (Azure Database for PostgreSQL Flexible Server, Burstable tier, or containerized for local dev)
+- Backend: C# / .NET 10 Web API; data access through Dapper calling PostgreSQL stored functions (no EF Core, no ad-hoc SQL)
+- Frontend: React 19 + Vite, Auth0 (`@auth0/auth0-react`); in Azure the built SPA is served from the Workbench image
+- Database: PostgreSQL 16 (Azure Database for PostgreSQL Flexible Server in Azure; Docker locally)
+- AI: `AI_PROVIDER` = `Anthropic` (local default) or `AzureFoundry` (dev in Azure)
 - Deployment: Azure Container Apps
-- Containerization: Dockerfile + docker-compose.yml (local), Bicep/Terraform (Azure deploy)
+- Containerization: a Dockerfile per service plus `ops/docker-compose*.yml` (local); Terraform in `ops/iac/` (Azure)
 - AI coding tool: Claude Code — used to direct/orchestrate development, not a prompt-to-app generator
 
 ---
@@ -139,15 +144,16 @@ Prepared by the team's BA (epics 1–10), plus Epics 11–13 raised by QA on 17 
 8. Committee Review & Voting
 9. Immutable Audit Trail (append-only at data layer)
 10. Platform Configuration (analyst-owned, no-code scoring/workflow tuning)
-11. Access Control (role-based permissions enforced at the API, not just the UI)
+11. Access Control (role-based permissions enforced at the API, not just the UI) — delivered: see `docs/governance/access-control-matrix.md` for the role-by-action matrix AC4 asks for
 12. Deployment & Operations (schema deploy, container build/scan, observability)
 13. Non-Functional Requirements (retention, in-tenant model calls)
 14. Mock External Systems & Data Ingestion (mock CRM/Core Banking/Vendor Management as a separate service; Data Ingestion Layer is the only path to it; committee decisions push back to the source system — deterministic, no AI call)
-15. Terraform Modules for Azure Infrastructure (10 reusable modules under `iac/modules`)
+15. Terraform Modules for Azure Infrastructure (10 reusable modules under `ops/iac/modules`)
 16. Dev Environment Infrastructure Set Up (the dev environment provisioned from those modules)
 17. Set Up DevOps CI/CD Pipelines (infrastructure and application pipelines in Azure DevOps) — US-17.4 and US-17.8 are tagged **[AI]**: AI reviews pull requests in the pipeline, not in the product
-18. Observability (application telemetry to Application Insights delivered — US-18.1; an SRE watchdog agent — US-18.2 — is still open)
+18. Observability (application telemetry to Application Insights — US-18.1 — and the SRE watchdog agent — US-18.2 — are both delivered; see the Observability section below)
 19. SLA Tracking and Breach Notification (business-day SLA targets per stage and change type, elapsed-time tracking and the SLA view are delivered — US-19.1, 19.2, 19.5; distribution lists and breach email — US-19.3, 19.4 — need an email provider and a scheduled job and are still open). Deterministic arithmetic, no AI; a breach only informs and never changes a status or decides anything.
+20. AI Orchestration State & LangGraph Evaluation (a shared state object across the AI touchpoints, plus a scoped LangGraph demonstrator — see `docs/architecture/langgraph-evaluation.md` for why full adoption isn't recommended for this submission, and its own epic for the risk that this doesn't finish by 30 Sep). Numbered 20, not 19 — Epic 19 (SLA Tracking) exists in Azure Boards only, not yet in `user-stories.md`.
 
 **Open questions logged by the BA — resolve with team before locking design:**
 1. Do Product Owners see analyst scoring rationale, or only status?
@@ -162,29 +168,33 @@ Every AI-touchpoint epic (2, 3, 4, 5) pairs with a human review/override story b
 
 ## Infrastructure, DevOps & Observability — see Epics 15–18 in `docs/requirements/user-stories.md`
 
-Orientation only, as of 25 Sep 2026; the acceptance criteria in the user stories are the spec. This section is separate from the application architecture above.
+Orientation only, as of 5 Oct 2026; the acceptance criteria in the user stories are the spec. This section is separate from the application architecture above.
 
 ### Where the code lives
-- **`main`** holds the infrastructure: `iac/` (Terraform) and the infrastructure pipelines in `.azure-pipelines/iac/`. It has no application code.
-- **`release/1.00`** holds the application (`src/`, `webapp/`, `tests/`, `ops/`), `docs/`, and the application pipelines in `.azure-pipelines/`. `iac/` is not on this branch yet.
+- Infrastructure lives in `ops/iac/` (Terraform) with its pipelines in `.azure-pipelines/iac/`; the application lives in `src/`, `webapp/`, and `tests/`, with its pipelines elsewhere in `.azure-pipelines/`. Both `main` and `release/1.00` carry the whole tree.
+- Infrastructure changes land on **`main`** (the infra PR review and deploy trigger on it, and the SRE watchdog is scheduled from it); application changes land on **`release/1.00`** (the app PR reviews run on PRs into it, and a push to `release/*` builds and deploys the images).
+- PRs into `release/*` can only be merged with a merge commit (GitHub ruleset `release-merge-commit-only`). Merge `release/1.00` → `main` with a merge commit too: squashing splits the two histories and causes add/add conflicts on the next release merge.
 - The repo is on GitHub; the pipelines run in Azure DevOps.
 
-### Infrastructure as Code (`iac/`, Epics 15–16)
+### Infrastructure as Code (`ops/iac/`, Epics 15–16)
 - Terraform `~> 1.8` (pipelines install 1.12.2), azurerm `>= 4.0, < 5.0`. Remote state: azurerm backend, resource group `rg-gh-tf-dev`, storage account `stghtfstatedev01`, container `tfstate`, key `dev/terraform.tfstate`.
-- **`iac/modules/`** — ten reusable modules, each with README, Intro, CHANGELOG, and examples: resource group, virtual network, private DNS zone, key vault, storage account, PostgreSQL, Log Analytics workspace, container registry, container apps environment, container apps. The modules validate the required tags (`business_unit`, `customer`, `environment`, `product`, `owner`, `region`), follow the `<type>-<product>-<environment>` naming, and offer optional locks, RBAC, private endpoints, and diagnostic settings.
-- **`iac/environments/dev/`** — one configuration, one `main.<resource>.tf` file per resource, variables in `variables.*.tf`, values in `parameters.*.auto.tfvars`. It provisions: resource group; VNet `10.12.0.0/16` with subnets `snet-pep-dev-01` and `snet-cae-dev-01` and one NSG each; six private DNS zones; Key Vault; Storage Account (four private endpoints); PostgreSQL Flexible Server with database `risk_governance_db`; Log Analytics workspace and Application Insights; container registry; user-assigned identity `id-ca-<product>-<environment>` with AcrPull; a VNet-integrated container apps environment (Consumption profile); and two container apps.
-- **Container apps:** `gh-hrg-workbench` (Workbench UI, external ingress, port 8080) and `gh-hrg-mockapi` (Mock API, internal-only ingress, so only the Workbench inside the environment can reach it). Both start from a placeholder image (`hello-dotnet-http:v1`); the real images are meant to be deployed by the pipeline.
+- **`ops/iac/modules/`** — ten reusable modules, each with README, Intro, CHANGELOG, and examples: resource group, virtual network, private DNS zone, key vault, storage account, PostgreSQL, Log Analytics workspace, container registry, container apps environment, container apps. The modules validate the required tags (`business_unit`, `customer`, `environment`, `product`, `owner`, `region`), follow the `<type>-<product>-<environment>` naming, and offer optional locks, RBAC, private endpoints, and diagnostic settings.
+- **`ops/iac/environments/dev/`** — one configuration, one `main.<resource>.tf` file per resource, variables in `variables.*.tf`, values in `parameters.*.auto.tfvars`. It provisions: resource group; VNet `10.12.0.0/16` with subnets `snet-pep-dev-01` and `snet-cae-dev-01` and one NSG each; six private DNS zones; Key Vault; Storage Account (four private endpoints); PostgreSQL Flexible Server with database `risk_governance_db`; Log Analytics workspace and Application Insights; container registry; user-assigned identity `id-ca-<product>-<environment>` with AcrPull; a VNet-integrated container apps environment (Consumption profile); and two container apps.
+- **Container apps:** `gh-hrg-workbench` (Workbench UI, external ingress, port 8080) and `gh-hrg-mockapi` (Mock API, internal-only ingress, so only the Workbench inside the environment can reach it). Terraform creates them with a placeholder image (`hello-dotnet-http:v1`); the real images are deployed by `workbench/workbench.yml` and `mock-api/mock-api.yml`, and Terraform ignores later image changes.
 - **Decisions and constraints to keep:** default region `eastus2`; PostgreSQL is in `centralus` because the subscription cannot provision it in `eastus2`, and its private endpoint stays in `eastus2` with the VNet. Data services sit behind private endpoints with network rules set to deny by default. Dev is cost-conscious on purpose: Consumption plan only, no high availability, no geo-redundant backup, no resource group lock, and diagnostic settings and Log Analytics attachments left disabled (commented out in Terraform).
 - **Secrets never go in code or tfvars.** The PostgreSQL admin password is generated by Terraform at apply time, and the apps reach PostgreSQL, Key Vault, and Storage through managed identities (Entra), not passwords.
+- **App config in Azure** comes from container app env vars set in `ops/iac/environments/dev/locals.tf`: `AZURE_POSTGRESQL_ENDPOINT` (passwordless connection string, Entra token), `BLOB_STORAGE_SERVICE_URI`, `PEP_KEY_VAULT`, `APPLICATIONINSIGHTS_CONNECTION_STRING`, `MOCK_SYSTEMS_BASE_URL`, `CORS_ALLOWED_ORIGINS__0`, and `AI_PROVIDER=AzureFoundry` with `FOUNDRY_PROJECT_ENDPOINT`/`FOUNDRY_MODEL_DEPLOYMENT`. The only secrets, `ANTHROPIC-API-KEY` and `FOUNDRY-API-KEY`, are read from Key Vault at startup (allow-listed in `Program.cs`). Each app's system identity holds Key Vault Secrets/Certificate User and Storage Blob/Queue Data Contributor.
 
 ### CI/CD pipelines (`.azure-pipelines/`, Epic 17)
 | Pipeline | File | Runs when | Hard gates |
 |---|---|---|---|
-| Infra PR review | `iac/dev-pr-review.yml` | PR to `main` touching `iac/environments/dev` | `terraform fmt`, init, validate, TFLint (errors), Trivy HIGH/CRITICAL, Terraform plan, AI review `BLOCKING_ISSUES` |
-| Infra deploy | `iac/dev-tf-deploy.yml` | push to `main` touching `iac/environments/dev` | plan + apply to dev, no manual approval (the PR review is the required check) |
+| Infra PR review | `iac/dev-pr-review.yml` | PR to `main` touching `ops/iac/environments/dev` | `terraform fmt`, init, validate, TFLint (errors), Trivy HIGH/CRITICAL, Terraform plan, AI review `BLOCKING_ISSUES` |
+| Infra deploy | `iac/dev-tf-deploy.yml` | push to `main` touching `ops/iac/environments/dev` | plan + apply to dev, no manual approval (the PR review is the required check) |
 | Workbench PR review | `workbench/pr-review.yml` | PR to `release/1.00` touching Workbench paths | build, unit tests, webapp build, dependency audit, AI review blockers |
 | Mock API PR review | `mock-api/pr-review.yml` | PR to `release/1.00` touching `src/6-MockExternalSystems` | `deploy_all.sql` drift, build, dependency audit, AI review blockers |
-| Image build and deploy | `workbench/workbench.yml`, `mock-api/mock-api.yml` | not built yet — empty placeholders (US-17.9, US-17.10) | — |
+| Image build, scan, deploy | `workbench/workbench.yml`, `mock-api/mock-api.yml` | push to `release/*` (not `release/dev`) touching the component's paths | Docker build, push to ACR, Trivy HIGH/CRITICAL, `az containerapp update` to dev |
+| Dev harness report | `harness/dev-harness.yml` | PR to `release/1.00` (draft, not a required check) | none — informational LangGraph review report |
+| SRE watchdog | `observability/sre-watchdog.yml` | every 30 minutes, from `main` | none — opens, updates, and closes GitHub issues (see Observability) |
 
 - Informational only (never fail a build): Trivy MEDIUM, Checkov (soft-fail, skipped checks are justified in `.azure-pipelines/iac/.checkov.yml`), TFLint warnings, Semgrep.
 - **AI review:** the infrastructure pipeline reviews the scan results and the plan; the application pipelines share `templates/ai-review.yml` and `scripts/ai-review/` (`rules.md`, `schema.json`, `review.sh`, `post.sh`) plus a per-component `prompt.md`. The reviewer is read-only inside the checkout, and only a blocker fails the build. An AI outage never blocks a PR.
@@ -193,7 +203,7 @@ Orientation only, as of 25 Sep 2026; the acceptance criteria in the user stories
 
 ### Observability (Epic 18)
 - **US-18.1 is delivered.** Both container apps' `APPLICATIONINSIGHTS_CONNECTION_STRING` env var points at the dev Application Insights instance, and both `Program.cs` files register `AddOpenTelemetry().UseAzureMonitor(...)` conditional on that variable being set — so requests, outbound calls, and errors are flowing now that real images are deployed (see Epic 17). Resource-level diagnostic settings (Key Vault, Storage, PostgreSQL, the container apps environment) stay disabled — a deliberate cost-control decision, not a gap.
-- **US-18.2 (an SRE watchdog agent that watches Application Insights and notifies the team of critical issues) is still open.** Open: which conditions are critical, and which notification channel.
+- **US-18.2 is delivered, in two layers.** Native Azure Monitor alerts in `ops/iac/environments/dev/main.monitor.tf` (Smart Detection failure anomalies, plus scheduled query rules for a failed-request burst and unhandled exceptions) email the team through the `ag-sre-*` action group. On top of that, `observability/sre-watchdog.yml` runs every 30 minutes: `scripts/sre-watchdog/query.sh` checks the same two threshold conditions plus two trend/anomaly conditions as a leading indicator, Claude turns the rows into a plain-language verdict, and `post.sh` keeps one GitHub issue per condition (opened, updated, closed — the issue state is the dedupe store). The watchdog is read-only: it only runs `az monitor log-analytics query`.
 - US-12.2 (build and publish images) and US-12.3 (observe an environment) in Epic 12 are expected to be largely covered by Epics 17 and 18.
 
 ### Azure DevOps Boards (how to add or change work items)

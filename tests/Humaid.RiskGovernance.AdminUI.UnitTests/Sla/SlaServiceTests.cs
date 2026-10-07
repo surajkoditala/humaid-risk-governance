@@ -19,9 +19,14 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Sla
         private readonly Mock<IUserRepo> _userRepo = new();
         private readonly SlaService _sut;
 
+        /// <summary>The acting user holds exactly this role (or none, for null).</summary>
+        private void GivenRole(string? heldRole) =>
+            _userRepo.Setup(u => u.HasRoleAsync(It.IsAny<Guid>(), It.IsAny<string>()))
+                .ReturnsAsync((Guid _, string role) => heldRole is not null && role == heldRole);
+
         public SlaServiceTests()
         {
-            _userRepo.Setup(u => u.GetRoleAsync(It.IsAny<Guid>())).ReturnsAsync("Admin");
+            GivenRole("Admin");
             _repo.Setup(r => r.UpsertConfigAsync(It.IsAny<string>(), It.IsAny<SaveSlaConfigInput>())).ReturnsAsync(Guid.NewGuid());
             _sut = new SlaService(_repo.Object, _userRepo.Object);
         }
@@ -57,7 +62,7 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Sla
         [InlineData("CommitteeMember")]
         public async Task SaveConfigAsync_RefusesAnyoneWhoIsNotAdmin(string role)
         {
-            _userRepo.Setup(u => u.GetRoleAsync(It.IsAny<Guid>())).ReturnsAsync(role);
+            GivenRole(role);
 
             await Assert.ThrowsAsync<ValidationException>(() => _sut.SaveConfigAsync(ValidInput()));
             VerifyNothingWritten();
@@ -66,7 +71,7 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Sla
         [Fact]
         public async Task SaveConfigAsync_RefusesAnUnknownActor()
         {
-            _userRepo.Setup(u => u.GetRoleAsync(It.IsAny<Guid>())).ReturnsAsync((string?)null);
+            GivenRole(null);
 
             await Assert.ThrowsAsync<ValidationException>(() => _sut.SaveConfigAsync(ValidInput()));
             VerifyNothingWritten();
@@ -232,7 +237,7 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Sla
         [InlineData("CommitteeMember")]
         public async Task AddHolidayAsync_RefusesAnyoneWhoIsNotAdmin(string role)
         {
-            _userRepo.Setup(u => u.GetRoleAsync(It.IsAny<Guid>())).ReturnsAsync(role);
+            GivenRole(role);
 
             await Assert.ThrowsAsync<ValidationException>(() =>
                 _sut.AddHolidayAsync(new AddSlaHolidayInput { HolidayDate = "2026-12-25", Reason = "Bank holiday", ActorUserId = Guid.NewGuid() }));
@@ -263,7 +268,7 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Sla
         [InlineData("CommitteeMember")]
         public async Task SlaReporting_IsNotAvailableToProductOwnersOrCommitteeMembers(string role)
         {
-            _userRepo.Setup(u => u.GetRoleAsync(It.IsAny<Guid>())).ReturnsAsync(role);
+            GivenRole(role);
             var actor = Guid.NewGuid();
 
             await Assert.ThrowsAsync<ValidationException>(() => _sut.GetViewAsync(new SlaViewQuery { ActorUserId = actor }));
@@ -277,7 +282,7 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Sla
         [Fact]
         public async Task GetViewAsync_TreatsBlankFiltersAsNoFilterAndKeepsPagingInRange()
         {
-            _userRepo.Setup(u => u.GetRoleAsync(It.IsAny<Guid>())).ReturnsAsync("Analyst");
+            GivenRole("Analyst");
             SlaViewQuery? sent = null;
             _repo.Setup(r => r.GetViewAsync(It.IsAny<SlaViewQuery>()))
                 .Callback<SlaViewQuery>(q => sent = q)
@@ -305,7 +310,7 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Sla
         [Fact]
         public async Task GetViewAsync_PassesRealFiltersSortAndPagingThrough()
         {
-            _userRepo.Setup(u => u.GetRoleAsync(It.IsAny<Guid>())).ReturnsAsync("Admin");
+            GivenRole("Admin");
             SlaViewQuery? sent = null;
             _repo.Setup(r => r.GetViewAsync(It.IsAny<SlaViewQuery>()))
                 .Callback<SlaViewQuery>(q => sent = q)
@@ -338,7 +343,7 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Sla
         [Fact]
         public async Task GetSummaryAsync_ReturnsTheCountsForAnAnalyst()
         {
-            _userRepo.Setup(u => u.GetRoleAsync(It.IsAny<Guid>())).ReturnsAsync("Analyst");
+            GivenRole("Analyst");
             IReadOnlyList<SlaStateCount> counts = [new SlaStateCount { OverallState = "Breached", RequestCount = 2 }];
             _repo.Setup(r => r.GetSummaryAsync(It.IsAny<SlaViewQuery>())).ReturnsAsync(counts);
 

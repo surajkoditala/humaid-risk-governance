@@ -189,14 +189,19 @@ namespace Humaid.RiskGovernance.AdminUI.Services.Sla
             return warnings;
         }
 
+        /// <summary>A user can hold more than one role (Epic 11), so this is a membership check: the actor
+        /// must hold at least one of the allowed roles.</summary>
         private async Task RequireRoleAsync(Guid actorUserId, string action, params string[] allowedRoles)
         {
-            var role = await _userRepo.GetRoleAsync(actorUserId);
-            if (role is null || !allowedRoles.Contains(role))
+            foreach (var role in allowedRoles)
             {
-                var who = allowedRoles.Length == 1 && allowedRoles[0] == "Admin" ? "an Admin" : "an FCRM Analyst or Admin";
-                throw new ValidationException($"Only {who} may {action}.");
+                if (await _userRepo.HasRoleAsync(actorUserId, role))
+                {
+                    return;
+                }
             }
+            var who = allowedRoles.Length == 1 && allowedRoles[0] == "Admin" ? "an Admin" : "an FCRM Analyst or Admin";
+            throw new ValidationException($"Only {who} may {action}.");
         }
 
         private static string? NullIfBlank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value;

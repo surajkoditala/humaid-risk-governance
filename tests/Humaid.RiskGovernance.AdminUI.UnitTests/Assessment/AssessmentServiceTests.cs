@@ -30,11 +30,18 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Assessment
 
         public AssessmentServiceTests()
         {
-            _userRepo.Setup(u => u.GetRoleAsync(It.IsAny<Guid>())).ReturnsAsync("Analyst");
+            SetUpActorRole("Analyst");
             _sut = new AssessmentService(
                 _assessmentRepo.Object, _categoryMappingRepo.Object, _narrativeSectionRepo.Object,
                 _policyResearchRepo.Object, _riskScoreRepo.Object, _userRepo.Object);
         }
+
+        /// <summary>A user can hold more than one role (Epic 11 follow-up), so HasRoleAsync is a
+        /// membership check, not equality - this mocks "the actor's only role is <paramref
+        /// name="role"/>" for tests that only care about a single one.</summary>
+        private void SetUpActorRole(string role) =>
+            _userRepo.Setup(u => u.HasRoleAsync(It.IsAny<Guid>(), It.IsAny<string>()))
+                .ReturnsAsync((Guid _, string checkedRole) => checkedRole == role);
 
         private void SetUpFullyReadyAssessment()
         {
@@ -51,7 +58,7 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Assessment
         [Fact]
         public async Task FinalizeAsync_RejectsNonAnalystActor()
         {
-            _userRepo.Setup(u => u.GetRoleAsync(It.IsAny<Guid>())).ReturnsAsync("ProductOwner");
+            SetUpActorRole("ProductOwner");
             SetUpFullyReadyAssessment();
 
             await Assert.ThrowsAsync<ValidationException>(() => _sut.FinalizeAsync(Guid.NewGuid(), Guid.NewGuid()));
@@ -61,7 +68,7 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Assessment
         [Fact]
         public async Task FinalizeAsync_AllowsAdminActor()
         {
-            _userRepo.Setup(u => u.GetRoleAsync(It.IsAny<Guid>())).ReturnsAsync("Admin");
+            SetUpActorRole("Admin");
             SetUpFullyReadyAssessment();
 
             await _sut.FinalizeAsync(Guid.NewGuid(), Guid.NewGuid());
