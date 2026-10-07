@@ -12,6 +12,10 @@ import { SLA_STAGE_LABEL, SLA_STAGES, formatDate } from '../lib/sla.js'
 import { useFetch } from '../lib/useFetch.js'
 import { RequiredMark } from './RequiredMark.jsx'
 
+// The overall (start to decision) target comes first and is required; the three stage targets after it
+// are optional - a stage left blank is still timed and shown, it just has no target of its own.
+const COLUMNS = ['EndToEnd', 'Submitted', 'InAssessment', 'PendingCommittee']
+
 // { Product: { Submitted: '2', ... }, ... } from the flat list the API returns.
 function toGrid(targets) {
   const grid = {}
@@ -57,11 +61,12 @@ export default function SlaSettings() {
   const buildTargets = () => {
     const targets = []
     for (const type of CHANGE_TYPES) {
-      for (const stage of SLA_STAGES) {
+      for (const stage of COLUMNS) {
         const raw = (grid[type][stage] ?? '').trim()
+        if (raw === '' && stage !== 'EndToEnd') continue // optional stage target left blank
         const days = Number(raw)
         if (raw === '' || !Number.isInteger(days) || days < 1) {
-          throw new Error(`${type} — ${SLA_STAGE_LABEL[stage]}: enter a whole number of business days, 1 or more.`)
+          throw new Error(`${type} — ${SLA_STAGE_LABEL[stage]}: enter a whole number of business days, 1 or more${stage === 'EndToEnd' ? '.' : ' (or leave it blank).'}`)
         }
         targets.push({ changeType: type, stage, targetBusinessDays: days })
       }
@@ -158,7 +163,7 @@ export default function SlaSettings() {
       <CardHeader>
         <CardTitle>Service levels</CardTitle>
         <CardDescription>
-          How many business days each stage should take. Weekends and the holidays below don't count. Every change is saved as a new version and audited.
+          How many business days a request should take from submission to a decision, for each request type. A target for a single stage is optional — leave it blank to track only the overall time. Weekends and the holidays below don't count. Every change is saved as a new version and audited.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
@@ -175,9 +180,10 @@ export default function SlaSettings() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Request type</TableHead>
-                  {SLA_STAGES.map((s) => (
+                  {COLUMNS.map((s) => (
                     <TableHead key={s} className="whitespace-normal">
                       {SLA_STAGE_LABEL[s]}
+                      {s === 'EndToEnd' ? <RequiredMark /> : <span className="block text-xs font-normal text-muted-foreground">optional</span>}
                     </TableHead>
                   ))}
                 </TableRow>
@@ -186,13 +192,14 @@ export default function SlaSettings() {
                 {CHANGE_TYPES.map((type) => (
                   <TableRow key={type}>
                     <TableCell className="font-medium">{type}</TableCell>
-                    {SLA_STAGES.map((stage) => (
+                    {COLUMNS.map((stage) => (
                       <TableCell key={stage}>
                         <Input
                           className="w-20"
                           type="number"
                           min={1}
                           step={1}
+                          placeholder={stage === 'EndToEnd' ? '' : '—'}
                           aria-label={`${type} — ${SLA_STAGE_LABEL[stage]} (business days)`}
                           value={grid[type][stage]}
                           onChange={(e) => setCell(type, stage, e.target.value)}

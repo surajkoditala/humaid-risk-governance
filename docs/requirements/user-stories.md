@@ -903,18 +903,20 @@ Related: the email mechanism built in US-19.4 is the natural owner for the notif
 
 Raised by QA on 24 Sep 2026 from business gap BG-1 in `docs/qa/business-requirement-coverage.html` (business case BC-2: the 15–20 business-day cycle the platform exists to reduce is not measured anywhere).
 
-> **Delivery status:** US-19.1, US-19.2 and US-19.5 are delivered. SLA state is computed at read time from the recorded stage timestamps, so no scheduled job is needed for them. US-19.3 and US-19.4 (distribution lists and breach email) are **not yet delivered** — they need an email provider and a scheduled job, which do not exist yet.
+> **Delivery status:** US-19.1, US-19.2 and US-19.5 are delivered, with the overall target defaulting to 2 business days (7 Oct 2026). Until the email stories are built, overdue and at-risk requests are shown in the application itself (SLA view, My Requests, Assessments inbox, Committee queue, analyst workspace). SLA state is computed at read time from the recorded stage timestamps, so no scheduled job is needed for them. US-19.3 and US-19.4 (distribution lists and breach email) are **not yet delivered** — they need an email provider and a scheduled job, which do not exist yet.
 
 ### US-19.1 — Configure SLA targets per stage and change type
-*As an Admin, I want to set an SLA target for each workflow stage and each change type in the Configuration screen, so that service levels can be tuned as policy changes without an engineering change.*
+*As an Admin, I want to set an SLA target for each change type in the Configuration screen — an overall start-to-decision target, and optionally a target for each workflow stage — so that service levels can be tuned as policy changes without an engineering change.*
 
-Confirmed by the team on 24 Sep 2026: targets are in business days (weekends excluded, plus a configurable holiday list). Default targets to seed: Submitted 2, InAssessment 8, PendingCommittee 5, end-to-end 15 business days, which sits below the 15–20 day baseline.
+Confirmed by the team on 24 Sep 2026: targets are in business days (weekends excluded, plus a configurable holiday list).
+
+Updated 7 Oct 2026 (sync-up with the product and delivery leads): the business wants a decision ready in about 2 business days from intake, committee decision included, against 15–20 today. The overall target is therefore the one that matters and defaults to **2 business days** for every change type; per-stage targets (Submitted, InAssessment, PendingCommittee) are optional. The earlier defaults of 2 / 8 / 5 / 15 are withdrawn.
 
 **Acceptance Criteria**
-- Given I am signed in as Admin, when I open Configuration, then I see an SLA section listing the target in business days for each stage (Submitted, InAssessment, PendingCommittee, end-to-end) for each of the six change types, in plain structured form rather than raw JSON.
+- Given I am signed in as Admin, when I open Configuration, then I see an SLA section listing, for each of the six change types, an overall (start to decision) target in business days and an optional target for each stage (Submitted, InAssessment, PendingCommittee), in plain structured form rather than raw JSON.
 - Given I edit a target, when I save, then the system requires a reason, stores the change as a new version (the previous version is deactivated, never overwritten), and writes a ConfigChanged audit event with the before and after values.
-- Given I enter a target that is zero, negative, non-numeric or blank, when I save, then the save is refused with a message explaining the valid range and nothing is written.
-- Given the stage targets for a change type add up to more than its end-to-end target, when I save, then I am warned about the inconsistency before the save is accepted.
+- Given I enter a target that is zero, negative or non-numeric, or leave a change type without its overall target (an optional stage target may be left blank), when I save, then the save is refused with a message explaining the valid range and nothing is written.
+- Given stage targets are set for a change type and add up to more than its overall target, when I save, then I am warned about the inconsistency before the save is accepted.
 - Given I set an at-risk warning threshold (a percentage of the target, default 80%), when I save, then it applies to every stage and is validated as between 1 and 99.
 - Given I maintain the holiday calendar, when I add or remove a date with a reason, then business-day calculations use it from that point on and the change is audited.
 - Given a request was submitted under one SLA version, when the SLA configuration later changes, then the request keeps the version active at its submission unless the change is explicitly marked retroactive (consistent with US-10.2).
@@ -929,6 +931,7 @@ Confirmed by the team on 24 Sep 2026: targets are in business days (weekends exc
 - Given a request leaves a stage, when the status changes, then the stage's actual duration and whether it met its SLA are kept permanently and are not recalculated if the configuration later changes.
 - Given a clarification request to the Product Owner is open, when elapsed time is calculated, then the time waiting for the Product Owner is shown separately so the analyst stage is not charged for it (whether the clock pauses is itself a configuration setting, defaulting to paused).
 - Given the end-to-end SLA, when a request is decisioned, then its total cycle time from `submitted_at` to `decided_at` is recorded against the end-to-end target.
+- Given a stage has no target of its own, when I view the request, then the time spent in that stage is still shown and the SLA state follows the overall target.
 - Given any SLA calculation, when it runs, then it is deterministic arithmetic over recorded timestamps; no AI is involved in computing due dates or SLA state.
 
 ### US-19.3 — Configure the email distribution list for SLA breaches
@@ -947,6 +950,8 @@ Constraint: synthetic data only. In dev and demo, addresses are synthetic and ma
 *As an FCRM Analyst lead, I want the distribution list emailed as soon as a request is not completed within its stage SLA, so that breaches are escalated to people rather than discovered later by an examiner.*
 
 Design note: a scheduled background job (for example a hosted service running every 15 minutes) evaluates SLA state. No such job or email provider exists today; this story introduces both, and the same mechanism can serve the status notifications in US-1.3, US-8.1 and US-8.3 (BG-4).
+
+Update 7 Oct 2026: the team agreed to show SLA state in the application first — due date and on-track / at-risk / overdue in the SLA view, My Requests, the Assessments inbox, the Committee queue and the analyst workspace (delivered under US-19.2 and US-19.5) — and to defer email delivery of breach notifications, which needs an email provider that does not exist yet.
 
 **Acceptance Criteria**
 - Given a request passes the due date of its current stage without leaving that stage, when the SLA check runs, then an email is sent to that stage's configured distribution list.

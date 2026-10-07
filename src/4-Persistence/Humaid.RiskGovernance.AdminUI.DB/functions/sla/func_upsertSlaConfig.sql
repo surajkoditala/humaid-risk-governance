@@ -2,8 +2,13 @@
 -- overwritten - same pattern as func_upsertWorkflowRule / scoring_config), with a mandatory reason and
 -- a ConfigChanged audit event carrying the before and after values.
 --
--- p_targets is a JSON array of exactly 24 entries - every change type x every stage:
---   [{"changeType":"Product","stage":"Submitted","targetBusinessDays":2}, ...]
+-- p_targets is a JSON array of targets, each {"changeType", "stage", "targetBusinessDays"}:
+--   [{"changeType":"Product","stage":"EndToEnd","targetBusinessDays":2},
+--    {"changeType":"Product","stage":"InAssessment","targetBusinessDays":1}, ...]
+-- The overall (EndToEnd, start-to-decision) target is REQUIRED for every change type - it is the
+-- service level the business set (a decision in about 2 business days). Per-stage targets
+-- (Submitted / InAssessment / PendingCommittee) are OPTIONAL: a stage with no target is still timed
+-- and shown, it just has no target of its own to be late against.
 -- Requests already in flight keep the version they were submitted under (change_request_sla pins it),
 -- unless p_retroactive is true, in which case open requests are re-pinned to the new version and their
 -- current stage target is refreshed (US-19.1 AC7). Finished stages are never touched.
@@ -21,6 +26,7 @@ DECLARE
     v_entry JSONB;
     v_seen TEXT[] := ARRAY[]::TEXT[];
     v_key TEXT;
+    v_type TEXT;
     v_days NUMERIC;
     v_before JSONB;
 BEGIN
@@ -55,9 +61,11 @@ BEGIN
         v_seen := v_seen || v_key;
     END LOOP;
 
-    IF COALESCE(array_length(v_seen, 1), 0) <> 24 THEN
-        RAISE EXCEPTION 'A target is required for every change type and stage (24 in total, got %)', COALESCE(array_length(v_seen, 1), 0);
-    END IF;
+    FOREACH v_type IN ARRAY ARRAY['Product','Feature','Process','Vendor','Geography','CustomerSegment'] LOOP
+        IF NOT ((v_type || '/EndToEnd') = ANY (v_seen)) THEN
+            RAISE EXCEPTION 'An overall (start to decision) target is required for %', v_type;
+        END IF;
+    END LOOP;
 
     SELECT jsonb_build_object(
                'version', c.version_number,
@@ -84,11 +92,14 @@ BEGIN
         FROM change_request cr
         WHERE cr.id = s.change_request_id AND cr.status <> 'Decisioned';
 
+        -- A stage with no target in the new version ends up with no target (null), not its old one.
         UPDATE change_request_stage_history h
-        SET target_business_days = t.target_business_days
-        FROM change_request cr, sla_target t
-        WHERE h.left_at IS NULL AND cr.id = h.change_request_id
-          AND t.sla_config_id = v_id AND t.change_type = cr.change_type AND t.stage = h.stage;
+        SET target_business_days = (
+            SELECT t.target_business_days
+            FROM change_request cr
+            JOIN sla_target t ON t.change_type = cr.change_type AND t.stage = h.stage
+            WHERE cr.id = h.change_request_id AND t.sla_config_id = v_id)
+        WHERE h.left_at IS NULL;
     END IF;
 
     INSERT INTO audit_event (entity_type, entity_id, action, actor_user_id, actor_label, before_value, after_value, reason)

@@ -48,11 +48,13 @@ BEGIN
         v_direction := 'DESC';
     END IF;
 
+    -- Epic 19: due_at is when the DECISION is due (the overall target) - what a requester or analyst wants to
+    -- know; the current stage's own due date is only used when no overall target is set.
     RETURN QUERY EXECUTE format(
         'SELECT c.id, c.request_number, c.change_type, c.title, c.status, c.submitted_at,
                 EXTRACT(DAY FROM now() - c.submitted_at)::INT AS days_elapsed,
                 d.resolution, d.conditions_text,
-                CASE WHEN c.status = ''Decisioned'' THEN NULL ELSE o.due_at END AS due_at,
+                CASE WHEN c.status = ''Decisioned'' THEN NULL ELSE COALESCE(o.e2e_due_at, o.due_at) END AS due_at,
                 CASE WHEN c.status = ''Decisioned'' THEN (CASE WHEN ms.e2e_met THEN ''Met'' WHEN ms.e2e_met = false THEN ''Missed'' END)
                      ELSE o.overall_state END AS sla_state,
                 COUNT(*) OVER()::BIGINT AS total_count

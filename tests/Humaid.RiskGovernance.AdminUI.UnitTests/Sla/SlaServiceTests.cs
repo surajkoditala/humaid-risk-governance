@@ -26,15 +26,18 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Sla
             _sut = new SlaService(_repo.Object, _userRepo.Object);
         }
 
-        /// <summary>The confirmed defaults: 2 / 8 / 5 business days per stage, 15 end to end.</summary>
+        /// <summary>The default: a 2-business-day overall (start to decision) target for every request type,
+        /// no per-stage targets.</summary>
         private static List<SlaTarget> DefaultTargets() =>
-            ChangeTypes.SelectMany(type => new[]
-            {
-                new SlaTarget { ChangeType = type, Stage = SlaStages.Submitted, TargetBusinessDays = 2 },
-                new SlaTarget { ChangeType = type, Stage = SlaStages.InAssessment, TargetBusinessDays = 8 },
-                new SlaTarget { ChangeType = type, Stage = SlaStages.PendingCommittee, TargetBusinessDays = 5 },
-                new SlaTarget { ChangeType = type, Stage = SlaStages.EndToEnd, TargetBusinessDays = 15 },
-            }).ToList();
+            ChangeTypes.Select(type => new SlaTarget { ChangeType = type, Stage = SlaStages.EndToEnd, TargetBusinessDays = 2 }).ToList();
+
+        /// <summary>Adds per-stage targets (2 + 8 + 5 = 15 business days) for one request type.</summary>
+        private static void AddStageTargets(SaveSlaConfigInput input, string changeType)
+        {
+            input.Targets.Add(new SlaTarget { ChangeType = changeType, Stage = SlaStages.Submitted, TargetBusinessDays = 2 });
+            input.Targets.Add(new SlaTarget { ChangeType = changeType, Stage = SlaStages.InAssessment, TargetBusinessDays = 8 });
+            input.Targets.Add(new SlaTarget { ChangeType = changeType, Stage = SlaStages.PendingCommittee, TargetBusinessDays = 5 });
+        }
 
         private static SaveSlaConfigInput ValidInput() => new()
         {
@@ -135,6 +138,40 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Sla
         }
 
         [Fact]
+        public async Task SaveConfigAsync_RefusesWhenAnyRequestTypeHasNoOverallTarget()
+        {
+            var input = ValidInput();
+            input.Targets.RemoveAll(t => t.ChangeType == "Vendor"); // Vendor: no overall target at all
+            AddStageTargets(input, "Vendor");                        // only stage targets - not enough
+
+            var ex = await Assert.ThrowsAsync<ValidationException>(() => _sut.SaveConfigAsync(input));
+
+            Assert.Contains("overall", ex.Message);
+            Assert.Contains("Vendor", ex.Message);
+            VerifyNothingWritten();
+        }
+
+        [Fact]
+        public async Task SaveConfigAsync_AcceptsOverallTargetsOnlyAndLeavesStageTargetsOptional()
+        {
+            var result = await _sut.SaveConfigAsync(ValidInput());
+
+            Assert.True(result.Saved);
+            Assert.Empty(result.Warnings);
+        }
+
+        [Fact]
+        public async Task SaveConfigAsync_RefusesAZeroStageTargetEvenThoughStageTargetsAreOptional()
+        {
+            var input = ValidInput();
+            AddStageTargets(input, "Product");
+            input.Targets.Single(t => t.ChangeType == "Product" && t.Stage == SlaStages.InAssessment).TargetBusinessDays = 0;
+
+            await Assert.ThrowsAsync<ValidationException>(() => _sut.SaveConfigAsync(input));
+            VerifyNothingWritten();
+        }
+
+        [Fact]
         public async Task SaveConfigAsync_SavesAConsistentConfiguration()
         {
             var result = await _sut.SaveConfigAsync(ValidInput());
@@ -148,6 +185,7 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Sla
         public async Task SaveConfigAsync_WarnsWithoutSavingWhenStageTargetsExceedEndToEnd()
         {
             var input = ValidInput();
+            AddStageTargets(input, "Vendor");
             input.Targets.Single(t => t.ChangeType == "Vendor" && t.Stage == SlaStages.EndToEnd).TargetBusinessDays = 10; // 2 + 8 + 5 = 15 > 10
 
             var result = await _sut.SaveConfigAsync(input);
@@ -162,6 +200,7 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Sla
         public async Task SaveConfigAsync_SavesTheInconsistentConfigurationOnceTheWarningIsConfirmed()
         {
             var input = ValidInput();
+            AddStageTargets(input, "Vendor");
             input.Targets.Single(t => t.ChangeType == "Vendor" && t.Stage == SlaStages.EndToEnd).TargetBusinessDays = 10;
             input.ConfirmWarnings = true;
 

@@ -142,6 +142,10 @@ namespace Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Sla
         /// <summary>The worse of the stage and end-to-end states.</summary>
         public string? OverallState { get; set; }
         public int DaysOverdue { get; set; }
+
+        /// <summary>The overall (start to decision) target and the business days used against it so far.</summary>
+        public int? E2eTargetDays { get; set; }
+        public int? E2eElapsedDays { get; set; }
     }
 
     /// <summary>US-19.5 AC2/AC3 - cycle time of finished stages / decided requests against target.

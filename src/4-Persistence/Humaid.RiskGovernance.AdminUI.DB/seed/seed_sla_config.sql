@@ -1,9 +1,11 @@
 -- Epic 19 - default SLA configuration and backfill. Idempotent: re-applied on every startup.
 --
--- Defaults confirmed by the team on 24 Sep 2026 (US-19.1), in business days: Submitted 2,
--- InAssessment 8, PendingCommittee 5, end-to-end 15 - below the 15-20 business-day baseline the
--- platform exists to reduce. Warning threshold 80% of the target; time waiting on the Product Owner is
--- not charged to the analyst stage. Run after seed_dev_users.sql.
+-- Default: the overall (start-to-decision) target is 2 business days for every request type - the
+-- service level the problem statement sets against the 15-20 business-day baseline the platform
+-- exists to reduce (agreed on the 7 Oct 2026 sync-up; the 24 Sep defaults of 2 / 8 / 5 / 15 were
+-- replaced). No per-stage targets are seeded - an Admin can add them in Configuration. Warning
+-- threshold 80% of the target; time waiting on the Product Owner is not charged to the analyst stage.
+-- Run after seed_dev_users.sql.
 DO $$
 DECLARE
     v_admin UUID;
@@ -13,12 +15,11 @@ BEGIN
         SELECT id INTO v_admin FROM app_user WHERE auth0_subject = 'seed|admin-1';
         IF v_admin IS NOT NULL THEN
             INSERT INTO sla_config (id, version_number, at_risk_threshold_pct, pause_on_clarification, created_by_user_id, reason)
-            VALUES (v_config, 1, 80, true, v_admin, 'Initial defaults confirmed by the team, 24 Sep 2026');
+            VALUES (v_config, 1, 80, true, v_admin, 'Initial default: 2 business days start to decision (7 Oct 2026 sync-up)');
 
             INSERT INTO sla_target (sla_config_id, change_type, stage, target_business_days)
-            SELECT v_config, ct.change_type, st.stage, st.days
-            FROM (VALUES ('Product'), ('Feature'), ('Process'), ('Vendor'), ('Geography'), ('CustomerSegment')) AS ct(change_type)
-            CROSS JOIN (VALUES ('Submitted', 2), ('InAssessment', 8), ('PendingCommittee', 5), ('EndToEnd', 15)) AS st(stage, days);
+            SELECT v_config, ct.change_type, 'EndToEnd', 2
+            FROM (VALUES ('Product'), ('Feature'), ('Process'), ('Vendor'), ('Geography'), ('CustomerSegment')) AS ct(change_type);
         END IF;
     END IF;
 END $$;

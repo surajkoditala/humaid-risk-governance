@@ -25,7 +25,7 @@ RETURNS TABLE (
     change_request_id UUID, request_number TEXT, title TEXT, change_type TEXT, stage TEXT,
     entered_at TIMESTAMPTZ, target_days INT, elapsed_days INT, waiting_days INT, due_at TIMESTAMPTZ,
     stage_state TEXT, e2e_due_at TIMESTAMPTZ, e2e_state TEXT, overall_state TEXT, days_overdue INT,
-    total_count BIGINT
+    e2e_target_days INT, e2e_elapsed_days INT, total_count BIGINT
 ) AS $$
 DECLARE
     v_key TEXT := COALESCE(NULLIF(p_sort_by, ''), 'urgency');
@@ -37,7 +37,8 @@ BEGIN
     RETURN QUERY
     SELECT v.v_cr, v.v_number, v.v_title, v.v_type, v.v_stage,
            v.v_entered, v.v_target, v.v_elapsed, v.v_waiting, v.v_due,
-           v.v_stage_state, v.v_e2e_due, v.v_e2e_state, v.v_overall, v.v_overdue, v.v_total
+           v.v_stage_state, v.v_e2e_due, v.v_e2e_state, v.v_overall, v.v_overdue,
+           v.v_e2e_target, v.v_e2e_elapsed, v.v_total
     FROM (
         SELECT o.change_request_id AS v_cr, cr.request_number AS v_number, cr.title AS v_title,
                cr.change_type AS v_type, o.stage AS v_stage, o.entered_at AS v_entered,
@@ -48,7 +49,12 @@ BEGIN
                    CASE WHEN o.stage_state = 'Breached' THEN fn_sla_business_days_between(o.due_at, now()) ELSE 0 END,
                    CASE WHEN o.e2e_state = 'Breached' THEN fn_sla_business_days_between(o.e2e_due_at, now()) ELSE 0 END
                ) AS v_overdue,
-               (o.elapsed_days::NUMERIC / NULLIF(o.target_days, 0)) AS v_ratio,
+               o.e2e_target_days AS v_e2e_target, o.e2e_elapsed_days AS v_e2e_elapsed,
+               -- How far through its target a request is: the further of its stage and overall position
+               -- (GREATEST ignores a null, so a stage with no target of its own just uses the overall one).
+               GREATEST(o.elapsed_days::NUMERIC / NULLIF(o.target_days, 0),
+                        o.e2e_elapsed_days::NUMERIC / NULLIF(o.e2e_target_days, 0)) AS v_ratio,
+               COALESCE(o.due_at, o.e2e_due_at) AS v_sort_due,
                CASE o.overall_state WHEN 'Breached' THEN 0 WHEN 'AtRisk' THEN 1 WHEN 'OnTrack' THEN 2 ELSE 3 END AS v_rank,
                CASE o.stage WHEN 'Submitted' THEN 0 WHEN 'InAssessment' THEN 1 ELSE 2 END AS v_stage_rank,
                cr.submitted_at AS v_submitted,
@@ -72,8 +78,8 @@ BEGIN
              CASE WHEN v_key = 'stage' AND NOT v_asc THEN v.v_stage_rank END DESC,
              CASE WHEN v_key = 'progress' AND v_asc THEN v.v_ratio END ASC NULLS LAST,
              CASE WHEN v_key = 'progress' AND NOT v_asc THEN v.v_ratio END DESC NULLS LAST,
-             CASE WHEN v_key = 'dueAt' AND v_asc THEN v.v_due END ASC NULLS LAST,
-             CASE WHEN v_key = 'dueAt' AND NOT v_asc THEN v.v_due END DESC NULLS LAST,
+             CASE WHEN v_key = 'dueAt' AND v_asc THEN v.v_sort_due END ASC NULLS LAST,
+             CASE WHEN v_key = 'dueAt' AND NOT v_asc THEN v.v_sort_due END DESC NULLS LAST,
              CASE WHEN v_key = 'urgency' THEN v.v_rank END ASC,
              CASE WHEN v_key = 'urgency' THEN v.v_overdue END DESC,
              CASE WHEN v_key = 'urgency' THEN v.v_ratio END DESC NULLS LAST,

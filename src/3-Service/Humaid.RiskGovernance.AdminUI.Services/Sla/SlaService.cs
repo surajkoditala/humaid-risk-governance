@@ -130,15 +130,16 @@ namespace Humaid.RiskGovernance.AdminUI.Services.Sla
         }
 
         /// <summary>
-        /// Every change type needs a whole, positive target for all four stages - and nothing is
-        /// written if any is missing, zero, negative or repeated (US-19.1 AC3). The message names
-        /// exactly which entry is wrong.
+        /// Every request type needs an overall (start-to-decision) target; per-stage targets are optional.
+        /// Whatever is given must be a whole number of business days greater than zero, and nothing is
+        /// written if any entry is wrong, missing or repeated (US-19.1 AC3). The message names exactly which
+        /// entry is wrong.
         /// </summary>
         private static List<SlaTarget> ValidateTargets(IReadOnlyCollection<SlaTarget>? targets)
         {
             if (targets is null || targets.Count == 0)
             {
-                throw new ValidationException("A target in business days is required for every change type and stage.");
+                throw new ValidationException("An overall (start to decision) target in business days is required for every request type.");
             }
 
             var seen = new HashSet<string>();
@@ -159,16 +160,19 @@ namespace Humaid.RiskGovernance.AdminUI.Services.Sla
                 }
             }
 
-            var expected = ChangeTypes.Length * SlaStages.All.Count;
-            if (seen.Count != expected)
+            foreach (var type in ChangeTypes)
             {
-                throw new ValidationException($"A target is required for every change type and stage ({expected} in total, {seen.Count} given).");
+                if (!seen.Contains($"{type} / {SlaStages.EndToEnd}"))
+                {
+                    throw new ValidationException($"An overall (start to decision) target is required for {type}.");
+                }
             }
             return targets.ToList();
         }
 
-        /// <summary>US-19.1 AC4: stage targets that add up to more than the end-to-end target can never
-        /// all be met - warn before accepting (the caller must confirm), but it is not an error.</summary>
+        /// <summary>US-19.1 AC4: stage targets that add up to more than the overall target can never all
+        /// be met - warn before accepting (the caller must confirm), but it is not an error. Only the stage
+        /// targets actually set count; stages left without a target are ignored.</summary>
         private static List<string> FindInconsistencies(IEnumerable<SlaTarget> targets)
         {
             var warnings = new List<string>();
@@ -179,7 +183,7 @@ namespace Humaid.RiskGovernance.AdminUI.Services.Sla
                 if (stageSum > endToEnd)
                 {
                     warnings.Add(
-                        $"{group.Key}: the three stage targets add up to {stageSum} business days, which is more than the {endToEnd}-day end-to-end target.");
+                        $"{group.Key}: the stage targets add up to {stageSum} business days, which is more than the {endToEnd}-day overall target.");
                 }
             }
             return warnings;

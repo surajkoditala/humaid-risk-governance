@@ -833,10 +833,12 @@ BEGIN
         v_direction := 'DESC';
     END IF;
 
+    -- Epic 19: due_at is when the DECISION is due (the overall target) - what a requester or analyst wants to
+    -- know; the current stage's own due date is only used when no overall target is set.
     RETURN QUERY EXECUTE format(
         'SELECT c.id, c.request_number, c.change_type, c.title, c.status, c.submitted_at,
                 EXTRACT(DAY FROM now() - c.submitted_at)::INT AS days_elapsed,
-                CASE WHEN c.status = ''Decisioned'' THEN NULL ELSE o.due_at END AS due_at,
+                CASE WHEN c.status = ''Decisioned'' THEN NULL ELSE COALESCE(o.e2e_due_at, o.due_at) END AS due_at,
                 CASE WHEN c.status = ''Decisioned'' THEN (CASE WHEN ms.e2e_met THEN ''Met'' WHEN ms.e2e_met = false THEN ''Missed'' END)
                      ELSE o.overall_state END AS sla_state,
                 COUNT(*) OVER()::BIGINT AS total_count
@@ -943,11 +945,13 @@ BEGIN
         v_direction := 'DESC';
     END IF;
 
+    -- Epic 19: due_at is when the DECISION is due (the overall target) - what a requester or analyst wants to
+    -- know; the current stage's own due date is only used when no overall target is set.
     RETURN QUERY EXECUTE format(
         'SELECT c.id, c.request_number, c.change_type, c.title, c.status, c.submitted_at,
                 EXTRACT(DAY FROM now() - c.submitted_at)::INT AS days_elapsed,
                 d.resolution, d.conditions_text,
-                CASE WHEN c.status = ''Decisioned'' THEN NULL ELSE o.due_at END AS due_at,
+                CASE WHEN c.status = ''Decisioned'' THEN NULL ELSE COALESCE(o.e2e_due_at, o.due_at) END AS due_at,
                 CASE WHEN c.status = ''Decisioned'' THEN (CASE WHEN ms.e2e_met THEN ''Met'' WHEN ms.e2e_met = false THEN ''Missed'' END)
                      ELSE o.overall_state END AS sla_state,
                 COUNT(*) OVER()::BIGINT AS total_count
@@ -1056,6 +1060,7 @@ $$ LANGUAGE sql STABLE;
 
 -- ---- functions/committee/func_getCommitteeQueue.sql ----
 -- US-8.1 AC1: everything currently sitting in the committee's decision queue.
+-- Epic 19: also when the decision is due and whether it is on track, so the committee sees what is waiting.
 --
 -- Grid standard (filters/sort/server-side paging): p_sort_by/p_sort_dir only ever select a
 -- column from the fixed v_column mapping below - the caller's values are never concatenated
@@ -1071,7 +1076,7 @@ CREATE OR REPLACE FUNCTION func_getCommitteeQueue(
 )
 RETURNS TABLE (
     assessment_id UUID, change_request_id UUID, request_number TEXT,
-    change_type TEXT, title TEXT, routed_at TIMESTAMPTZ, total_count BIGINT
+    change_type TEXT, title TEXT, routed_at TIMESTAMPTZ, due_at TIMESTAMPTZ, sla_state TEXT, total_count BIGINT
 ) AS $$
 DECLARE
     v_column TEXT := CASE p_sort_by
@@ -1093,9 +1098,11 @@ BEGIN
 
     RETURN QUERY EXECUTE format(
         'SELECT a.id, c.id, c.request_number, c.change_type, c.title, a.finalized_at,
+                COALESCE(o.e2e_due_at, o.due_at) AS due_at, o.overall_state AS sla_state,
                 COUNT(*) OVER()::BIGINT AS total_count
          FROM change_request c
          JOIN assessment a ON a.change_request_id = c.id
+         LEFT JOIN fn_sla_open_status() o ON o.change_request_id = c.id
          WHERE c.status = ''PendingCommittee''
            AND ($1::TEXT IS NULL OR c.change_type = $1)
            AND ($2::TEXT IS NULL OR c.title ILIKE ''%%'' || $2 || ''%%'' OR c.request_number ILIKE ''%%'' || $2 || ''%%'')
@@ -2107,7 +2114,7 @@ RETURNS TABLE (
     change_request_id UUID, request_number TEXT, title TEXT, change_type TEXT, stage TEXT,
     entered_at TIMESTAMPTZ, target_days INT, elapsed_days INT, waiting_days INT, due_at TIMESTAMPTZ,
     stage_state TEXT, e2e_due_at TIMESTAMPTZ, e2e_state TEXT, overall_state TEXT, days_overdue INT,
-    total_count BIGINT
+    e2e_target_days INT, e2e_elapsed_days INT, total_count BIGINT
 ) AS $$
 DECLARE
     v_key TEXT := COALESCE(NULLIF(p_sort_by, ''), 'urgency');
@@ -2119,7 +2126,8 @@ BEGIN
     RETURN QUERY
     SELECT v.v_cr, v.v_number, v.v_title, v.v_type, v.v_stage,
            v.v_entered, v.v_target, v.v_elapsed, v.v_waiting, v.v_due,
-           v.v_stage_state, v.v_e2e_due, v.v_e2e_state, v.v_overall, v.v_overdue, v.v_total
+           v.v_stage_state, v.v_e2e_due, v.v_e2e_state, v.v_overall, v.v_overdue,
+           v.v_e2e_target, v.v_e2e_elapsed, v.v_total
     FROM (
         SELECT o.change_request_id AS v_cr, cr.request_number AS v_number, cr.title AS v_title,
                cr.change_type AS v_type, o.stage AS v_stage, o.entered_at AS v_entered,
@@ -2130,7 +2138,12 @@ BEGIN
                    CASE WHEN o.stage_state = 'Breached' THEN fn_sla_business_days_between(o.due_at, now()) ELSE 0 END,
                    CASE WHEN o.e2e_state = 'Breached' THEN fn_sla_business_days_between(o.e2e_due_at, now()) ELSE 0 END
                ) AS v_overdue,
-               (o.elapsed_days::NUMERIC / NULLIF(o.target_days, 0)) AS v_ratio,
+               o.e2e_target_days AS v_e2e_target, o.e2e_elapsed_days AS v_e2e_elapsed,
+               -- How far through its target a request is: the further of its stage and overall position
+               -- (GREATEST ignores a null, so a stage with no target of its own just uses the overall one).
+               GREATEST(o.elapsed_days::NUMERIC / NULLIF(o.target_days, 0),
+                        o.e2e_elapsed_days::NUMERIC / NULLIF(o.e2e_target_days, 0)) AS v_ratio,
+               COALESCE(o.due_at, o.e2e_due_at) AS v_sort_due,
                CASE o.overall_state WHEN 'Breached' THEN 0 WHEN 'AtRisk' THEN 1 WHEN 'OnTrack' THEN 2 ELSE 3 END AS v_rank,
                CASE o.stage WHEN 'Submitted' THEN 0 WHEN 'InAssessment' THEN 1 ELSE 2 END AS v_stage_rank,
                cr.submitted_at AS v_submitted,
@@ -2154,8 +2167,8 @@ BEGIN
              CASE WHEN v_key = 'stage' AND NOT v_asc THEN v.v_stage_rank END DESC,
              CASE WHEN v_key = 'progress' AND v_asc THEN v.v_ratio END ASC NULLS LAST,
              CASE WHEN v_key = 'progress' AND NOT v_asc THEN v.v_ratio END DESC NULLS LAST,
-             CASE WHEN v_key = 'dueAt' AND v_asc THEN v.v_due END ASC NULLS LAST,
-             CASE WHEN v_key = 'dueAt' AND NOT v_asc THEN v.v_due END DESC NULLS LAST,
+             CASE WHEN v_key = 'dueAt' AND v_asc THEN v.v_sort_due END ASC NULLS LAST,
+             CASE WHEN v_key = 'dueAt' AND NOT v_asc THEN v.v_sort_due END DESC NULLS LAST,
              CASE WHEN v_key = 'urgency' THEN v.v_rank END ASC,
              CASE WHEN v_key = 'urgency' THEN v.v_overdue END DESC,
              CASE WHEN v_key = 'urgency' THEN v.v_ratio END DESC NULLS LAST,
@@ -2197,8 +2210,13 @@ $$ LANGUAGE plpgsql;
 -- overwritten - same pattern as func_upsertWorkflowRule / scoring_config), with a mandatory reason and
 -- a ConfigChanged audit event carrying the before and after values.
 --
--- p_targets is a JSON array of exactly 24 entries - every change type x every stage:
---   [{"changeType":"Product","stage":"Submitted","targetBusinessDays":2}, ...]
+-- p_targets is a JSON array of targets, each {"changeType", "stage", "targetBusinessDays"}:
+--   [{"changeType":"Product","stage":"EndToEnd","targetBusinessDays":2},
+--    {"changeType":"Product","stage":"InAssessment","targetBusinessDays":1}, ...]
+-- The overall (EndToEnd, start-to-decision) target is REQUIRED for every change type - it is the
+-- service level the business set (a decision in about 2 business days). Per-stage targets
+-- (Submitted / InAssessment / PendingCommittee) are OPTIONAL: a stage with no target is still timed
+-- and shown, it just has no target of its own to be late against.
 -- Requests already in flight keep the version they were submitted under (change_request_sla pins it),
 -- unless p_retroactive is true, in which case open requests are re-pinned to the new version and their
 -- current stage target is refreshed (US-19.1 AC7). Finished stages are never touched.
@@ -2216,6 +2234,7 @@ DECLARE
     v_entry JSONB;
     v_seen TEXT[] := ARRAY[]::TEXT[];
     v_key TEXT;
+    v_type TEXT;
     v_days NUMERIC;
     v_before JSONB;
 BEGIN
@@ -2250,9 +2269,11 @@ BEGIN
         v_seen := v_seen || v_key;
     END LOOP;
 
-    IF COALESCE(array_length(v_seen, 1), 0) <> 24 THEN
-        RAISE EXCEPTION 'A target is required for every change type and stage (24 in total, got %)', COALESCE(array_length(v_seen, 1), 0);
-    END IF;
+    FOREACH v_type IN ARRAY ARRAY['Product','Feature','Process','Vendor','Geography','CustomerSegment'] LOOP
+        IF NOT ((v_type || '/EndToEnd') = ANY (v_seen)) THEN
+            RAISE EXCEPTION 'An overall (start to decision) target is required for %', v_type;
+        END IF;
+    END LOOP;
 
     SELECT jsonb_build_object(
                'version', c.version_number,
@@ -2279,11 +2300,14 @@ BEGIN
         FROM change_request cr
         WHERE cr.id = s.change_request_id AND cr.status <> 'Decisioned';
 
+        -- A stage with no target in the new version ends up with no target (null), not its old one.
         UPDATE change_request_stage_history h
-        SET target_business_days = t.target_business_days
-        FROM change_request cr, sla_target t
-        WHERE h.left_at IS NULL AND cr.id = h.change_request_id
-          AND t.sla_config_id = v_id AND t.change_type = cr.change_type AND t.stage = h.stage;
+        SET target_business_days = (
+            SELECT t.target_business_days
+            FROM change_request cr
+            JOIN sla_target t ON t.change_type = cr.change_type AND t.stage = h.stage
+            WHERE cr.id = h.change_request_id AND t.sla_config_id = v_id)
+        WHERE h.left_at IS NULL;
     END IF;
 
     INSERT INTO audit_event (entity_type, entity_id, action, actor_user_id, actor_label, before_value, after_value, reason)
@@ -2506,10 +2530,12 @@ WHERE u.auth0_subject = 'seed|admin-1'
 -- ---- seed/seed_sla_config.sql ----
 -- Epic 19 - default SLA configuration and backfill. Idempotent: re-applied on every startup.
 --
--- Defaults confirmed by the team on 24 Sep 2026 (US-19.1), in business days: Submitted 2,
--- InAssessment 8, PendingCommittee 5, end-to-end 15 - below the 15-20 business-day baseline the
--- platform exists to reduce. Warning threshold 80% of the target; time waiting on the Product Owner is
--- not charged to the analyst stage. Run after seed_dev_users.sql.
+-- Default: the overall (start-to-decision) target is 2 business days for every request type - the
+-- service level the problem statement sets against the 15-20 business-day baseline the platform
+-- exists to reduce (agreed on the 7 Oct 2026 sync-up; the 24 Sep defaults of 2 / 8 / 5 / 15 were
+-- replaced). No per-stage targets are seeded - an Admin can add them in Configuration. Warning
+-- threshold 80% of the target; time waiting on the Product Owner is not charged to the analyst stage.
+-- Run after seed_dev_users.sql.
 DO $$
 DECLARE
     v_admin UUID;
@@ -2519,12 +2545,11 @@ BEGIN
         SELECT id INTO v_admin FROM app_user WHERE auth0_subject = 'seed|admin-1';
         IF v_admin IS NOT NULL THEN
             INSERT INTO sla_config (id, version_number, at_risk_threshold_pct, pause_on_clarification, created_by_user_id, reason)
-            VALUES (v_config, 1, 80, true, v_admin, 'Initial defaults confirmed by the team, 24 Sep 2026');
+            VALUES (v_config, 1, 80, true, v_admin, 'Initial default: 2 business days start to decision (7 Oct 2026 sync-up)');
 
             INSERT INTO sla_target (sla_config_id, change_type, stage, target_business_days)
-            SELECT v_config, ct.change_type, st.stage, st.days
-            FROM (VALUES ('Product'), ('Feature'), ('Process'), ('Vendor'), ('Geography'), ('CustomerSegment')) AS ct(change_type)
-            CROSS JOIN (VALUES ('Submitted', 2), ('InAssessment', 8), ('PendingCommittee', 5), ('EndToEnd', 15)) AS st(stage, days);
+            SELECT v_config, ct.change_type, 'EndToEnd', 2
+            FROM (VALUES ('Product'), ('Feature'), ('Process'), ('Vendor'), ('Geography'), ('CustomerSegment')) AS ct(change_type);
         END IF;
     END IF;
 END $$;

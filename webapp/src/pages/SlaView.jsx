@@ -130,7 +130,7 @@ function OpenRequests({ actorId }) {
                 <SortableHeader column="requestNumber" label="Request #" query={query} onSort={toggleSort} />
                 <SortableHeader column="title" label="Title" query={query} onSort={toggleSort} />
                 <SortableHeader column="stage" label="Where it is" query={query} onSort={toggleSort} />
-                <SortableHeader column="progress" label="Progress" query={query} onSort={toggleSort} />
+                <SortableHeader column="progress" label="Time used" query={query} onSort={toggleSort} />
                 <SortableHeader column="dueAt" label="Due" query={query} onSort={toggleSort} />
               </TableRow>
             </TableHeader>
@@ -144,13 +144,22 @@ function OpenRequests({ actorId }) {
                   </TableCell>
                   <TableCell className="whitespace-normal break-words">{SLA_STAGE_LABEL[r.stage] || r.stage}</TableCell>
                   <TableCell className="whitespace-normal">
-                    {r.targetDays != null ? `${r.elapsedDays} of ${r.targetDays} days` : `${r.elapsedDays} days`}
+                    {r.e2eTargetDays != null ? `${r.e2eElapsedDays} of ${r.e2eTargetDays} days` : `${r.elapsedDays} days`}
+                    <p className="text-xs text-muted-foreground">
+                      {r.e2eTargetDays != null ? 'overall' : 'in this stage'}
+                      {r.e2eTargetDays != null && (
+                        <>
+                          {' · '}
+                          {r.targetDays != null ? `${r.elapsedDays} of ${r.targetDays}` : r.elapsedDays} in this stage
+                        </>
+                      )}
+                    </p>
                     {r.waitingDays > 0 && (
                       <p className="text-xs text-muted-foreground">+{r.waitingDays} waiting on requester</p>
                     )}
                   </TableCell>
                   <TableCell className="whitespace-normal">
-                    {formatDate(r.dueAt)}
+                    {formatDate(r.dueAt ?? r.e2eDueAt)}
                     {r.daysOverdue > 0 && (
                       <p className="text-xs text-red-700">
                         {r.daysOverdue} business day{r.daysOverdue === 1 ? '' : 's'} overdue

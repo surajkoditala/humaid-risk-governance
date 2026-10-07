@@ -1,4 +1,5 @@
 -- US-8.1 AC1: everything currently sitting in the committee's decision queue.
+-- Epic 19: also when the decision is due and whether it is on track, so the committee sees what is waiting.
 --
 -- Grid standard (filters/sort/server-side paging): p_sort_by/p_sort_dir only ever select a
 -- column from the fixed v_column mapping below - the caller's values are never concatenated
@@ -14,7 +15,7 @@ CREATE OR REPLACE FUNCTION func_getCommitteeQueue(
 )
 RETURNS TABLE (
     assessment_id UUID, change_request_id UUID, request_number TEXT,
-    change_type TEXT, title TEXT, routed_at TIMESTAMPTZ, total_count BIGINT
+    change_type TEXT, title TEXT, routed_at TIMESTAMPTZ, due_at TIMESTAMPTZ, sla_state TEXT, total_count BIGINT
 ) AS $$
 DECLARE
     v_column TEXT := CASE p_sort_by
@@ -36,9 +37,11 @@ BEGIN
 
     RETURN QUERY EXECUTE format(
         'SELECT a.id, c.id, c.request_number, c.change_type, c.title, a.finalized_at,
+                COALESCE(o.e2e_due_at, o.due_at) AS due_at, o.overall_state AS sla_state,
                 COUNT(*) OVER()::BIGINT AS total_count
          FROM change_request c
          JOIN assessment a ON a.change_request_id = c.id
+         LEFT JOIN fn_sla_open_status() o ON o.change_request_id = c.id
          WHERE c.status = ''PendingCommittee''
            AND ($1::TEXT IS NULL OR c.change_type = $1)
            AND ($2::TEXT IS NULL OR c.title ILIKE ''%%'' || $2 || ''%%'' OR c.request_number ILIKE ''%%'' || $2 || ''%%'')
