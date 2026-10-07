@@ -90,6 +90,14 @@ module "container_app_gh_riskgovernance_ui" {
           {
             name  = "APPLICATIONINSIGHTS_CONNECTION_STRING"
             value = local.APPLICATIONINSIGHTS_CONNECTION_STRING
+          },
+          {
+            name  = "AUTH0_DOMAIN"
+            value = local.AUTH0_DOMAIN
+          },
+          {
+            name  = "AUTH0_AUDIENCE"
+            value = local.AUTH0_AUDIENCE
           }
         ]
       }

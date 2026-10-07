@@ -15,6 +15,8 @@ locals {
   CORS_ALLOWED_ORIGINS__0               = "https://ca-${var.container_app_ui_name}-${var.tags.environment}.${module.container_app_env.container_app_environment_default_domain}"
   MOCK_SYSTEMS_BASE_URL                 = "https://ca-${var.container_app_backend_app_name}-${var.tags.environment}.internal.${module.container_app_env.container_app_environment_default_domain}"
   APPLICATIONINSIGHTS_CONNECTION_STRING = module.log_analytics_workspace.application_insights_connection_string
+  AUTH0_DOMAIN                          = "dev-sqeqegefs2iv4taa.us.auth0.com"
+  AUTH0_AUDIENCE                        = "https://risk-governance-api"
 
   # workbench variables
   AZURE_POSTGRESQL_ENDPOINT = "Server=${module.pgsql.postgresql_server_fqdn};Database=risk_governance_db;Port=5432;Ssl Mode=Require;User Id=ca-${var.container_app_ui_name}-${var.tags.environment};"
