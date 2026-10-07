@@ -153,6 +153,19 @@ export const Endpoints = {
     upsert: () => api('WorkflowRule'),
   },
 
+  // Service levels (SLA): configured by an Admin, viewed by Analysts and Admins. Every call carries
+  // the acting user so the server can check their role - same pattern as the other role-gated screens.
+  sla: {
+    config: (actorUserId) => api(`Sla/Config?actorUserId=${actorUserId}`),
+    saveConfig: () => api('Sla/Config'),
+    addHoliday: () => api('Sla/Holiday'),
+    removeHoliday: (id) => api(`Sla/Holiday/${id}/Remove`),
+    view: (actorUserId, query) => api(`Sla/View${toQueryString({ actorUserId, ...query })}`),
+    summary: (actorUserId, query) => api(`Sla/Summary${toQueryString({ actorUserId, ...query })}`),
+    performance: (actorUserId, query) => api(`Sla/Performance${toQueryString({ actorUserId, ...query })}`),
+    forRequest: (changeRequestId, actorUserId) => api(`Sla/Request/${changeRequestId}?actorUserId=${actorUserId}`),
+  },
+
   audit: {
     trail: (changeRequestId) => api(`Audit/${changeRequestId}`),
     exportPdf: (changeRequestId) => api(`Audit/${changeRequestId}/Export`),

@@ -45,7 +45,7 @@ OUT="deploy_all.sql"
 
   echo
   echo "-- ============================== seed =================================================="
-  for f in seed/seed_dev_users.sql seed/seed_ffiec_framework.sql seed/seed_controls.sql seed/seed_policy_corpus.sql seed/seed_workflow_rules.sql; do
+  for f in seed/seed_dev_users.sql seed/seed_ffiec_framework.sql seed/seed_controls.sql seed/seed_policy_corpus.sql seed/seed_workflow_rules.sql seed/seed_sla_config.sql; do
     echo
     echo "-- ---- $f ----"
     cat "$f"

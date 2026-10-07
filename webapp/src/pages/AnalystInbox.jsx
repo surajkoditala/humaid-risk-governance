@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import ClampedText from '../components/ClampedText.jsx'
+import SlaBadge from '../components/SlaBadge.jsx'
 import GridPagination from '../components/GridPagination.jsx'
 import SortableHeader from '../components/SortableHeader.jsx'
 import { Badge } from '@/components/ui/badge'
@@ -10,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Endpoints } from '../lib/api.js'
 import { CHANGE_REQUEST_STATUSES, CHANGE_TYPES } from '../lib/constants.js'
+import { formatDate } from '../lib/sla.js'
 import { useDebouncedValue } from '../lib/useDebouncedValue.js'
 import { useFetch } from '../lib/useFetch.js'
 import { useGridQuery } from '../lib/useGridQuery.js'
@@ -82,9 +84,10 @@ export default function AnalystInbox() {
                 <col className="w-28" />
                 <col className="w-24" />
                 <col />
-                <col className="w-32" />
-                <col className="w-24" />
+                <col className="w-28" />
                 <col className="w-20" />
+                <col className="w-32" />
+                <col className="w-16" />
               </colgroup>
               <TableHeader>
                 <TableRow>
@@ -99,6 +102,7 @@ export default function AnalystInbox() {
                     onSort={toggleSort}
                     className="text-right"
                   />
+                  <TableHead>Due</TableHead>
                   <TableHead />
                 </TableRow>
               </TableHeader>
@@ -114,6 +118,10 @@ export default function AnalystInbox() {
                       <Badge variant="secondary">{r.status}</Badge>
                     </TableCell>
                     <TableCell className="text-right">{r.daysElapsed}</TableCell>
+                    <TableCell className="whitespace-normal">
+                      {r.dueAt && <p className="text-sm">{formatDate(r.dueAt)}</p>}
+                      <SlaBadge state={r.slaState} />
+                    </TableCell>
                     <TableCell>
                       <Button size="sm" onClick={() => setSelected(r)}>
                         Open

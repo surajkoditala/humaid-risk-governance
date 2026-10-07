@@ -15,7 +15,7 @@ CREATE OR REPLACE FUNCTION func_getAllChangeRequests(
 )
 RETURNS TABLE (
     id UUID, request_number TEXT, change_type TEXT, title TEXT, status TEXT,
-    submitted_at TIMESTAMPTZ, days_elapsed INT, total_count BIGINT
+    submitted_at TIMESTAMPTZ, days_elapsed INT, due_at TIMESTAMPTZ, sla_state TEXT, total_count BIGINT
 ) AS $$
 DECLARE
     v_column TEXT := CASE p_sort_by
@@ -41,11 +41,18 @@ BEGIN
         v_direction := 'DESC';
     END IF;
 
+    -- Epic 19: due_at is when the DECISION is due (the overall target) - what a requester or analyst wants to
+    -- know; the current stage's own due date is only used when no overall target is set.
     RETURN QUERY EXECUTE format(
         'SELECT c.id, c.request_number, c.change_type, c.title, c.status, c.submitted_at,
                 EXTRACT(DAY FROM now() - c.submitted_at)::INT AS days_elapsed,
+                CASE WHEN c.status = ''Decisioned'' THEN NULL ELSE COALESCE(o.e2e_due_at, o.due_at) END AS due_at,
+                CASE WHEN c.status = ''Decisioned'' THEN (CASE WHEN ms.e2e_met THEN ''Met'' WHEN ms.e2e_met = false THEN ''Missed'' END)
+                     ELSE o.overall_state END AS sla_state,
                 COUNT(*) OVER()::BIGINT AS total_count
          FROM change_request c
+         LEFT JOIN fn_sla_open_status() o ON o.change_request_id = c.id
+         LEFT JOIN change_request_sla ms ON ms.change_request_id = c.id
          WHERE ($1::TEXT IS NULL OR c.status = $1)
            AND ($2::TEXT IS NULL OR c.change_type = $2)
            AND ($3::TEXT IS NULL OR c.title ILIKE ''%%'' || $3 || ''%%'' OR c.request_number ILIKE ''%%'' || $3 || ''%%'')

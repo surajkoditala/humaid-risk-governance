@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { useDevUser } from '../auth/DevUserContext.jsx'
 import { RequiredMark } from '../components/RequiredMark.jsx'
+import SlaStrip from '../components/SlaStrip.jsx'
 import { Endpoints, apiFetch, downloadFile } from '../lib/api.js'
 import { useFetch } from '../lib/useFetch.js'
 
@@ -857,6 +858,8 @@ export default function AssessmentWorkspace({ changeRequest, onBack }) {
         </div>
         {assessment && <Badge>{assessment.status}</Badge>}
       </div>
+
+      {assessmentId && <SlaStrip changeRequestId={changeRequest.id} refreshKey={`${assessmentId}-${bump}`} />}
 
       {!assessmentId ? (
         <p className="text-sm text-muted-foreground">Opening workspace…</p>

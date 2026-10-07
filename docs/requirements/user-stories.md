@@ -10,6 +10,7 @@
 
 - Stories are grouped into epics. Epics 1–10 map to the functional requirements in the problem statement. Epics 11–13 (Access Control, Deployment and Operations, Non-Functional Requirements) and US-9.3 (examiner-ready audit export) were raised by QA on 17 Sep 2026 after reviewing the built increment, and are cross-cutting rather than feature epics. Epic 14 (mock external systems and data ingestion) was added from the Platform Ecosystem Diagram (`docs/architecture/ecosystem-diagram.md`) and is deterministic integration, not an AI touchpoint.
 - Epics 15–18 (Terraform modules, dev environment infrastructure, CI/CD pipelines, and observability) were added from the infrastructure-as-code and pipeline work in `ops/iac/` and `.azure-pipelines/`. They are engineering-delivery epics written for the DevOps Engineer, and none of them changes what the product does for its users. US-17.4 and US-17.8 are tagged **[AI]** because AI reviews pull requests in the delivery pipeline (not in the product); a human still decides whether a pull request merges. Epic 18's application-telemetry story (US-18.1) is delivered; its SRE-agent story (US-18.2) is still open, with its scope to be refined.
+- Epic 19 (SLA tracking and breach notification) was raised by QA on 24 Sep 2026 from business gap BG-1 — the 15–20 business-day cycle the platform exists to reduce is not measured anywhere. US-19.1, US-19.2 and US-19.5 are delivered; US-19.3 and US-19.4 (email) are not yet.
 - Numbering note: Epic 14 follows Epic 13 because 11–13 were already taken in Azure Boards when the mock-systems epic was written up. The IDs here match the Boards work items one-to-one, and Epics 15–18 continue the same numbering. Epic 19 is reserved for Shanthi's SLA Tracking epic, which exists in Azure Boards (ids 93–98) but is not yet written up here — Epic 20 is numbered to leave that gap rather than collide with it.
 - Each story follows: *As a [actor], I want [capability], so that [outcome].*
 - Acceptance criteria use **Given / When / Then** so they're directly testable.
@@ -888,6 +889,92 @@ Builds on the dev environment (Epic 16) and the pipelines (Epic 17).
 
 ---
 
+## Epic 19 — SLA Tracking and Breach Notification
+
+**Goal:** Give every change request a service level at each workflow stage, measure elapsed time against it, and email a named distribution list when a request is not completed within its SLA. SLA targets and distribution lists are defined by the Admin in the Configuration screen, never in code.
+
+Stages tracked, matching the existing `change_request.status` values: Submitted (waiting for an analyst to open it), InAssessment (analyst working until routed), PendingCommittee (until the decision is recorded), plus the end-to-end cycle from `submitted_at` to `decided_at`.
+
+> **Governance rule:** an SLA breach only informs people. It never changes a request's status, skips a review gate, or auto-approves, auto-rejects or auto-defers anything. The system prepares, humans decide. Every SLA calculation is deterministic arithmetic over recorded timestamps; no AI is involved.
+
+Why it matters: without a target there is no way to demonstrate the platform made assessments faster, which is the benefit the business asked for. Before this epic there was no `due_date`, `sla`, `target_date` or `cycle_time` anywhere in the schema, and no notification or scheduling mechanism.
+
+Related: the email mechanism built in US-19.4 is the natural owner for the notification criteria in US-1.3, US-8.1 and US-8.3 (business gap BG-4). Configuration follows the Epic 10 pattern: reason required, versioned, audited.
+
+Raised by QA on 24 Sep 2026 from business gap BG-1 in `docs/qa/business-requirement-coverage.html` (business case BC-2: the 15–20 business-day cycle the platform exists to reduce is not measured anywhere).
+
+> **Delivery status:** US-19.1, US-19.2 and US-19.5 are delivered, with the overall target defaulting to 2 business days (7 Oct 2026). Until the email stories are built, overdue and at-risk requests are shown in the application itself (SLA view, My Requests, Assessments inbox, Committee queue, analyst workspace). SLA state is computed at read time from the recorded stage timestamps, so no scheduled job is needed for them. US-19.3 and US-19.4 (distribution lists and breach email) are **not yet delivered** — they need an email provider and a scheduled job, which do not exist yet.
+
+### US-19.1 — Configure SLA targets per stage and change type
+*As an Admin, I want to set an SLA target for each change type in the Configuration screen — an overall start-to-decision target, and optionally a target for each workflow stage — so that service levels can be tuned as policy changes without an engineering change.*
+
+Confirmed by the team on 24 Sep 2026: targets are in business days (weekends excluded, plus a configurable holiday list).
+
+Updated 7 Oct 2026 (sync-up with the product and delivery leads): the business wants a decision ready in about 2 business days from intake, committee decision included, against 15–20 today. The overall target is therefore the one that matters and defaults to **2 business days** for every change type; per-stage targets (Submitted, InAssessment, PendingCommittee) are optional. The earlier defaults of 2 / 8 / 5 / 15 are withdrawn.
+
+**Acceptance Criteria**
+- Given I am signed in as Admin, when I open Configuration, then I see an SLA section listing, for each of the six change types, an overall (start to decision) target in business days and an optional target for each stage (Submitted, InAssessment, PendingCommittee), in plain structured form rather than raw JSON.
+- Given I edit a target, when I save, then the system requires a reason, stores the change as a new version (the previous version is deactivated, never overwritten), and writes a ConfigChanged audit event with the before and after values.
+- Given I enter a target that is zero, negative or non-numeric, or leave a change type without its overall target (an optional stage target may be left blank), when I save, then the save is refused with a message explaining the valid range and nothing is written.
+- Given stage targets are set for a change type and add up to more than its overall target, when I save, then I am warned about the inconsistency before the save is accepted.
+- Given I set an at-risk warning threshold (a percentage of the target, default 80%), when I save, then it applies to every stage and is validated as between 1 and 99.
+- Given I maintain the holiday calendar, when I add or remove a date with a reason, then business-day calculations use it from that point on and the change is audited.
+- Given a request was submitted under one SLA version, when the SLA configuration later changes, then the request keeps the version active at its submission unless the change is explicitly marked retroactive (consistent with US-10.2).
+- Given a user who is not Admin, when they try to view the edit controls or call the SLA configuration endpoint, then the change is refused on authorization grounds.
+
+### US-19.2 — Track elapsed time against the SLA at each stage
+*As an FCRM Analyst, I want every request to show how long it has spent in its current stage against that stage's SLA, so that I can see which requests need attention before they breach.*
+
+**Acceptance Criteria**
+- Given a request enters a stage (Submitted, InAssessment, PendingCommittee), when the status changes, then the stage entry time is recorded and the stage due date is calculated in business days from the SLA version pinned to the request.
+- Given a request is in a stage, when I view it, then I see the elapsed business days, the target, the due date and an SLA state of On track, At risk (past the warning threshold) or Breached.
+- Given a request leaves a stage, when the status changes, then the stage's actual duration and whether it met its SLA are kept permanently and are not recalculated if the configuration later changes.
+- Given a clarification request to the Product Owner is open, when elapsed time is calculated, then the time waiting for the Product Owner is shown separately so the analyst stage is not charged for it (whether the clock pauses is itself a configuration setting, defaulting to paused).
+- Given the end-to-end SLA, when a request is decisioned, then its total cycle time from `submitted_at` to `decided_at` is recorded against the end-to-end target.
+- Given a stage has no target of its own, when I view the request, then the time spent in that stage is still shown and the SLA state follows the overall target.
+- Given any SLA calculation, when it runs, then it is deterministic arithmetic over recorded timestamps; no AI is involved in computing due dates or SLA state.
+
+### US-19.3 — Configure the email distribution list for SLA breaches
+*As an Admin, I want to define which email distribution list is notified when a request breaches its SLA, per stage, so that the people accountable for each stage are told without anyone having to check a screen.*
+
+Constraint: synthetic data only. In dev and demo, addresses are synthetic and mail goes to a local capture inbox (for example Mailpit), never to a real mailbox.
+
+**Acceptance Criteria**
+- Given I am signed in as Admin, when I open the SLA section of Configuration, then I can maintain a distribution list for each stage (Submitted, InAssessment, PendingCommittee) and one for the end-to-end breach.
+- Given I add an address, when I save, then malformed addresses are refused with a message naming the invalid entry, and duplicates are removed.
+- Given I save a distribution list change, when it is saved, then a reason is required, the previous list is kept as a prior version, and a ConfigChanged audit event records who changed it, the before and after lists, and the reason.
+- Given a stage has an empty distribution list, when I try to save it, then I am warned that breaches for that stage will not be emailed and must confirm before it is accepted.
+- Given I want to confirm a list works, when I choose Send test email, then a clearly marked test message is sent to that list and the attempt is logged.
+
+### US-19.4 — Email the distribution list when a request breaches its SLA
+*As an FCRM Analyst lead, I want the distribution list emailed as soon as a request is not completed within its stage SLA, so that breaches are escalated to people rather than discovered later by an examiner.*
+
+Design note: a scheduled background job (for example a hosted service running every 15 minutes) evaluates SLA state. No such job or email provider exists today; this story introduces both, and the same mechanism can serve the status notifications in US-1.3, US-8.1 and US-8.3 (BG-4).
+
+Update 7 Oct 2026: the team agreed to show SLA state in the application first — due date and on-track / at-risk / overdue in the SLA view, My Requests, the Assessments inbox, the Committee queue and the analyst workspace (delivered under US-19.2 and US-19.5) — and to defer email delivery of breach notifications, which needs an email provider that does not exist yet.
+
+**Acceptance Criteria**
+- Given a request passes the due date of its current stage without leaving that stage, when the SLA check runs, then an email is sent to that stage's configured distribution list.
+- Given a breach email is sent, when it is read, then it states the request reference and title, change type, stage, target, due date, business days overdue and the assigned analyst, and links to the request; it contains no scoring rationale or internal analyst notes.
+- Given the same request remains breached, when the check runs again, then no duplicate email is sent for that stage breach (at most one breach email per request per stage, plus an optional reminder at a configured interval).
+- Given a request breaches its end-to-end SLA, when the check runs, then the end-to-end distribution list is emailed once, separately from any stage breach.
+- Given a breach is detected, when it is recorded, then an SlaBreached audit event and a NotificationSent audit event (recipients, time, outcome) are appended; nothing is updated in place.
+- Given email delivery fails, when the check runs, then the failure is logged and audited, delivery is retried, and the breach itself is still recorded and visible on screen.
+- Given a request breaches its SLA, when the breach is processed, then its status, assessment and committee decision are unchanged: a breach never auto-approves, auto-rejects, auto-defers or skips any review gate.
+- Given the notification job is not running, when an operator checks the environment, then the missed schedule is visible in monitoring (Epic 18).
+
+### US-19.5 — View SLA performance and cycle time against target
+*As an FCRM Analyst or Admin, I want a view of requests approaching or breaching their SLA and of cycle time per change type against target, so that the team can demonstrate whether the platform shortened the 15–20 business-day cycle.*
+
+**Acceptance Criteria**
+- Given open requests, when I open the SLA view, then I see them grouped as Breached, At risk and On track, sorted by how overdue they are, filterable by stage and change type.
+- Given decisioned requests, when I view SLA performance, then I see for each change type and stage the median and 90th-percentile cycle time in business days against the target, and the percentage of requests that met their SLA.
+- Given the end-to-end figures, when I view them, then they are shown alongside the 15–20 business-day baseline from the brief, so improvement can be stated as a number.
+- Given I am a Product Owner, when I view my requests, then I see only the due date and whether my request is on track, not other requests or internal SLA reporting.
+- Given any figure in the view, when I trace it, then it is derived from recorded stage timestamps and audit events, so an examiner can reproduce it.
+
+---
+
 ## Epic 20 — AI Orchestration State & LangGraph Evaluation
 
 **Goal:** Make the AI harness's orchestration explicit and inspectable — a documented, shared state object carried across the AI-touchpoint epics (2, 3, 4, 5), and a small, clearly-scoped LangGraph demonstrator that implements it — without replacing the Workbench's own deterministic sequence, which stays the product's real orchestration.
@@ -955,6 +1042,7 @@ Builds on the dev environment (Epic 16) and the pipelines (Epic 17).
 | The dev environment provisioned from code with remote state, private networking, and the container apps — *from the `ops/iac/environments/dev` code, not the original brief* | Epic 16 (builds on Epic 15) |
 | Automated check, build, and deploy pipelines for infrastructure and both services — *from the `.azure-pipelines/` code, not the original brief* | Epic 17 (deploys to the Epic 16 environment) |
 | Logs, metrics, and telemetry collected from the resources, and an SRE agent that watches them and notifies of critical issues — *telemetry delivered (US-18.1); SRE agent still open (US-18.2)* | Epic 18 |
+| Measure assessment time against service levels, and tell people when a request is late — *raised by QA, 24 Sep 2026; targets, tracking and the SLA view delivered (US-19.1, 19.2, 19.5), breach email (US-19.3, 19.4) still open* | Epic 19 |
 | An explicit, inspectable AI orchestration state and graph, evaluated against the deterministic harness already in place — *raised in the 22 Sep 2026 standup; not in the original brief* | Epic 20 |
 
 ## Open Questions Requiring Stakeholder Input (consolidated)

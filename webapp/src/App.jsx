@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useAuth0 } from '@auth0/auth0-react'
-import { ClipboardList, Gavel, LayoutList, Menu, ShieldCheck, Sliders, Users, X } from 'lucide-react'
+import { ClipboardList, Gavel, LayoutList, Menu, ShieldCheck, Sliders, Timer, Users, X } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -14,12 +14,14 @@ import AnalystInbox from './pages/AnalystInbox.jsx'
 import CommitteeQueue from './pages/CommitteeQueue.jsx'
 import Configuration from './pages/Configuration.jsx'
 import AdminUsers from './pages/AdminUsers.jsx'
+import SlaView from './pages/SlaView.jsx'
 
 const NAV_ITEMS = [
   { key: 'intake', label: 'Submit Request', icon: ClipboardList, roles: ['ProductOwner'] },
   { key: 'myRequests', label: 'My Requests', icon: LayoutList, roles: ['ProductOwner'] },
   { key: 'assessments', label: 'Assessments', icon: ShieldCheck, roles: ['Analyst'] },
   { key: 'committee', label: 'Committee Queue', icon: Gavel, roles: ['CommitteeMember'] },
+  { key: 'serviceLevels', label: 'Service Levels', icon: Timer, roles: ['Analyst', 'Admin'] },
   { key: 'configuration', label: 'Configuration', icon: Sliders, roles: ['Admin'] },
   { key: 'users', label: 'Users', icon: Users, roles: ['Admin'] },
 ]
@@ -166,6 +168,7 @@ export default function App() {
     myRequests: <MyRequests />,
     assessments: <AnalystInbox />,
     committee: <CommitteeQueue />,
+    serviceLevels: <SlaView />,
     configuration: <Configuration />,
     users: <AdminUsers />,
   }

@@ -13,6 +13,7 @@ using Humaid.RiskGovernance.AdminUI.DA.Repos.DocumentExtraction;
 using Humaid.RiskGovernance.AdminUI.DA.Repos.Narrative;
 using Humaid.RiskGovernance.AdminUI.DA.Repos.PolicyResearch;
 using Humaid.RiskGovernance.AdminUI.DA.Repos.Scoring;
+using Humaid.RiskGovernance.AdminUI.DA.Repos.Sla;
 using Humaid.RiskGovernance.AdminUI.DA.Repos.Users;
 using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Ai;
 using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.Assessment;
@@ -26,6 +27,7 @@ using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.Docum
 using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.Narrative;
 using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.PolicyResearch;
 using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.Scoring;
+using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.Sla;
 using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.Users;
 using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.Assessment;
 using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.Audit;
@@ -39,6 +41,7 @@ using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.DocumentP
 using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.Narrative;
 using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.PolicyResearch;
 using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.Scoring;
+using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.Sla;
 using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.Users;
 using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Users;
 using Humaid.RiskGovernance.AdminUI.Services.Assessment;
@@ -53,6 +56,7 @@ using Humaid.RiskGovernance.AdminUI.Services.DocumentProcessing;
 using Humaid.RiskGovernance.AdminUI.Services.Narrative;
 using Humaid.RiskGovernance.AdminUI.Services.PolicyResearch;
 using Humaid.RiskGovernance.AdminUI.Services.Scoring;
+using Humaid.RiskGovernance.AdminUI.Services.Sla;
 using Humaid.RiskGovernance.AdminUI.Services.Startup;
 using Humaid.RiskGovernance.AdminUI.Services.Users;
 using Humaid.RiskGovernance.AdminUI.Web.Auth;
@@ -247,6 +251,7 @@ builder.Services.AddScoped<IRiskScoreRepo, RiskScoreRepo>();
 builder.Services.AddScoped<IAuditRepo, AuditRepo>();
 builder.Services.AddScoped<ICommitteeRepo, CommitteeRepo>();
 builder.Services.AddScoped<IWorkflowRuleRepo, WorkflowRuleRepo>();
+builder.Services.AddScoped<ISlaRepo, SlaRepo>();
 builder.Services.AddScoped<IUserRepo, UserRepo>();
 builder.Services.AddScoped<IExternalSnapshotRepo, ExternalSnapshotRepo>();
 
@@ -326,6 +331,7 @@ builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddScoped<IAuditExportService, AuditExportService>();
 builder.Services.AddScoped<ICommitteeService, CommitteeService>();
 builder.Services.AddScoped<IWorkflowRuleService, WorkflowRuleService>();
+builder.Services.AddScoped<ISlaService, SlaService>();
 builder.Services.AddScoped<IUserService, UserService>();
 
 var app = builder.Build();

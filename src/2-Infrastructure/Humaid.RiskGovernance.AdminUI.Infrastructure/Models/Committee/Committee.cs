@@ -9,6 +9,10 @@ namespace Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Committee
         public string ChangeType { get; set; } = string.Empty;
         public string Title { get; set; } = string.Empty;
         public DateTimeOffset RoutedAt { get; set; }
+
+        /// <summary>Epic 19: when the decision is due, and OnTrack | AtRisk | Breached (null if no target applies).</summary>
+        public DateTimeOffset? DueAt { get; set; }
+        public string? SlaState { get; set; }
     }
 
     /// <summary>One committee member's individual, never-aggregated vote (US-8.2 AC5).</summary>
