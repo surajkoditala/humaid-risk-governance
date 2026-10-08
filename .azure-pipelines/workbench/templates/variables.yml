@@ -20,10 +20,10 @@ variables:
 
   # Epic 11 - Auth0 SPA config, baked into the frontend bundle at image build time (Vite inlines
   # import.meta.env.VITE_* then, not at container start - see the Dockerfile's own comment). Not
-  # secret (a SPA's client id/domain are public by design), but empty by default: an empty build
-  # arg leaves the built frontend in the same "Auth0 not configured" dev-bypass mode as today.
-  # Fill these in (here, or override in the pipeline UI) once the Auth0 tenant exists - see
-  # docs/architecture/auth0-setup.md.
-  frontendAuth0Domain: ''
-  frontendAuth0ClientId: ''
-  frontendAuth0Audience: ''
+  # secret (a SPA's client id/domain are public by design). If any of these were left empty, the
+  # built frontend would ship in the "Auth0 is not configured" state - which is what the first
+  # deployed images did. These must match the container app's runtime AUTH0_DOMAIN/AUTH0_AUDIENCE
+  # (which only configure the API's token validation) - see docs/architecture/auth0-setup.md.
+  frontendAuth0Domain: 'dev-sqeqegefs2iv4taa.us.auth0.com'
+  frontendAuth0ClientId: 'sIPanUVyZAEdlgDk4ef7D2aMCAjqEiqX'
+  frontendAuth0Audience: 'https://risk-governance-api'

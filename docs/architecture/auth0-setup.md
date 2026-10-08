@@ -84,7 +84,9 @@ until its actual `sub` is written into the matching row.
   `frontendAuth0ClientId` / `frontendAuth0Audience` in
   `.azure-pipelines/workbench/templates/variables.yml` — see the "Frontend Auth0 config is a
   build-time value" section of `ops/README.md` for why a Container App env var alone won't do it.
-  The next Workbench pipeline run after that edit ships a build with real login.
+  The next Workbench pipeline run after that edit ships a build with real login. (Filled in for
+  dev on 2026-10-08 — the first deployed images were built with these empty and showed "Auth0 is
+  not configured". If it ever reappears, check the deployed bundle for the tenant domain first.)
 
 ## 6. Verify
 
