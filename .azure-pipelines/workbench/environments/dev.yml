@@ -53,9 +53,6 @@ stages:
                 if ! docker build \
                   --pull \
                   --no-cache \
-                  --build-arg VITE_AUTH0_DOMAIN="$(frontendAuth0Domain)" \
-                  --build-arg VITE_AUTH0_CLIENT_ID="$(frontendAuth0ClientId)" \
-                  --build-arg VITE_AUTH0_AUDIENCE="$(frontendAuth0Audience)" \
                   -f "${{ parameters.dockerfilePath }}" \
                   -t "$IMAGE_REF" \
                   .; then

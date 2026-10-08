@@ -22,8 +22,9 @@ instead. So the Auth0 side of this is deliberately small: get a login working, n
 **Applications → APIs → Create API**
 - Name: `HumAId Risk Governance API`
 - Identifier: any URI-shaped string, doesn't need to resolve — e.g.
-  `https://api.humaid-risk-governance` (a convention, not a real endpoint). This value is both
-  `AUTH0_AUDIENCE` (backend) and `VITE_AUTH0_AUDIENCE` (frontend) — they must match exactly.
+  `https://api.humaid-risk-governance` (a convention, not a real endpoint). This value is
+  `AUTH0_AUDIENCE` on the backend, which also serves it to the webapp at `/config.json`, so the two
+  can't drift apart (locally, `VITE_AUTH0_AUDIENCE` is only the fallback and must match).
 - Signing Algorithm: RS256 (the default; `Program.cs`'s `AddJwtBearer` expects this).
 
 ## 3. Create the application (this is what the webapp logs in through)
@@ -75,16 +76,21 @@ until its actual `sub` is written into the matching row.
   team should probably leave local dev alone and only configure Auth0 in the deployed environment.
 
 **In the deployed dev environment:**
-- **Backend (runtime config):** `AUTH0_DOMAIN` and `AUTH0_AUDIENCE` as Container App env vars (or
-  Key Vault secret references, matching how `ANTHROPIC-API-KEY`/`FOUNDRY-API-KEY` are already set
-  up) on `ca-gh-hrg-workbench-dev`.
-- **Frontend (build-time config — this is the step that's easy to miss):** the webapp is baked
-  into the same image at `docker build` time (PR #49), and Vite inlines `VITE_*` values into the
-  bundle at that point, not at container start. Fill in `frontendAuth0Domain` /
-  `frontendAuth0ClientId` / `frontendAuth0Audience` in
-  `.azure-pipelines/workbench/templates/variables.yml` — see the "Frontend Auth0 config is a
-  build-time value" section of `ops/README.md` for why a Container App env var alone won't do it.
-  The next Workbench pipeline run after that edit ships a build with real login.
+Set three env vars on `ca-gh-hrg-workbench-dev` (Container App → Settings → Environment
+variables, or Key Vault secret references like `ANTHROPIC-API-KEY`/`FOUNDRY-API-KEY`):
+
+| Env var | Value |
+|---|---|
+| `AUTH0_DOMAIN` | the tenant domain, no `https://` |
+| `AUTH0_AUDIENCE` | the API identifier from step 2 |
+| `AUTH0_CLIENT_ID` | the SPA application's Client ID from step 3 |
+
+The API uses the first two to validate tokens, and serves all three, unauthenticated, at
+`GET /config.json`; the webapp fetches that before it renders (`webapp/src/auth/authConfig.js`).
+So there is **no frontend build step** and no pipeline variable: changing these and restarting the
+revision is enough. (Earlier the SPA values were inlined at image build time, and the first
+deployed images shipped with them empty — "Auth0 is not configured". If that card ever
+reappears, open `<app url>/config.json` first: empty fields mean an env var is missing.)
 
 ## 6. Verify
 

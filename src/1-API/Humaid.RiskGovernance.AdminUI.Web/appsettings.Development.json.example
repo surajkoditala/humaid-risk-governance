@@ -2,6 +2,7 @@
   "_comment": "Port 5433 = the ops/docker-compose.yml Postgres container (docker compose up -d). Using a native Postgres install instead? Switch Port back to 5432 and Password to that install's own password.",
   "AZURE_POSTGRESQL_CONNECTIONSTRING": "Host=localhost;Username=postgres;Password=postgres;Database=risk_governance_db;Port=5433",
   "AUTH0_DOMAIN": "",
+  "AUTH0_CLIENT_ID": "",
   "AUTH0_AUDIENCE": "",
   "CORS_ALLOWED_ORIGINS": [ "http://localhost:3000" ],
   "AI_PROVIDER": "Anthropic",

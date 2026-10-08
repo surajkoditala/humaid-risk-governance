@@ -413,6 +413,23 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+// Runtime config for the SPA (see ClientAuthConfig). Anonymous on purpose - the SPA needs it before
+// it has a token - and never cached, so changing the container app's env vars takes effect on the
+// next page load without a rebuild or a stale browser/CDN copy.
+var clientAuthConfig = ClientAuthConfig.FromConfiguration(app.Configuration);
+if (clientAuthConfig.IsHalfConfigured)
+{
+    app.Logger.LogWarning(
+        "AUTH0_DOMAIN is set but AUTH0_CLIENT_ID is not: the API will validate tokens, but the webapp " +
+        "cannot start a login and will show 'Auth0 is not configured'. Set AUTH0_CLIENT_ID to the Auth0 " +
+        "application's Client ID.");
+}
+app.MapGet("/config.json", (HttpContext context) =>
+{
+    context.Response.Headers.CacheControl = "no-store";
+    return Results.Json(clientAuthConfig);
+}).AllowAnonymous();
+
 app.Run();
 
 // The Dockerfile copies Humaid.RiskGovernance.AdminUI.DB to ./db next to the published DLLs, so
