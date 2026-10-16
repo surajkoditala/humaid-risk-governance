@@ -1,8 +1,9 @@
 module "acr" {
   source = "../../modules/terraform-azure-containerregistry"
 
-  resource_group_name = module.rg.resource_group_name
-  location            = var.location
+  resource_group_name  = module.rg.resource_group_name
+  location             = var.location
+  user_preferred_index = "02"
 
   sku                           = "Standard"
   admin_enabled                 = false

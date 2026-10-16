@@ -63,7 +63,7 @@ resource "azurerm_monitor_diagnostic_setting" "this" {
 # Azure Key Vault
 resource "azurerm_key_vault" "this" {
   location                        = var.location
-  name                            = var.name != null ? var.name : "kv-${var.tags.product}-${var.tags.environment}-${var.tags.region}-${local.user_preferred_index}" #kv-gh-dev-eastus2-01
+  name                            = var.name != null ? var.name : "kv-${var.tags.product}-${var.tags.environment}-${local.user_preferred_index}"
   resource_group_name             = var.resource_group_name
   sku_name                        = var.sku_name
   tenant_id                       = var.tenant_id
