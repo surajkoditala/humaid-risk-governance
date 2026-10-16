@@ -1,9 +1,11 @@
 module "storage" {
   source = "../../modules/terraform-azure-storageaccount"
 
-  location            = var.location
-  resource_group_name = module.rg.resource_group_name
-  tags                = var.tags
+  location             = var.location
+  resource_group_name  = module.rg.resource_group_name
+  tags                 = var.tags
+  user_preferred_index = "02"
+
 
   # Public network access
   public_network_access_enabled = var.storage_public_network_access_enabled
