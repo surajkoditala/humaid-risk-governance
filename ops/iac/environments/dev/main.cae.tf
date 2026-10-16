@@ -1,5 +1,16 @@
+# Container Apps live in the Microsoft.App namespace, which is not in the
+# provider's default "core" registration set and is not pre-registered on a
+# fresh subscription -- without this the environment fails with
+# MissingSubscriptionRegistration. If the namespace is registered by hand
+# first, import this resource instead of letting it create.
+resource "azurerm_resource_provider_registration" "app" {
+  name = "Microsoft.App"
+}
+
 module "container_app_env" {
   source = "../../modules/terraform-azure-containerappsenvironment"
+
+  depends_on = [azurerm_resource_provider_registration.app]
 
   location            = var.location
   resource_group_name = module.rg.resource_group_name
