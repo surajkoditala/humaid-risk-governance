@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { useDevUser } from '../auth/DevUserContext.jsx'
 import { RequiredMark } from '../components/RequiredMark.jsx'
+import SlaSettings from '../components/SlaSettings.jsx'
 import { Endpoints, apiFetch } from '../lib/api.js'
 import { useFetch } from '../lib/useFetch.js'
 
@@ -154,6 +155,8 @@ export default function Configuration() {
           <Button onClick={saveScoringConfig}>Save configuration</Button>
         </CardContent>
       </Card>
+
+      <SlaSettings />
     </div>
   )
 }

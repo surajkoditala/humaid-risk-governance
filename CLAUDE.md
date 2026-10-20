@@ -132,7 +132,7 @@ New product → Products/Services + Customers · Feature → Products/Services �
 
 ## User Stories — see `docs/requirements/user-stories.md`
 
-Prepared by the team's BA (epics 1–10), plus Epics 11–13 raised by QA on 17 Sep 2026 (Access Control, Deployment & Operations, Non-Functional Requirements; also US-9.3, audit export), Epic 14 added from the Platform Ecosystem Diagram, and Epics 15–18 (infrastructure, pipelines, observability) added from the IaC and pipeline work — see the section below. Epic and story IDs match the Azure Boards work items. Given/When/Then acceptance criteria throughout. Structure:
+Prepared by the team's BA (epics 1–10), plus Epics 11–13 raised by QA on 17 Sep 2026 (Access Control, Deployment & Operations, Non-Functional Requirements; also US-9.3, audit export), Epic 14 added from the Platform Ecosystem Diagram, Epics 15–18 (infrastructure, pipelines, observability) added from the IaC and pipeline work — see the section below — and Epic 19 (SLA tracking) raised by QA on 24 Sep 2026. Epic and story IDs match the Azure Boards work items. Given/When/Then acceptance criteria throughout. Structure:
 
 1. Change Request Intake
 2. Risk Categorization & Framework Mapping **[AI]**
@@ -152,6 +152,7 @@ Prepared by the team's BA (epics 1–10), plus Epics 11–13 raised by QA on 17 
 16. Dev Environment Infrastructure Set Up (the dev environment provisioned from those modules)
 17. Set Up DevOps CI/CD Pipelines (infrastructure and application pipelines in Azure DevOps) — US-17.4 and US-17.8 are tagged **[AI]**: AI reviews pull requests in the pipeline, not in the product
 18. Observability (application telemetry to Application Insights — US-18.1 — and the SRE watchdog agent — US-18.2 — are both delivered; see the Observability section below)
+19. SLA Tracking and Breach Notification (business-day SLA targets per stage and change type, elapsed-time tracking and the SLA view are delivered — US-19.1, 19.2, 19.5; distribution lists and breach email — US-19.3, 19.4 — need an email provider and a scheduled job and are still open). Deterministic arithmetic, no AI; a breach only informs and never changes a status or decides anything.
 20. AI Orchestration State & LangGraph Evaluation (a shared state object across the AI touchpoints, plus a scoped LangGraph demonstrator — see `docs/architecture/langgraph-evaluation.md` for why full adoption isn't recommended for this submission, and its own epic for the risk that this doesn't finish by 30 Sep). Numbered 20, not 19 — Epic 19 (SLA Tracking) exists in Azure Boards only, not yet in `user-stories.md`.
 
 **Open questions logged by the BA — resolve with team before locking design:**
@@ -209,7 +210,7 @@ Orientation only, as of 5 Oct 2026; the acceptance criteria in the user stories 
 - Organization `https://dev.azure.com/Myridius-Insurity`, project `humaid-risk-governance`, Scrum process: **Epic → Product Backlog Item** (no Feature level). Area and iteration stay at the project root.
 - Title format `Epic N - Name` and `US-N.M - Title`. Description: `<p>As a DevOps Engineer, I want …, so that ….</p>`. Acceptance criteria go in the Acceptance Criteria field as `<ul><li>Given … when … then …</li></ul>`. Priority 2, Value Area Business, State New. Tags: one category tag plus one epic tag, separated by `; `.
 - **Write items as work for someone to pick up:** forward-looking ("set up", "create"), never describing something as already existing.
-- Boards IDs (they differ from the epic numbers): Epic 15 = 52 (stories 53–62), Epic 16 = 63 (64–76), Epic 17 = 77 (78, 80–89; 79 was deleted), Epic 18 = 90 (91–92).
+- Boards IDs (they differ from the epic numbers): Epic 15 = 52 (stories 53–62), Epic 16 = 63 (64–76), Epic 17 = 77 (78, 80–89; 79 was deleted), Epic 18 = 90 (91–92), Epic 19 = 93 (94–98).
 - **CLI:** `az devops login` and paste the PAT (Work Items: Read & write) at the hidden prompt — never in chat, and revoke it when done. Set the defaults with `az devops configure --defaults organization=… project=…`. In WIQL, `@project` returned no results; use the literal project name. Link a story to its epic with `az boards work-item relation add --relation-type parent`.
 - **Keep the docs in sync:** any change to these Boards items must also be made in `docs/requirements/user-stories.md`, whose IDs match one-to-one.
 

@@ -412,6 +412,105 @@ CREATE TABLE change_request_external_snapshot (
     ingested_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- ---- schema/015_sla.sql ----
+-- Epic 19 - SLA tracking (US-19.1 targets, US-19.2 elapsed time per stage, US-19.5 view).
+--
+-- Everything here is deterministic arithmetic over recorded timestamps - no AI. An SLA breach only
+-- INFORMS: nothing in this file (or functions/sla/) ever changes a request's status, skips a review
+-- gate, or auto-decides anything.
+--
+-- Written with IF NOT EXISTS / DROP TRIGGER IF EXISTS so migrations/0010_epic19_sla_tracking.sql
+-- (which carries the same DDL for databases deployed before this epic) can safely mirror it.
+--
+-- Targets are in BUSINESS days (weekends + the sla_holiday calendar excluded). SLA configuration
+-- follows the Epic 10 pattern: a change is a NEW versioned row, never an in-place update, and a
+-- request keeps the version that was active when it was submitted (change_request_sla.sla_config_id).
+
+CREATE TABLE IF NOT EXISTS sla_config (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    version_number INT NOT NULL UNIQUE,
+    at_risk_threshold_pct INT NOT NULL CHECK (at_risk_threshold_pct BETWEEN 1 AND 99), -- % of the target after which a request is "At risk"
+    pause_on_clarification BOOLEAN NOT NULL DEFAULT true, -- time waiting on the Product Owner is not charged to the analyst stage
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    created_by_user_id UUID NOT NULL REFERENCES app_user(id),
+    reason TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+-- At most one active version at a time.
+CREATE UNIQUE INDEX IF NOT EXISTS ux_sla_config_single_active ON sla_config ((is_active)) WHERE is_active;
+
+CREATE TABLE IF NOT EXISTS sla_target (
+    sla_config_id UUID NOT NULL REFERENCES sla_config(id),
+    change_type TEXT NOT NULL CHECK (change_type IN ('Product','Feature','Process','Vendor','Geography','CustomerSegment')),
+    stage TEXT NOT NULL CHECK (stage IN ('Submitted','InAssessment','PendingCommittee','EndToEnd')),
+    target_business_days INT NOT NULL CHECK (target_business_days > 0),
+    PRIMARY KEY (sla_config_id, change_type, stage)
+);
+
+CREATE TABLE IF NOT EXISTS sla_holiday (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    holiday_date DATE NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT true, -- removing a holiday deactivates it (audited), never deletes the row
+    created_by_user_id UUID NOT NULL REFERENCES app_user(id),
+    reason TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_sla_holiday_active_date ON sla_holiday (holiday_date) WHERE is_active;
+
+-- One row per change request: which SLA version it is pinned to, and its end-to-end result once decided.
+CREATE TABLE IF NOT EXISTS change_request_sla (
+    change_request_id UUID PRIMARY KEY REFERENCES change_request(id),
+    sla_config_id UUID REFERENCES sla_config(id), -- null only if no SLA version existed at submission
+    decided_at TIMESTAMPTZ,
+    e2e_actual_business_days INT, -- frozen once decided; never recomputed if configuration changes later
+    e2e_met BOOLEAN
+);
+
+-- One row per stage a request has been in. Closed rows (left_at set) are frozen: actual duration and
+-- whether the SLA was met are kept permanently (US-19.2 AC3).
+CREATE TABLE IF NOT EXISTS change_request_stage_history (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    change_request_id UUID NOT NULL REFERENCES change_request(id),
+    stage TEXT NOT NULL CHECK (stage IN ('Submitted','InAssessment','PendingCommittee')),
+    entered_at TIMESTAMPTZ NOT NULL,
+    left_at TIMESTAMPTZ,
+    target_business_days INT, -- snapshot of the pinned version's target when the stage was entered; null if untracked
+    actual_business_days INT, -- charged business days (waiting on the Product Owner excluded when configured)
+    met_sla BOOLEAN
+);
+CREATE INDEX IF NOT EXISTS idx_stage_history_request ON change_request_stage_history (change_request_id, entered_at);
+-- A request is in exactly one stage at a time.
+CREATE UNIQUE INDEX IF NOT EXISTS ux_stage_history_one_open ON change_request_stage_history (change_request_id) WHERE left_at IS NULL;
+
+-- The ONE capture point: change_request.status is changed by several different functions, so a
+-- trigger records every transition instead of each of them needing to remember to. The triggers stay
+-- deliberately thin - the logic lives in functions/sla/func_slaRecordTransition.sql, which (unlike a
+-- trigger function defined here) can be changed later without a new migration.
+CREATE OR REPLACE FUNCTION fn_trg_sla_request_submitted() RETURNS TRIGGER AS $$
+BEGIN
+    PERFORM fn_sla_record_transition(NEW.id, NULL, NEW.status);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION fn_trg_sla_status_changed() RETURNS TRIGGER AS $$
+BEGIN
+    PERFORM fn_sla_record_transition(NEW.id, OLD.status, NEW.status);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_sla_request_submitted ON change_request;
+CREATE TRIGGER trg_sla_request_submitted
+    AFTER INSERT ON change_request
+    FOR EACH ROW EXECUTE FUNCTION fn_trg_sla_request_submitted();
+
+DROP TRIGGER IF EXISTS trg_sla_status_changed ON change_request;
+CREATE TRIGGER trg_sla_status_changed
+    AFTER UPDATE OF status ON change_request
+    FOR EACH ROW WHEN (OLD.status IS DISTINCT FROM NEW.status)
+    EXECUTE FUNCTION fn_trg_sla_status_changed();
+
 -- ============================== functions ============================================
 
 -- ---- functions/assessment/func_finalizeAssessment.sql ----
@@ -721,7 +820,7 @@ CREATE OR REPLACE FUNCTION func_getAllChangeRequests(
 )
 RETURNS TABLE (
     id UUID, request_number TEXT, change_type TEXT, title TEXT, status TEXT,
-    submitted_at TIMESTAMPTZ, days_elapsed INT, total_count BIGINT
+    submitted_at TIMESTAMPTZ, days_elapsed INT, due_at TIMESTAMPTZ, sla_state TEXT, total_count BIGINT
 ) AS $$
 DECLARE
     v_column TEXT := CASE p_sort_by
@@ -747,11 +846,18 @@ BEGIN
         v_direction := 'DESC';
     END IF;
 
+    -- Epic 19: due_at is when the DECISION is due (the overall target) - what a requester or analyst wants to
+    -- know; the current stage's own due date is only used when no overall target is set.
     RETURN QUERY EXECUTE format(
         'SELECT c.id, c.request_number, c.change_type, c.title, c.status, c.submitted_at,
                 EXTRACT(DAY FROM now() - c.submitted_at)::INT AS days_elapsed,
+                CASE WHEN c.status = ''Decisioned'' THEN NULL ELSE COALESCE(o.e2e_due_at, o.due_at) END AS due_at,
+                CASE WHEN c.status = ''Decisioned'' THEN (CASE WHEN ms.e2e_met THEN ''Met'' WHEN ms.e2e_met = false THEN ''Missed'' END)
+                     ELSE o.overall_state END AS sla_state,
                 COUNT(*) OVER()::BIGINT AS total_count
          FROM change_request c
+         LEFT JOIN fn_sla_open_status() o ON o.change_request_id = c.id
+         LEFT JOIN change_request_sla ms ON ms.change_request_id = c.id
          WHERE ($1::TEXT IS NULL OR c.status = $1)
            AND ($2::TEXT IS NULL OR c.change_type = $2)
            AND ($3::TEXT IS NULL OR c.title ILIKE ''%%'' || $3 || ''%%'' OR c.request_number ILIKE ''%%'' || $3 || ''%%'')
@@ -803,6 +909,8 @@ $$ LANGUAGE sql STABLE;
 
 -- ---- functions/change_requests/func_getChangeRequestsForUser.sql ----
 -- US-1.3: "all my requests with current status and days elapsed since submission."
+-- Epic 19 (US-19.5 AC4): also the due date and whether the request is on track - the requester sees
+-- only that, never other requests or the internal SLA reporting.
 -- DEF-022: status alone only ever says "Decisioned" - the Product Owner never saw the actual
 -- outcome or its conditions (US-8.3 AC3). The committee's resolution lives in committee_decision,
 -- not on change_request itself (see func_recordCommitteeDecision.sql), so it's left-joined in here
@@ -824,7 +932,7 @@ CREATE OR REPLACE FUNCTION func_getChangeRequestsForUser(
 RETURNS TABLE (
     id UUID, request_number TEXT, change_type TEXT, title TEXT, status TEXT,
     submitted_at TIMESTAMPTZ, days_elapsed INT, decision_resolution TEXT, decision_conditions_text TEXT,
-    total_count BIGINT
+    due_at TIMESTAMPTZ, sla_state TEXT, total_count BIGINT
 ) AS $$
 DECLARE
     v_column TEXT := CASE p_sort_by
@@ -850,14 +958,21 @@ BEGIN
         v_direction := 'DESC';
     END IF;
 
+    -- Epic 19: due_at is when the DECISION is due (the overall target) - what a requester or analyst wants to
+    -- know; the current stage's own due date is only used when no overall target is set.
     RETURN QUERY EXECUTE format(
         'SELECT c.id, c.request_number, c.change_type, c.title, c.status, c.submitted_at,
                 EXTRACT(DAY FROM now() - c.submitted_at)::INT AS days_elapsed,
                 d.resolution, d.conditions_text,
+                CASE WHEN c.status = ''Decisioned'' THEN NULL ELSE COALESCE(o.e2e_due_at, o.due_at) END AS due_at,
+                CASE WHEN c.status = ''Decisioned'' THEN (CASE WHEN ms.e2e_met THEN ''Met'' WHEN ms.e2e_met = false THEN ''Missed'' END)
+                     ELSE o.overall_state END AS sla_state,
                 COUNT(*) OVER()::BIGINT AS total_count
          FROM change_request c
          LEFT JOIN assessment a ON a.change_request_id = c.id
          LEFT JOIN committee_decision d ON d.assessment_id = a.id
+         LEFT JOIN fn_sla_open_status() o ON o.change_request_id = c.id
+         LEFT JOIN change_request_sla ms ON ms.change_request_id = c.id
          WHERE c.submitted_by_user_id = $1
            AND ($2::TEXT IS NULL OR c.status = $2)
            AND ($3::TEXT IS NULL OR c.change_type = $3)
@@ -958,6 +1073,7 @@ $$ LANGUAGE sql STABLE;
 
 -- ---- functions/committee/func_getCommitteeQueue.sql ----
 -- US-8.1 AC1: everything currently sitting in the committee's decision queue.
+-- Epic 19: also when the decision is due and whether it is on track, so the committee sees what is waiting.
 --
 -- Grid standard (filters/sort/server-side paging): p_sort_by/p_sort_dir only ever select a
 -- column from the fixed v_column mapping below - the caller's values are never concatenated
@@ -973,7 +1089,7 @@ CREATE OR REPLACE FUNCTION func_getCommitteeQueue(
 )
 RETURNS TABLE (
     assessment_id UUID, change_request_id UUID, request_number TEXT,
-    change_type TEXT, title TEXT, routed_at TIMESTAMPTZ, total_count BIGINT
+    change_type TEXT, title TEXT, routed_at TIMESTAMPTZ, due_at TIMESTAMPTZ, sla_state TEXT, total_count BIGINT
 ) AS $$
 DECLARE
     v_column TEXT := CASE p_sort_by
@@ -995,9 +1111,11 @@ BEGIN
 
     RETURN QUERY EXECUTE format(
         'SELECT a.id, c.id, c.request_number, c.change_type, c.title, a.finalized_at,
+                COALESCE(o.e2e_due_at, o.due_at) AS due_at, o.overall_state AS sla_state,
                 COUNT(*) OVER()::BIGINT AS total_count
          FROM change_request c
          JOIN assessment a ON a.change_request_id = c.id
+         LEFT JOIN fn_sla_open_status() o ON o.change_request_id = c.id
          WHERE c.status = ''PendingCommittee''
            AND ($1::TEXT IS NULL OR c.change_type = $1)
            AND ($2::TEXT IS NULL OR c.title ILIKE ''%%'' || $2 || ''%%'' OR c.request_number ILIKE ''%%'' || $2 || ''%%'')
@@ -1573,6 +1691,651 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- ---- functions/sla/fn_slaAddBusinessDays.sql ----
+-- Epic 19: the due date - p_start advanced by p_days business days, keeping p_start's time of day.
+-- Counting starts the day after p_start, so entering a stage on a Saturday with a 2-day target is due
+-- on Tuesday. p_days <= 0 returns p_start unchanged.
+CREATE OR REPLACE FUNCTION fn_sla_add_business_days(p_start TIMESTAMPTZ, p_days INT)
+RETURNS TIMESTAMPTZ AS $$
+DECLARE
+    v_date DATE := (p_start AT TIME ZONE 'UTC')::date;
+    v_left INT := COALESCE(p_days, 0);
+    v_guard INT := 0;
+BEGIN
+    WHILE v_left > 0 LOOP
+        v_date := v_date + 1;
+        IF fn_sla_is_business_day(v_date) THEN
+            v_left := v_left - 1;
+        END IF;
+        v_guard := v_guard + 1;
+        IF v_guard > 20000 THEN
+            RAISE EXCEPTION 'SLA due-date calculation did not converge (check the holiday calendar)';
+        END IF;
+    END LOOP;
+    RETURN (v_date::timestamp + (p_start AT TIME ZONE 'UTC')::time) AT TIME ZONE 'UTC';
+END;
+$$ LANGUAGE plpgsql STABLE;
+
+-- ---- functions/sla/fn_slaBusinessDaysBetween.sql ----
+-- Epic 19: whole business days elapsed after p_start's calendar day, up to and including p_end's
+-- calendar day. Same-day = 0. Never negative.
+-- (plpgsql rather than sql: functions/ files apply in alphabetical order, and a plpgsql body is only
+-- resolved at call time, so this doesn't depend on fn_sla_is_business_day being created first.)
+CREATE OR REPLACE FUNCTION fn_sla_business_days_between(p_start TIMESTAMPTZ, p_end TIMESTAMPTZ)
+RETURNS INT AS $$
+BEGIN
+    RETURN (
+        SELECT COUNT(*)::INT
+        FROM generate_series(
+            ((p_start AT TIME ZONE 'UTC')::date + 1)::timestamp,
+            (p_end AT TIME ZONE 'UTC')::date::timestamp,
+            interval '1 day') AS g(d)
+        WHERE fn_sla_is_business_day(g.d::date));
+END;
+$$ LANGUAGE plpgsql STABLE;
+
+-- ---- functions/sla/fn_slaIsBusinessDay.sql ----
+-- Epic 19: a business day is Monday-Friday and not on the active sla_holiday calendar (US-19.1 AC6).
+-- Dates are read in UTC, so a given timestamp always maps to the same calendar day regardless of the
+-- session time zone - SLA arithmetic must be reproducible by an examiner (US-19.5 AC5).
+CREATE OR REPLACE FUNCTION fn_sla_is_business_day(p_date DATE)
+RETURNS BOOLEAN AS $$
+    SELECT EXTRACT(ISODOW FROM p_date) < 6
+       AND NOT EXISTS (SELECT 1 FROM sla_holiday h WHERE h.is_active AND h.holiday_date = p_date);
+$$ LANGUAGE sql STABLE;
+
+-- ---- functions/sla/fn_slaOpenStatus.sql ----
+-- Epic 19 / US-19.2 AC2: the live SLA position of every request that is not yet decisioned - computed
+-- at read time from recorded timestamps, so there is no job to keep running and nothing can drift.
+-- One row per open request: its current stage (elapsed charged business days, target, due date, state)
+-- and its end-to-end position. overall_state is the worse of the two.
+--   elapsed = business days since entering the stage, minus days spent waiting on the Product Owner
+--             (when the pinned config pauses for clarifications)
+--   due     = entry + (target + waiting days) business days
+CREATE OR REPLACE FUNCTION fn_sla_open_status()
+RETURNS TABLE (
+    change_request_id UUID, stage TEXT, entered_at TIMESTAMPTZ, target_days INT, waiting_days INT,
+    elapsed_days INT, due_at TIMESTAMPTZ, stage_state TEXT,
+    e2e_target_days INT, e2e_elapsed_days INT, e2e_due_at TIMESTAMPTZ, e2e_state TEXT, overall_state TEXT
+) AS $$
+BEGIN
+    RETURN QUERY
+    WITH base AS (
+        SELECT cr.id AS b_cr, cr.submitted_at AS b_submitted, h.stage AS b_stage, h.entered_at AS b_entered,
+               h.target_business_days AS b_target,
+               COALESCE(cfg.pause_on_clarification, true) AS b_pause,
+               COALESCE(cfg.at_risk_threshold_pct, 80) AS b_pct,
+               e.target_business_days AS b_e2e_target
+        FROM change_request cr
+        JOIN change_request_stage_history h ON h.change_request_id = cr.id AND h.left_at IS NULL
+        LEFT JOIN change_request_sla s ON s.change_request_id = cr.id
+        LEFT JOIN sla_config cfg ON cfg.id = s.sla_config_id
+        LEFT JOIN sla_target e ON e.sla_config_id = cfg.id AND e.change_type = cr.change_type AND e.stage = 'EndToEnd'
+        WHERE cr.status <> 'Decisioned'
+    ), waited AS (
+        SELECT b.*,
+               CASE WHEN b.b_pause THEN fn_sla_waiting_days(b.b_cr, b.b_entered, now()) ELSE 0 END AS w_stage,
+               CASE WHEN b.b_pause THEN fn_sla_waiting_days(b.b_cr, b.b_submitted, now()) ELSE 0 END AS w_e2e
+        FROM base b
+    ), measured AS (
+        SELECT w.*,
+               GREATEST(fn_sla_business_days_between(w.b_entered, now()) - w.w_stage, 0) AS m_el_stage,
+               GREATEST(fn_sla_business_days_between(w.b_submitted, now()) - w.w_e2e, 0) AS m_el_e2e,
+               CASE WHEN w.b_target IS NULL THEN NULL ELSE fn_sla_add_business_days(w.b_entered, w.b_target + w.w_stage) END AS m_due_stage,
+               CASE WHEN w.b_e2e_target IS NULL THEN NULL ELSE fn_sla_add_business_days(w.b_submitted, w.b_e2e_target + w.w_e2e) END AS m_due_e2e
+        FROM waited w
+    ), judged AS (
+        SELECT m.*,
+               fn_sla_state(now(), m.m_due_stage, m.m_el_stage, m.b_target, m.b_pct) AS j_stage_state,
+               fn_sla_state(now(), m.m_due_e2e, m.m_el_e2e, m.b_e2e_target, m.b_pct) AS j_e2e_state
+        FROM measured m
+    )
+    SELECT j.b_cr, j.b_stage, j.b_entered, j.b_target, j.w_stage, j.m_el_stage, j.m_due_stage, j.j_stage_state,
+           j.b_e2e_target, j.m_el_e2e, j.m_due_e2e, j.j_e2e_state,
+           CASE WHEN 'Breached' IN (j.j_stage_state, j.j_e2e_state) THEN 'Breached'
+                WHEN 'AtRisk' IN (j.j_stage_state, j.j_e2e_state) THEN 'AtRisk'
+                WHEN j.j_stage_state IS NULL AND j.j_e2e_state IS NULL THEN NULL
+                ELSE 'OnTrack' END
+    FROM judged j;
+END;
+$$ LANGUAGE plpgsql STABLE;
+
+-- ---- functions/sla/fn_slaRecordTransition.sql ----
+-- Epic 19 / US-19.2: called by the change_request triggers (schema/015_sla.sql) on every status change.
+--   p_old_status NULL  -> the request was just submitted: pin it to the active SLA version and open its
+--                         first stage.
+--   otherwise          -> close the open stage (freezing its charged duration and whether it met the
+--                         SLA - never recomputed later) and either open the next stage or, on
+--                         'Decisioned', record the end-to-end result.
+-- This only RECORDS what happened. It never changes a status, blocks a transition or decides anything.
+CREATE OR REPLACE FUNCTION fn_sla_record_transition(p_change_request_id UUID, p_old_status TEXT, p_new_status TEXT)
+RETURNS VOID AS $$
+DECLARE
+    v_cr change_request%ROWTYPE;
+    v_config_id UUID;
+    v_pause BOOLEAN;
+    v_open change_request_stage_history%ROWTYPE;
+    v_waiting INT;
+    v_charged INT;
+    v_e2e_target INT;
+BEGIN
+    SELECT * INTO v_cr FROM change_request WHERE id = p_change_request_id;
+
+    IF p_old_status IS NULL THEN
+        INSERT INTO change_request_sla (change_request_id, sla_config_id)
+        VALUES (p_change_request_id, (SELECT id FROM sla_config WHERE is_active))
+        ON CONFLICT (change_request_id) DO NOTHING;
+    END IF;
+
+    SELECT s.sla_config_id, COALESCE(c.pause_on_clarification, true)
+    INTO v_config_id, v_pause
+    FROM change_request_sla s
+    LEFT JOIN sla_config c ON c.id = s.sla_config_id
+    WHERE s.change_request_id = p_change_request_id;
+    v_pause := COALESCE(v_pause, true);
+
+    -- Close the stage the request is leaving.
+    SELECT * INTO v_open FROM change_request_stage_history
+    WHERE change_request_id = p_change_request_id AND left_at IS NULL
+    FOR UPDATE;
+    IF FOUND THEN
+        v_waiting := CASE WHEN v_pause THEN fn_sla_waiting_days(p_change_request_id, v_open.entered_at, now()) ELSE 0 END;
+        v_charged := GREATEST(fn_sla_business_days_between(v_open.entered_at, now()) - v_waiting, 0);
+        UPDATE change_request_stage_history
+        SET left_at = now(),
+            actual_business_days = v_charged,
+            met_sla = CASE WHEN v_open.target_business_days IS NULL THEN NULL
+                           ELSE now() <= fn_sla_add_business_days(v_open.entered_at, v_open.target_business_days + v_waiting) END
+        WHERE id = v_open.id;
+    END IF;
+
+    IF p_new_status = 'Decisioned' THEN
+        SELECT target_business_days INTO v_e2e_target FROM sla_target
+        WHERE sla_config_id = v_config_id AND change_type = v_cr.change_type AND stage = 'EndToEnd';
+        v_waiting := CASE WHEN v_pause THEN fn_sla_waiting_days(p_change_request_id, v_cr.submitted_at, now()) ELSE 0 END;
+        v_charged := GREATEST(fn_sla_business_days_between(v_cr.submitted_at, now()) - v_waiting, 0);
+        UPDATE change_request_sla
+        SET decided_at = now(),
+            e2e_actual_business_days = v_charged,
+            e2e_met = CASE WHEN v_e2e_target IS NULL THEN NULL
+                           ELSE now() <= fn_sla_add_business_days(v_cr.submitted_at, v_e2e_target + v_waiting) END
+        WHERE change_request_id = p_change_request_id;
+    ELSIF p_new_status IN ('Submitted','InAssessment','PendingCommittee') THEN
+        INSERT INTO change_request_stage_history (change_request_id, stage, entered_at, target_business_days)
+        VALUES (p_change_request_id, p_new_status, now(),
+                (SELECT target_business_days FROM sla_target
+                 WHERE sla_config_id = v_config_id AND change_type = v_cr.change_type AND stage = p_new_status));
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ---- functions/sla/fn_slaState.sql ----
+-- Epic 19 / US-19.2 AC2: OnTrack, AtRisk (charged elapsed days have reached the warning threshold,
+-- a percentage of the target) or Breached (past the due date). Null when no target is configured.
+CREATE OR REPLACE FUNCTION fn_sla_state(p_now TIMESTAMPTZ, p_due TIMESTAMPTZ, p_elapsed INT, p_target INT, p_threshold_pct INT)
+RETURNS TEXT AS $$
+    SELECT CASE
+        WHEN p_target IS NULL OR p_due IS NULL THEN NULL
+        WHEN p_now > p_due THEN 'Breached'
+        WHEN p_elapsed * 100 >= p_target * p_threshold_pct THEN 'AtRisk'
+        ELSE 'OnTrack'
+    END;
+$$ LANGUAGE sql IMMUTABLE;
+
+-- ---- functions/sla/fn_slaWaitingDays.sql ----
+-- Epic 19 / US-19.2 AC4: business days within (p_from, p_to] on which the Product Owner was being
+-- waited on - i.e. an Open clarification existed (created before that day, not yet answered by the end
+-- of it). Counted per calendar day, so overlapping clarifications are never double-counted.
+-- (plpgsql for the same alphabetical-apply-order reason as fn_slaBusinessDaysBetween.sql.)
+CREATE OR REPLACE FUNCTION fn_sla_waiting_days(p_change_request_id UUID, p_from TIMESTAMPTZ, p_to TIMESTAMPTZ)
+RETURNS INT AS $$
+BEGIN
+    RETURN (
+        SELECT COUNT(*)::INT
+        FROM generate_series(
+            ((p_from AT TIME ZONE 'UTC')::date + 1)::timestamp,
+            (p_to AT TIME ZONE 'UTC')::date::timestamp,
+            interval '1 day') AS g(d)
+        WHERE fn_sla_is_business_day(g.d::date)
+          AND EXISTS (
+              SELECT 1 FROM change_request_clarification c
+              WHERE c.change_request_id = p_change_request_id
+                AND (c.created_at AT TIME ZONE 'UTC')::date < g.d::date
+                AND g.d::date <= (COALESCE(c.answered_at, p_to) AT TIME ZONE 'UTC')::date));
+END;
+$$ LANGUAGE plpgsql STABLE;
+
+-- ---- functions/sla/func_addSlaHoliday.sql ----
+-- Epic 19 / US-19.1 AC6: add a date to the holiday calendar. Business-day calculations use it from
+-- this point on (open requests' due dates shift; finished stages keep their frozen results). Audited.
+CREATE OR REPLACE FUNCTION func_addSlaHoliday(
+    p_holiday_date DATE,
+    p_reason TEXT,
+    p_actor_user_id UUID
+) RETURNS UUID AS $$
+DECLARE
+    v_id UUID := gen_random_uuid();
+BEGIN
+    IF p_holiday_date IS NULL THEN
+        RAISE EXCEPTION 'A holiday date is required';
+    END IF;
+    IF p_reason IS NULL OR btrim(p_reason) = '' THEN
+        RAISE EXCEPTION 'A reason is required to change the holiday calendar';
+    END IF;
+    IF EXISTS (SELECT 1 FROM sla_holiday WHERE is_active AND holiday_date = p_holiday_date) THEN
+        RAISE EXCEPTION '% is already on the holiday calendar', to_char(p_holiday_date, 'YYYY-MM-DD');
+    END IF;
+
+    INSERT INTO sla_holiday (id, holiday_date, created_by_user_id, reason)
+    VALUES (v_id, p_holiday_date, p_actor_user_id, p_reason);
+
+    INSERT INTO audit_event (entity_type, entity_id, action, actor_user_id, actor_label, after_value, reason)
+    VALUES ('SlaHoliday', v_id, 'ConfigChanged', p_actor_user_id, 'human',
+            jsonb_build_object('holidayDate', to_char(p_holiday_date, 'YYYY-MM-DD'), 'change', 'Added'), p_reason);
+
+    RETURN v_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ---- functions/sla/func_getRequestSla.sql ----
+-- Epic 19 / US-19.2: one request's SLA picture, for the analyst workspace strip.
+--   scope 'Stage'      the stage it is in now (live)
+--   scope 'EndToEnd'   submission -> decision: live while open, 'Met'/'Missed' once decided
+--   scope 'Completed'  a stage it has already left (frozen - never recomputed)
+-- waiting_days is the time spent waiting on the Product Owner, shown separately so the analyst
+-- stage is not charged for it (US-19.2 AC4).
+CREATE OR REPLACE FUNCTION func_getRequestSla(p_change_request_id UUID)
+RETURNS TABLE (
+    scope TEXT, stage TEXT, entered_at TIMESTAMPTZ, left_at TIMESTAMPTZ, target_days INT,
+    elapsed_days INT, waiting_days INT, due_at TIMESTAMPTZ, state TEXT
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 'Stage'::TEXT, o.stage, o.entered_at, NULL::TIMESTAMPTZ, o.target_days,
+           o.elapsed_days, o.waiting_days, o.due_at, o.stage_state
+    FROM fn_sla_open_status() o WHERE o.change_request_id = p_change_request_id
+    UNION ALL
+    SELECT 'EndToEnd'::TEXT, NULL::TEXT, cr.submitted_at, NULL::TIMESTAMPTZ, o.e2e_target_days,
+           o.e2e_elapsed_days, NULL::INT, o.e2e_due_at, o.e2e_state
+    FROM fn_sla_open_status() o JOIN change_request cr ON cr.id = o.change_request_id
+    WHERE o.change_request_id = p_change_request_id
+    UNION ALL
+    SELECT 'EndToEnd'::TEXT, NULL::TEXT, cr.submitted_at, s.decided_at, t.target_business_days,
+           s.e2e_actual_business_days, NULL::INT, NULL::TIMESTAMPTZ,
+           CASE WHEN s.e2e_met THEN 'Met' WHEN s.e2e_met = false THEN 'Missed' END
+    FROM change_request_sla s
+    JOIN change_request cr ON cr.id = s.change_request_id
+    LEFT JOIN sla_target t ON t.sla_config_id = s.sla_config_id AND t.change_type = cr.change_type AND t.stage = 'EndToEnd'
+    WHERE s.change_request_id = p_change_request_id AND s.decided_at IS NOT NULL
+    UNION ALL
+    SELECT 'Completed'::TEXT, h.stage, h.entered_at, h.left_at, h.target_business_days,
+           h.actual_business_days, NULL::INT, NULL::TIMESTAMPTZ,
+           CASE WHEN h.met_sla THEN 'Met' WHEN h.met_sla = false THEN 'Missed' END
+    FROM change_request_stage_history h
+    WHERE h.change_request_id = p_change_request_id AND h.left_at IS NOT NULL;
+END;
+$$ LANGUAGE plpgsql STABLE;
+
+-- ---- functions/sla/func_getSlaConfig.sql ----
+-- Epic 19 / US-19.1 AC1: the active SLA version's settings (targets come from func_getSlaTargets).
+CREATE OR REPLACE FUNCTION func_getSlaConfig()
+RETURNS TABLE (
+    id UUID, version_number INT, at_risk_threshold_pct INT, pause_on_clarification BOOLEAN,
+    reason TEXT, created_at TIMESTAMPTZ
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT c.id, c.version_number, c.at_risk_threshold_pct, c.pause_on_clarification, c.reason, c.created_at
+    FROM sla_config c
+    WHERE c.is_active;
+END;
+$$ LANGUAGE plpgsql STABLE;
+
+-- ---- functions/sla/func_getSlaHolidays.sql ----
+-- Epic 19 / US-19.1 AC6: the active holiday calendar business-day arithmetic excludes.
+CREATE OR REPLACE FUNCTION func_getSlaHolidays()
+RETURNS TABLE (id UUID, holiday_date DATE, reason TEXT, created_at TIMESTAMPTZ) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT h.id, h.holiday_date, h.reason, h.created_at
+    FROM sla_holiday h
+    WHERE h.is_active
+    ORDER BY h.holiday_date;
+END;
+$$ LANGUAGE plpgsql STABLE;
+
+-- ---- functions/sla/func_getSlaPerformance.sql ----
+-- Epic 19 / US-19.5 AC2-AC3: cycle time of requests that have finished a stage / been decided -
+-- median and 90th percentile in business days, the target, and the share that met their SLA - per
+-- change type and stage, plus an all-types end-to-end row (change_type 'All') so the headline figure
+-- can be set against the 15-20 business-day baseline. Derived only from the frozen stage_history /
+-- change_request_sla values, so every figure can be reproduced from recorded timestamps.
+CREATE OR REPLACE FUNCTION func_getSlaPerformance(p_change_type TEXT DEFAULT NULL)
+RETURNS TABLE (
+    change_type TEXT, stage TEXT, sample_count INT, target_days INT,
+    median_days NUMERIC, p90_days NUMERIC, met_percent NUMERIC
+) AS $$
+BEGIN
+    RETURN QUERY
+    WITH finished AS (
+        SELECT cr.change_type AS f_type, h.stage AS f_stage, h.actual_business_days AS f_days, h.met_sla AS f_met
+        FROM change_request_stage_history h
+        JOIN change_request cr ON cr.id = h.change_request_id
+        WHERE h.left_at IS NOT NULL AND h.actual_business_days IS NOT NULL
+        UNION ALL
+        SELECT cr.change_type, 'EndToEnd', s.e2e_actual_business_days, s.e2e_met
+        FROM change_request_sla s
+        JOIN change_request cr ON cr.id = s.change_request_id
+        WHERE s.decided_at IS NOT NULL AND s.e2e_actual_business_days IS NOT NULL
+    ), per_type AS (
+        SELECT f.f_type AS p_type, f.f_stage AS p_stage, COUNT(*)::INT AS p_count,
+               (percentile_cont(0.5) WITHIN GROUP (ORDER BY f.f_days))::NUMERIC(6,1) AS p_median,
+               (percentile_cont(0.9) WITHIN GROUP (ORDER BY f.f_days))::NUMERIC(6,1) AS p_p90,
+               ROUND(100.0 * COUNT(*) FILTER (WHERE f.f_met) / NULLIF(COUNT(*) FILTER (WHERE f.f_met IS NOT NULL), 0), 1) AS p_met
+        FROM finished f
+        WHERE p_change_type IS NULL OR f.f_type = p_change_type
+        GROUP BY f.f_type, f.f_stage
+    ), overall AS (
+        SELECT 'All'::TEXT AS o_type, 'EndToEnd'::TEXT AS o_stage, COUNT(*)::INT AS o_count,
+               (percentile_cont(0.5) WITHIN GROUP (ORDER BY f.f_days))::NUMERIC(6,1) AS o_median,
+               (percentile_cont(0.9) WITHIN GROUP (ORDER BY f.f_days))::NUMERIC(6,1) AS o_p90,
+               ROUND(100.0 * COUNT(*) FILTER (WHERE f.f_met) / NULLIF(COUNT(*) FILTER (WHERE f.f_met IS NOT NULL), 0), 1) AS o_met
+        FROM finished f
+        WHERE f.f_stage = 'EndToEnd' AND (p_change_type IS NULL OR f.f_type = p_change_type)
+        HAVING COUNT(*) > 0
+    )
+    SELECT r.r_type, r.r_stage, r.r_count, r.r_target, r.r_median, r.r_p90, r.r_met
+    FROM (
+        SELECT p.p_type AS r_type, p.p_stage AS r_stage, p.p_count AS r_count, t.target_business_days AS r_target,
+               p.p_median AS r_median, p.p_p90 AS r_p90, p.p_met AS r_met
+        FROM per_type p
+        LEFT JOIN sla_config c ON c.is_active
+        LEFT JOIN sla_target t ON t.sla_config_id = c.id AND t.change_type = p.p_type AND t.stage = p.p_stage
+        UNION ALL
+        SELECT ov.o_type, ov.o_stage, ov.o_count, NULL::INT, ov.o_median, ov.o_p90, ov.o_met FROM overall ov
+    ) r
+    ORDER BY CASE r.r_type WHEN 'All' THEN 1 ELSE 0 END, r.r_type,
+             CASE r.r_stage WHEN 'Submitted' THEN 0 WHEN 'InAssessment' THEN 1 WHEN 'PendingCommittee' THEN 2 ELSE 3 END;
+END;
+$$ LANGUAGE plpgsql STABLE;
+
+-- ---- functions/sla/func_getSlaSummary.sql ----
+-- Epic 19 / US-19.5 AC1: how many open requests are in each SLA state, for the counts above the SLA
+-- grid. Respects the grid's stage / type / search filters but deliberately NOT its state filter, so the
+-- counts stay put while the user picks a state. A null overall_state is a request with no target set.
+CREATE OR REPLACE FUNCTION func_getSlaSummary(
+    p_stage TEXT DEFAULT NULL,
+    p_change_type TEXT DEFAULT NULL,
+    p_search TEXT DEFAULT NULL
+)
+RETURNS TABLE (overall_state TEXT, request_count INT) AS $$
+DECLARE
+    v_search TEXT := lower(NULLIF(btrim(COALESCE(p_search, '')), ''));
+BEGIN
+    RETURN QUERY
+    SELECT o.overall_state, COUNT(*)::INT
+    FROM fn_sla_open_status() o
+    JOIN change_request cr ON cr.id = o.change_request_id
+    WHERE (p_stage IS NULL OR o.stage = p_stage)
+      AND (p_change_type IS NULL OR cr.change_type = p_change_type)
+      AND (v_search IS NULL
+           OR position(v_search IN lower(cr.title)) > 0
+           OR position(v_search IN lower(cr.request_number)) > 0)
+    GROUP BY o.overall_state;
+END;
+$$ LANGUAGE plpgsql STABLE;
+
+-- ---- functions/sla/func_getSlaTargets.sql ----
+-- Epic 19 / US-19.1 AC1: the active SLA version's target in business days for every change type and stage.
+CREATE OR REPLACE FUNCTION func_getSlaTargets()
+RETURNS TABLE (change_type TEXT, stage TEXT, target_business_days INT) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT t.change_type, t.stage, t.target_business_days
+    FROM sla_target t
+    JOIN sla_config c ON c.id = t.sla_config_id AND c.is_active
+    ORDER BY t.change_type,
+             CASE t.stage WHEN 'Submitted' THEN 0 WHEN 'InAssessment' THEN 1 WHEN 'PendingCommittee' THEN 2 ELSE 3 END;
+END;
+$$ LANGUAGE plpgsql STABLE;
+
+-- ---- functions/sla/func_getSlaView.sql ----
+-- Epic 19 / US-19.5 AC1: open requests with their SLA position, one page at a time. Default order is
+-- most urgent first - Breached (most overdue first), then At risk (closest to the target first), then
+-- On track; a request with no SLA target configured has a null overall_state and sorts last.
+--
+-- Grid standard (filters / sort / server-side paging): filter by current stage, change type, SLA state
+-- and a free-text search of title / request number. p_sort_by only ever selects one of the fixed CASE
+-- branches below - the caller's value is never concatenated into SQL text - so sorting stays
+-- injection-safe. Search uses position(), not LIKE, so % and _ in what the user types are literal.
+--
+-- The signature changed from the first (unpaged) version of this function, which never shipped; the
+-- DROP below removes that old overload so a call can never be ambiguous between the two.
+DROP FUNCTION IF EXISTS func_getSlaView(TEXT, TEXT, TEXT);
+
+CREATE OR REPLACE FUNCTION func_getSlaView(
+    p_stage TEXT DEFAULT NULL,
+    p_change_type TEXT DEFAULT NULL,
+    p_state TEXT DEFAULT NULL,
+    p_search TEXT DEFAULT NULL,
+    p_sort_by TEXT DEFAULT NULL,
+    p_sort_dir TEXT DEFAULT NULL,
+    p_page INT DEFAULT 1,
+    p_page_size INT DEFAULT 10
+)
+RETURNS TABLE (
+    change_request_id UUID, request_number TEXT, title TEXT, change_type TEXT, stage TEXT,
+    entered_at TIMESTAMPTZ, target_days INT, elapsed_days INT, waiting_days INT, due_at TIMESTAMPTZ,
+    stage_state TEXT, e2e_due_at TIMESTAMPTZ, e2e_state TEXT, overall_state TEXT, days_overdue INT,
+    e2e_target_days INT, e2e_elapsed_days INT, total_count BIGINT
+) AS $$
+DECLARE
+    v_key TEXT := COALESCE(NULLIF(p_sort_by, ''), 'urgency');
+    v_asc BOOLEAN := lower(COALESCE(p_sort_dir, 'asc')) <> 'desc';
+    v_page INT := GREATEST(COALESCE(p_page, 1), 1);
+    v_size INT := LEAST(GREATEST(COALESCE(p_page_size, 10), 1), 200);
+    v_search TEXT := lower(NULLIF(btrim(COALESCE(p_search, '')), ''));
+BEGIN
+    RETURN QUERY
+    SELECT v.v_cr, v.v_number, v.v_title, v.v_type, v.v_stage,
+           v.v_entered, v.v_target, v.v_elapsed, v.v_waiting, v.v_due,
+           v.v_stage_state, v.v_e2e_due, v.v_e2e_state, v.v_overall, v.v_overdue,
+           v.v_e2e_target, v.v_e2e_elapsed, v.v_total
+    FROM (
+        SELECT o.change_request_id AS v_cr, cr.request_number AS v_number, cr.title AS v_title,
+               cr.change_type AS v_type, o.stage AS v_stage, o.entered_at AS v_entered,
+               o.target_days AS v_target, o.elapsed_days AS v_elapsed, o.waiting_days AS v_waiting,
+               o.due_at AS v_due, o.stage_state AS v_stage_state, o.e2e_due_at AS v_e2e_due,
+               o.e2e_state AS v_e2e_state, o.overall_state AS v_overall,
+               GREATEST(
+                   CASE WHEN o.stage_state = 'Breached' THEN fn_sla_business_days_between(o.due_at, now()) ELSE 0 END,
+                   CASE WHEN o.e2e_state = 'Breached' THEN fn_sla_business_days_between(o.e2e_due_at, now()) ELSE 0 END
+               ) AS v_overdue,
+               o.e2e_target_days AS v_e2e_target, o.e2e_elapsed_days AS v_e2e_elapsed,
+               -- How far through its target a request is: the further of its stage and overall position
+               -- (GREATEST ignores a null, so a stage with no target of its own just uses the overall one).
+               GREATEST(o.elapsed_days::NUMERIC / NULLIF(o.target_days, 0),
+                        o.e2e_elapsed_days::NUMERIC / NULLIF(o.e2e_target_days, 0)) AS v_ratio,
+               COALESCE(o.due_at, o.e2e_due_at) AS v_sort_due,
+               CASE o.overall_state WHEN 'Breached' THEN 0 WHEN 'AtRisk' THEN 1 WHEN 'OnTrack' THEN 2 ELSE 3 END AS v_rank,
+               CASE o.stage WHEN 'Submitted' THEN 0 WHEN 'InAssessment' THEN 1 ELSE 2 END AS v_stage_rank,
+               cr.submitted_at AS v_submitted,
+               COUNT(*) OVER()::BIGINT AS v_total
+        FROM fn_sla_open_status() o
+        JOIN change_request cr ON cr.id = o.change_request_id
+        WHERE (p_stage IS NULL OR o.stage = p_stage)
+          AND (p_change_type IS NULL OR cr.change_type = p_change_type)
+          AND (p_state IS NULL OR o.overall_state = p_state)
+          AND (v_search IS NULL
+               OR position(v_search IN lower(cr.title)) > 0
+               OR position(v_search IN lower(cr.request_number)) > 0)
+    ) v
+    ORDER BY CASE WHEN v_key = 'requestNumber' AND v_asc THEN v.v_number END ASC,
+             CASE WHEN v_key = 'requestNumber' AND NOT v_asc THEN v.v_number END DESC,
+             CASE WHEN v_key = 'title' AND v_asc THEN v.v_title END ASC,
+             CASE WHEN v_key = 'title' AND NOT v_asc THEN v.v_title END DESC,
+             CASE WHEN v_key = 'changeType' AND v_asc THEN v.v_type END ASC,
+             CASE WHEN v_key = 'changeType' AND NOT v_asc THEN v.v_type END DESC,
+             CASE WHEN v_key = 'stage' AND v_asc THEN v.v_stage_rank END ASC,
+             CASE WHEN v_key = 'stage' AND NOT v_asc THEN v.v_stage_rank END DESC,
+             CASE WHEN v_key = 'progress' AND v_asc THEN v.v_ratio END ASC NULLS LAST,
+             CASE WHEN v_key = 'progress' AND NOT v_asc THEN v.v_ratio END DESC NULLS LAST,
+             CASE WHEN v_key = 'dueAt' AND v_asc THEN v.v_sort_due END ASC NULLS LAST,
+             CASE WHEN v_key = 'dueAt' AND NOT v_asc THEN v.v_sort_due END DESC NULLS LAST,
+             CASE WHEN v_key = 'urgency' THEN v.v_rank END ASC,
+             CASE WHEN v_key = 'urgency' THEN v.v_overdue END DESC,
+             CASE WHEN v_key = 'urgency' THEN v.v_ratio END DESC NULLS LAST,
+             v.v_submitted, v.v_cr
+    LIMIT v_size OFFSET (v_page - 1) * v_size;
+END;
+$$ LANGUAGE plpgsql STABLE;
+
+-- ---- functions/sla/func_removeSlaHoliday.sql ----
+-- Epic 19 / US-19.1 AC6: take a date off the holiday calendar. The row is deactivated, never deleted,
+-- so the calendar's history stays reconstructable. Audited with the reason.
+CREATE OR REPLACE FUNCTION func_removeSlaHoliday(
+    p_holiday_id UUID,
+    p_reason TEXT,
+    p_actor_user_id UUID
+) RETURNS VOID AS $$
+DECLARE
+    v_date DATE;
+BEGIN
+    IF p_reason IS NULL OR btrim(p_reason) = '' THEN
+        RAISE EXCEPTION 'A reason is required to change the holiday calendar';
+    END IF;
+
+    UPDATE sla_holiday SET is_active = false
+    WHERE id = p_holiday_id AND is_active
+    RETURNING holiday_date INTO v_date;
+    IF v_date IS NULL THEN
+        RAISE EXCEPTION 'That holiday is not on the calendar';
+    END IF;
+
+    INSERT INTO audit_event (entity_type, entity_id, action, actor_user_id, actor_label, before_value, reason)
+    VALUES ('SlaHoliday', p_holiday_id, 'ConfigChanged', p_actor_user_id, 'human',
+            jsonb_build_object('holidayDate', to_char(v_date, 'YYYY-MM-DD'), 'change', 'Removed'), p_reason);
+END;
+$$ LANGUAGE plpgsql;
+
+-- ---- functions/sla/func_upsertSlaConfig.sql ----
+-- Epic 19 / US-19.1: save SLA configuration as a NEW version (the previous one is deactivated, never
+-- overwritten - same pattern as func_upsertWorkflowRule / scoring_config), with a mandatory reason and
+-- a ConfigChanged audit event carrying the before and after values.
+--
+-- p_targets is a JSON array of targets, each {"changeType", "stage", "targetBusinessDays"}:
+--   [{"changeType":"Product","stage":"EndToEnd","targetBusinessDays":2},
+--    {"changeType":"Product","stage":"InAssessment","targetBusinessDays":1}, ...]
+-- The overall (EndToEnd, start-to-decision) target is REQUIRED for every change type - it is the
+-- service level the business set (a decision in about 2 business days). Per-stage targets
+-- (Submitted / InAssessment / PendingCommittee) are OPTIONAL: a stage with no target is still timed
+-- and shown, it just has no target of its own to be late against.
+-- Requests already in flight keep the version they were submitted under (change_request_sla pins it),
+-- unless p_retroactive is true, in which case open requests are re-pinned to the new version and their
+-- current stage target is refreshed (US-19.1 AC7). Finished stages are never touched.
+CREATE OR REPLACE FUNCTION func_upsertSlaConfig(
+    p_targets JSONB,
+    p_at_risk_threshold_pct INT,
+    p_pause_on_clarification BOOLEAN,
+    p_retroactive BOOLEAN,
+    p_reason TEXT,
+    p_actor_user_id UUID
+) RETURNS UUID AS $$
+DECLARE
+    v_id UUID := gen_random_uuid();
+    v_version INT;
+    v_entry JSONB;
+    v_seen TEXT[] := ARRAY[]::TEXT[];
+    v_key TEXT;
+    v_type TEXT;
+    v_days NUMERIC;
+    v_before JSONB;
+BEGIN
+    IF p_reason IS NULL OR btrim(p_reason) = '' THEN
+        RAISE EXCEPTION 'A reason is required to change the SLA configuration';
+    END IF;
+    IF p_at_risk_threshold_pct IS NULL OR p_at_risk_threshold_pct < 1 OR p_at_risk_threshold_pct > 99 THEN
+        RAISE EXCEPTION 'The at-risk warning threshold must be a whole number between 1 and 99 (percent of the target)';
+    END IF;
+    IF p_targets IS NULL OR jsonb_typeof(p_targets) <> 'array' THEN
+        RAISE EXCEPTION 'SLA targets must be a list of change type / stage targets';
+    END IF;
+
+    FOR v_entry IN SELECT * FROM jsonb_array_elements(p_targets) LOOP
+        v_key := (v_entry->>'changeType') || '/' || (v_entry->>'stage');
+        IF (v_entry->>'changeType') IS NULL OR (v_entry->>'changeType') NOT IN ('Product','Feature','Process','Vendor','Geography','CustomerSegment') THEN
+            RAISE EXCEPTION 'Unknown change type in SLA targets: %', COALESCE(v_entry->>'changeType', '(blank)');
+        END IF;
+        IF (v_entry->>'stage') IS NULL OR (v_entry->>'stage') NOT IN ('Submitted','InAssessment','PendingCommittee','EndToEnd') THEN
+            RAISE EXCEPTION 'Unknown stage in SLA targets: %', COALESCE(v_entry->>'stage', '(blank)');
+        END IF;
+        IF jsonb_typeof(v_entry->'targetBusinessDays') IS DISTINCT FROM 'number' THEN
+            RAISE EXCEPTION 'The % target must be a whole number of business days greater than zero', v_key;
+        END IF;
+        v_days := (v_entry->>'targetBusinessDays')::NUMERIC;
+        IF v_days <= 0 OR v_days <> trunc(v_days) THEN
+            RAISE EXCEPTION 'The % target must be a whole number of business days greater than zero', v_key;
+        END IF;
+        IF v_key = ANY (v_seen) THEN
+            RAISE EXCEPTION 'The % target was given more than once', v_key;
+        END IF;
+        v_seen := v_seen || v_key;
+    END LOOP;
+
+    FOREACH v_type IN ARRAY ARRAY['Product','Feature','Process','Vendor','Geography','CustomerSegment'] LOOP
+        IF NOT ((v_type || '/EndToEnd') = ANY (v_seen)) THEN
+            RAISE EXCEPTION 'An overall (start to decision) target is required for %', v_type;
+        END IF;
+    END LOOP;
+
+    SELECT jsonb_build_object(
+               'version', c.version_number,
+               'atRiskThresholdPct', c.at_risk_threshold_pct,
+               'pauseOnClarification', c.pause_on_clarification,
+               'targets', (SELECT jsonb_agg(jsonb_build_object('changeType', t.change_type, 'stage', t.stage, 'targetBusinessDays', t.target_business_days)
+                                            ORDER BY t.change_type, t.stage)
+                           FROM sla_target t WHERE t.sla_config_id = c.id))
+    INTO v_before
+    FROM sla_config c WHERE c.is_active;
+
+    SELECT COALESCE(MAX(version_number), 0) + 1 INTO v_version FROM sla_config;
+    UPDATE sla_config SET is_active = false WHERE is_active;
+
+    INSERT INTO sla_config (id, version_number, at_risk_threshold_pct, pause_on_clarification, created_by_user_id, reason)
+    VALUES (v_id, v_version, p_at_risk_threshold_pct, COALESCE(p_pause_on_clarification, true), p_actor_user_id, p_reason);
+
+    INSERT INTO sla_target (sla_config_id, change_type, stage, target_business_days)
+    SELECT v_id, e->>'changeType', e->>'stage', (e->>'targetBusinessDays')::INT
+    FROM jsonb_array_elements(p_targets) e;
+
+    IF COALESCE(p_retroactive, false) THEN
+        UPDATE change_request_sla s SET sla_config_id = v_id
+        FROM change_request cr
+        WHERE cr.id = s.change_request_id AND cr.status <> 'Decisioned';
+
+        -- A stage with no target in the new version ends up with no target (null), not its old one.
+        UPDATE change_request_stage_history h
+        SET target_business_days = (
+            SELECT t.target_business_days
+            FROM change_request cr
+            JOIN sla_target t ON t.change_type = cr.change_type AND t.stage = h.stage
+            WHERE cr.id = h.change_request_id AND t.sla_config_id = v_id)
+        WHERE h.left_at IS NULL;
+    END IF;
+
+    INSERT INTO audit_event (entity_type, entity_id, action, actor_user_id, actor_label, before_value, after_value, reason)
+    VALUES ('SlaConfig', v_id, 'ConfigChanged', p_actor_user_id, 'human', v_before,
+            jsonb_build_object('version', v_version,
+                               'atRiskThresholdPct', p_at_risk_threshold_pct,
+                               'pauseOnClarification', COALESCE(p_pause_on_clarification, true),
+                               'retroactive', COALESCE(p_retroactive, false),
+                               'targets', p_targets),
+            p_reason);
+
+    RETURN v_id;
+END;
+$$ LANGUAGE plpgsql;
+
 -- ---- functions/users/func_createUser.sql ----
 -- Admin user-management screen: creates an app_user row and its initial role grant(s) in one
 -- transaction, so a user is never left with zero roles between the two inserts. auth0_subject
@@ -1679,6 +2442,47 @@ RETURNS TABLE (id UUID, display_name TEXT, email TEXT, roles TEXT[]) AS $$
     GROUP BY u.id, u.display_name, u.email;
 $$ LANGUAGE sql STABLE;
 
+-- ---- functions/users/func_linkUserAuth0ByEmail.sql ----
+-- Epic 11 follow-up: closes the chicken-and-egg gap where an Admin-created user (auth0_subject
+-- still NULL) can't be linked until an Admin knows their real Auth0 subject - which nobody learns
+-- until that person has logged in once and been refused every role-gated endpoint. Called only as
+-- a fallback from AppUserClaimsTransformation when func_getUserByAuth0Subject finds nothing, using
+-- the email Auth0's own /userinfo endpoint returned for that exact access token (never a
+-- client-supplied value). Only ever claims a row not already linked to someone else - a row whose
+-- auth0_subject is already set is left alone, so this can't hijack an existing, distinct login.
+-- Case-insensitive: Auth0's stored email casing doesn't always match what an Admin typed at
+-- creation time.
+CREATE OR REPLACE FUNCTION func_linkUserAuth0ByEmail(p_email TEXT, p_auth0_subject TEXT)
+RETURNS TABLE (id UUID, display_name TEXT, email TEXT, roles TEXT[]) AS $$
+DECLARE
+    v_user_id UUID;
+BEGIN
+    SELECT u.id INTO v_user_id
+    FROM app_user u
+    WHERE lower(u.email) = lower(p_email)
+      AND u.auth0_subject IS NULL
+      AND u.is_active = true;
+
+    IF v_user_id IS NULL THEN
+        RETURN;
+    END IF;
+
+    UPDATE app_user SET auth0_subject = p_auth0_subject WHERE id = v_user_id;
+
+    INSERT INTO audit_event (entity_type, entity_id, action, actor_label, after_value, reason)
+    VALUES ('AppUser', v_user_id, 'Auth0SubjectLinked', 'system',
+            jsonb_build_object('auth0Subject', p_auth0_subject),
+            'Auto-linked via verified email match on first login');
+
+    RETURN QUERY
+    SELECT u.id, u.display_name, u.email, array_agg(ur.role ORDER BY ur.role)
+    FROM app_user u
+    JOIN app_user_role ur ON ur.user_id = u.id
+    WHERE u.id = v_user_id
+    GROUP BY u.id, u.display_name, u.email;
+END;
+$$ LANGUAGE plpgsql;
+
 -- ---- functions/users/func_setUserActive.sql ----
 -- Admin user-management screen: deactivate/reactivate. A deactivated user's role grants stay in
 -- app_user_role untouched - is_active is what every identity-resolution function already filters
@@ -1700,6 +2504,19 @@ BEGIN
     SELECT is_active INTO v_before FROM app_user WHERE id = p_user_id;
     IF v_before IS NULL THEN
         RAISE EXCEPTION 'User % not found', p_user_id;
+    END IF;
+
+    -- Guard against the last active Admin locking everyone out: deactivating would leave no one
+    -- able to manage users/configuration without going straight to SQL.
+    IF p_is_active = FALSE AND EXISTS (
+        SELECT 1 FROM app_user_role WHERE user_id = p_user_id AND role = 'Admin'
+    ) AND NOT EXISTS (
+        SELECT 1
+        FROM app_user_role r
+        JOIN app_user u ON u.id = r.user_id
+        WHERE r.role = 'Admin' AND u.is_active = TRUE AND u.id <> p_user_id
+    ) THEN
+        RAISE EXCEPTION 'Cannot deactivate the last active Admin';
     END IF;
 
     UPDATE app_user SET is_active = p_is_active WHERE id = p_user_id;
@@ -1763,6 +2580,17 @@ BEGIN
     END IF;
 
     SELECT array_agg(role ORDER BY role) INTO v_before FROM app_user_role WHERE user_id = p_user_id;
+
+    -- Guard against stripping the last active Admin's Admin role: would leave no one able to
+    -- manage users/configuration without going straight to SQL.
+    IF 'Admin' = ANY(v_before) AND NOT ('Admin' = ANY(p_roles)) AND NOT EXISTS (
+        SELECT 1
+        FROM app_user_role r
+        JOIN app_user u ON u.id = r.user_id
+        WHERE r.role = 'Admin' AND u.is_active = TRUE AND u.id <> p_user_id
+    ) THEN
+        RAISE EXCEPTION 'Cannot remove the Admin role from the last active Admin';
+    END IF;
 
     DELETE FROM app_user_role WHERE user_id = p_user_id AND role NOT IN (SELECT unnest(p_roles));
 
@@ -2002,5 +2830,79 @@ SELECT 'CommitteeQuorum', '{"quorum": 2}'::jsonb, u.id, 'Initial MVP default - s
 FROM app_user u
 WHERE u.auth0_subject = 'seed|admin-1'
   AND NOT EXISTS (SELECT 1 FROM workflow_rule WHERE rule_key = 'CommitteeQuorum');
+
+-- ---- seed/seed_sla_config.sql ----
+-- Epic 19 - default SLA configuration and backfill. Idempotent: re-applied on every startup.
+--
+-- Default: the overall (start-to-decision) target is 2 business days for every request type - the
+-- service level the problem statement sets against the 15-20 business-day baseline the platform
+-- exists to reduce (agreed on the 7 Oct 2026 sync-up; the 24 Sep defaults of 2 / 8 / 5 / 15 were
+-- replaced). No per-stage targets are seeded - an Admin can add them in Configuration. Warning
+-- threshold 80% of the target; time waiting on the Product Owner is not charged to the analyst stage.
+-- Run after seed_dev_users.sql.
+DO $$
+DECLARE
+    v_admin UUID;
+    v_config UUID := gen_random_uuid();
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM sla_config) THEN
+        SELECT id INTO v_admin FROM app_user WHERE auth0_subject = 'seed|admin-1';
+        IF v_admin IS NOT NULL THEN
+            INSERT INTO sla_config (id, version_number, at_risk_threshold_pct, pause_on_clarification, created_by_user_id, reason)
+            VALUES (v_config, 1, 80, true, v_admin, 'Initial default: 2 business days start to decision (7 Oct 2026 sync-up)');
+
+            INSERT INTO sla_target (sla_config_id, change_type, stage, target_business_days)
+            SELECT v_config, ct.change_type, 'EndToEnd', 2
+            FROM (VALUES ('Product'), ('Feature'), ('Process'), ('Vendor'), ('Geography'), ('CustomerSegment')) AS ct(change_type);
+        END IF;
+    END IF;
+END $$;
+
+-- Backfill for requests that existed before this epic (the triggers only cover new ones): pin them to
+-- the active version, open their current stage, and record the end-to-end result for decided ones.
+-- Stage entry times for these old rows are APPROXIMATE - the history did not exist when they moved
+-- through their stages - taken from the assessment's own timestamps, falling back to submission time.
+INSERT INTO change_request_sla (change_request_id, sla_config_id)
+SELECT cr.id, (SELECT id FROM sla_config WHERE is_active)
+FROM change_request cr
+WHERE NOT EXISTS (SELECT 1 FROM change_request_sla s WHERE s.change_request_id = cr.id);
+
+INSERT INTO change_request_stage_history (change_request_id, stage, entered_at, target_business_days)
+SELECT cr.id, cr.status,
+       CASE cr.status
+           WHEN 'InAssessment' THEN COALESCE(a.created_at, cr.submitted_at)
+           WHEN 'PendingCommittee' THEN COALESCE(a.finalized_at, a.created_at, cr.submitted_at)
+           ELSE cr.submitted_at
+       END,
+       t.target_business_days
+FROM change_request cr
+JOIN change_request_sla s ON s.change_request_id = cr.id
+LEFT JOIN assessment a ON a.change_request_id = cr.id
+LEFT JOIN sla_target t ON t.sla_config_id = s.sla_config_id AND t.change_type = cr.change_type AND t.stage = cr.status
+WHERE cr.status IN ('Submitted','InAssessment','PendingCommittee')
+  AND NOT EXISTS (SELECT 1 FROM change_request_stage_history h WHERE h.change_request_id = cr.id);
+
+UPDATE change_request_sla s
+SET decided_at = q.q_decided,
+    e2e_actual_business_days = q.q_days,
+    e2e_met = q.q_met
+FROM (
+    SELECT cr.id AS q_cr, d.decided_at AS q_decided,
+           GREATEST(fn_sla_business_days_between(cr.submitted_at, d.decided_at) - w.w_days, 0) AS q_days,
+           CASE WHEN t.target_business_days IS NULL THEN NULL
+                ELSE d.decided_at <= fn_sla_add_business_days(cr.submitted_at, t.target_business_days + w.w_days) END AS q_met
+    FROM change_request cr
+    JOIN change_request_sla s2 ON s2.change_request_id = cr.id AND s2.decided_at IS NULL
+    JOIN assessment a ON a.change_request_id = cr.id
+    JOIN committee_decision d ON d.assessment_id = a.id
+    LEFT JOIN sla_config c ON c.id = s2.sla_config_id
+    LEFT JOIN sla_target t ON t.sla_config_id = s2.sla_config_id AND t.change_type = cr.change_type AND t.stage = 'EndToEnd'
+    CROSS JOIN LATERAL (
+        SELECT CASE WHEN COALESCE(c.pause_on_clarification, true)
+                    THEN fn_sla_waiting_days(cr.id, cr.submitted_at, d.decided_at) ELSE 0 END AS w_days
+    ) w
+    WHERE cr.status = 'Decisioned'
+) q
+WHERE s.change_request_id = q.q_cr;
 
 COMMIT;

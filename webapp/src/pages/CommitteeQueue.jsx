@@ -8,11 +8,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
 import ClampedText from '../components/ClampedText.jsx'
+import SlaBadge from '../components/SlaBadge.jsx'
 import GridPagination from '../components/GridPagination.jsx'
 import SortableHeader from '../components/SortableHeader.jsx'
 import { useDevUser } from '../auth/DevUserContext.jsx'
 import { Endpoints, apiFetch } from '../lib/api.js'
 import { CHANGE_TYPES } from '../lib/constants.js'
+import { formatDate } from '../lib/sla.js'
 import { useDebouncedValue } from '../lib/useDebouncedValue.js'
 import { useFetch } from '../lib/useFetch.js'
 import { useGridQuery } from '../lib/useGridQuery.js'
@@ -215,6 +217,7 @@ export default function CommitteeQueue() {
                 <col className="w-28" />
                 <col className="w-24" />
                 <col />
+                <col className="w-36" />
                 <col className="w-24" />
               </colgroup>
               <TableHeader>
@@ -222,6 +225,7 @@ export default function CommitteeQueue() {
                   <SortableHeader column="requestNumber" label="Request #" query={query} onSort={toggleSort} />
                   <SortableHeader column="changeType" label="Type" query={query} onSort={toggleSort} />
                   <SortableHeader column="title" label="Title" query={query} onSort={toggleSort} />
+                  <TableHead>Decision due</TableHead>
                   <TableHead />
                 </TableRow>
               </TableHeader>
@@ -232,6 +236,10 @@ export default function CommitteeQueue() {
                     <TableCell className="whitespace-normal break-words">{q.changeType}</TableCell>
                     <TableCell>
                       <ClampedText text={q.title} />
+                    </TableCell>
+                    <TableCell className="whitespace-normal">
+                      {q.dueAt && <p className="text-sm">{formatDate(q.dueAt)}</p>}
+                      <SlaBadge state={q.slaState} />
                     </TableCell>
                     <TableCell>
                       <Button size="sm" onClick={() => setSelected(q)}>

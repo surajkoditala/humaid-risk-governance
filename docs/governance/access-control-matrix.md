@@ -129,6 +129,17 @@ request's `SubmittedByUserId` against the caller (Product Owner only; Analyst is
 | `GET` (rules) | | | | ✅ | US-10.2 |
 | `POST` (upsert) | | | | ✅ Self | |
 
+### Epic 19 — SLA Tracking (`SlaController`)
+| Action | PO | AN | CM | AD | Notes |
+|---|---|---|---|---|---|
+| `GET Config` | | ✅ Self | | ✅ Self | US-19.1 — read-only for an Analyst |
+| `POST Config` | | | | ✅ Self | US-19.1 — Admin only, reason required, new version |
+| `POST Holiday` / `POST Holiday/{holidayId}/Remove` | | | | ✅ Self | US-19.1 AC6 |
+| `GET View` / `GET Summary` / `GET Performance` | | ✅ Self | | ✅ Self | US-19.5 — a Product Owner sees only their own due date and state, through My Requests |
+| `GET Request/{changeRequestId}` | | ✅ Self | | ✅ Self | US-19.2 — the workspace strip |
+
+Due date and SLA state also appear on the request lists (`ChangeRequest` / `ChangeRequest/ForUser`) and the committee queue — read-only, and they follow those actions' own restrictions.
+
 ### Epic 14 — Mock Systems / Data Ingestion (`DataIngestionController`)
 | Action | PO | AN | CM | AD | Notes |
 |---|---|---|---|---|---|
