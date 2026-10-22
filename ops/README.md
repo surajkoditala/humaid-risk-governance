@@ -101,6 +101,7 @@ dev and a passwordless fallback that Azure uses (managed identity, Entra token).
 | `AZURE_POSTGRESQL_CONNECTIONSTRING` | Docker Postgres, port 5433 | unset - `AZURE_POSTGRESQL_ENDPOINT` is used instead |
 | `AZURE_POSTGRESQL_ENDPOINT` | unset | passwordless connection string (`User Id=` the app's identity), token from managed identity |
 | `AUTH0_DOMAIN` / `AUTH0_AUDIENCE` | blank (DevBypassAuthHandler active) | real Auth0 tenant values once configured - read at runtime, ordinary Container App env vars (not set by Terraform today) |
+| `AUTH0_CLIENT_ID` | blank | the Auth0 SPA application's Client ID. Not used by the API itself - it is served to the webapp at `/config.json` together with the two values above (see below). Public, not a secret |
 | `CORS_ALLOWED_ORIGINS` | `["http://localhost:3000"]` | `CORS_ALLOWED_ORIGINS__0` = the Workbench container app's own URL |
 | `AI_PROVIDER` | `Anthropic` | `AzureFoundry` |
 | `ANTHROPIC_API_KEY` / `ANTHROPIC_MODEL` | dev key, if using the Anthropic path | key from Key Vault (`ANTHROPIC-API-KEY`); model set by Terraform - only used if `AI_PROVIDER` is switched back to `Anthropic` |
@@ -121,21 +122,24 @@ dev and a passwordless fallback that Azure uses (managed identity, Entra token).
 | `CORS_ALLOWED_ORIGINS` | `["http://localhost:5210"]` | `CORS_ALLOWED_ORIGINS__0` set by Terraform - Mock Systems is only ever called by the Workbench, never the browser directly |
 | `APPLICATIONINSIGHTS_CONNECTION_STRING` | blank | the same Application Insights resource as the Workbench |
 
-## Frontend Auth0 config is a build-time value, not a runtime one
+## Frontend Auth0 config is read at runtime, from the API
 
-Unlike every variable in the table above, the webapp's three `VITE_AUTH0_*` values (`webapp/.env.example`)
-are inlined into the JavaScript bundle by Vite **when the image is built**, not read at container
-start. Since PR #49 baked the webapp into the Workbench image's `wwwroot`, setting them as a
-Container App env var later has no effect - the bundle already shipped without them. They reach
-the build as Docker `--build-arg`s instead: `frontendAuth0Domain` / `frontendAuth0ClientId` /
-`frontendAuth0Audience` in `.azure-pipelines/workbench/templates/variables.yml`, consumed by the
-`docker build` step in `workbench/environments/dev.yml` and the three `ARG`/`ENV` pairs in the
-Dockerfile's `webapp-build` stage. All three default to empty, which keeps the built frontend in
-today's "Auth0 not configured" dev-bypass mode - filling them in (once the tenant exists) is a
-one-time edit to that one variables file, not a code change.
+The webapp is static JavaScript running in the browser, so it can't see the container's env vars
+directly - and Vite inlines `VITE_*` values at image build time, which froze them into the bundle
+(the first deployed images shipped with them empty and showed "Auth0 is not configured"). Instead,
+the Workbench API serves `GET /config.json` (anonymous, `Cache-Control: no-store`) containing
+`auth0Domain`, `auth0ClientId` and `auth0Audience`, taken from the `AUTH0_DOMAIN`,
+`AUTH0_CLIENT_ID` and `AUTH0_AUDIENCE` env vars in the table above; `main.jsx` fetches it before the
+first render. Changing those env vars and restarting the container app changes the webapp's Auth0
+settings with **no image rebuild**, and one image works in any environment.
+
+The webapp's `VITE_AUTH0_*` values (`webapp/.env.example`) remain only as a fallback for local dev
+when the API isn't serving them. `VITE_API_BASE_URL` stays build-time on purpose: it is where the
+webapp finds `/config.json`, and is `""` (same origin) in the deployed image.
 
 ## Still open
 
-- Auth0 tenant for the deployed app: `AUTH0_DOMAIN`/`AUTH0_AUDIENCE` aren't set on the container
-  apps yet, and the frontend's `VITE_AUTH0_*` build args default to empty - see
-  `docs/architecture/auth0-setup.md` for the step-by-step.
+- Auth0 for the deployed app is set by hand as container app env vars (`AUTH0_DOMAIN`,
+  `AUTH0_CLIENT_ID`, `AUTH0_AUDIENCE`), not by Terraform - see `docs/architecture/auth0-setup.md`.
+  If Terraform ever starts managing that container app's env block, add them there or an apply
+  will remove them.
