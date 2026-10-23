@@ -6,7 +6,7 @@
 
 CREATE SCHEMA IF NOT EXISTS mock_systems;
 
-CREATE TABLE mock_systems.crm_customer (
+CREATE TABLE IF NOT EXISTS mock_systems.crm_customer (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     customer_name TEXT NOT NULL,
     customer_type TEXT NOT NULL CHECK (customer_type IN ('Individual','SmallBusiness','Corporate','MSB','NGO')),
@@ -17,7 +17,7 @@ CREATE TABLE mock_systems.crm_customer (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE TABLE mock_systems.core_banking_product (
+CREATE TABLE IF NOT EXISTS mock_systems.core_banking_product (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     product_name TEXT NOT NULL,
     product_type TEXT NOT NULL, -- e.g. WireTransfer, PrepaidCard, TradeFinance, CorrespondentBanking
@@ -29,7 +29,7 @@ CREATE TABLE mock_systems.core_banking_product (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE TABLE mock_systems.vendor_registry (
+CREATE TABLE IF NOT EXISTS mock_systems.vendor_registry (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     vendor_name TEXT NOT NULL,
     vendor_risk_rating TEXT NOT NULL CHECK (vendor_risk_rating IN ('Low','Medium','High')), -- as originally on file

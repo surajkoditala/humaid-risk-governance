@@ -91,6 +91,16 @@ builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>
 }));
 
 var app = builder.Build();
+
+// Apply schema/functions/seed before accepting traffic - without it a fresh environment starts
+// cleanly and every request 500s on a missing func_* (nothing had run db/deploy_all.sql in Azure).
+// Idempotent, so safe on every start; uncaught on purpose so a failure halts startup instead of
+// serving against a half-applied schema. See MigrationRunner.cs.
+await new MigrationRunner(
+    dataSource,
+    Path.Combine(app.Environment.ContentRootPath, "db"),
+    app.Services.GetRequiredService<ILogger<MigrationRunner>>()).RunAsync();
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
