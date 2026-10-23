@@ -69,7 +69,7 @@ resource "azurerm_monitor_scheduled_query_rules_alert_v2" "failed_request_burst"
   criteria {
     query                   = "AppRequests | where Success == false"
     time_aggregation_method = "Count"
-    threshold               = 5
+    threshold               = 10
     operator                = "GreaterThan"
   }
 
@@ -92,7 +92,7 @@ resource "azurerm_monitor_scheduled_query_rules_alert_v2" "unhandled_exceptions"
   criteria {
     query                   = "AppExceptions"
     time_aggregation_method = "Count"
-    threshold               = 3
+    threshold               = 10
     operator                = "GreaterThan"
   }
 
