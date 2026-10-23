@@ -3,6 +3,7 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Auth
     using System.Net;
     using System.Text;
     using Humaid.RiskGovernance.AdminUI.Web.Auth;
+    using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Logging.Abstractions;
     using Moq;
     using Xunit;
@@ -14,13 +15,13 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Auth
     /// </summary>
     public class Auth0UserInfoClientTests
     {
-        private static Auth0UserInfoClient ClientReturning(Func<HttpResponseMessage> respond)
+        private static Auth0UserInfoClient ClientReturning(Func<HttpResponseMessage> respond, ILogger<Auth0UserInfoClient>? logger = null)
         {
             var handler = new StubHandler(respond);
             var factory = new Mock<IHttpClientFactory>();
             factory.Setup(f => f.CreateClient("Auth0"))
                 .Returns(new HttpClient(handler) { BaseAddress = new Uri("https://tenant.example/") });
-            return new Auth0UserInfoClient(factory.Object, NullLogger<Auth0UserInfoClient>.Instance);
+            return new Auth0UserInfoClient(factory.Object, logger ?? NullLogger<Auth0UserInfoClient>.Instance);
         }
 
         private static HttpResponseMessage Json(string body) =>
@@ -72,6 +73,51 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Auth
             var client = ClientReturning(() => new HttpResponseMessage(HttpStatusCode.Unauthorized));
 
             Assert.Null(await client.GetEmailAsync("token"));
+        }
+
+        [Fact]
+        public async Task LogsWhyWhenEmailIsNotVerified()
+        {
+            var log = new CapturingLogger<Auth0UserInfoClient>();
+            var client = ClientReturning(() => Json("""{"email":"a@b.com","email_verified":false}"""), log);
+
+            Assert.Null(await client.GetEmailAsync("token"));
+            Assert.Contains(log.Warnings, w => w.Contains("email_verified=false"));
+        }
+
+        [Fact]
+        public async Task LogsWhyWhenNoEmailIsReturned()
+        {
+            var log = new CapturingLogger<Auth0UserInfoClient>();
+            var client = ClientReturning(() => Json("""{"email_verified":true}"""), log);
+
+            Assert.Null(await client.GetEmailAsync("token"));
+            Assert.Contains(log.Warnings, w => w.Contains("no email"));
+        }
+
+        [Fact]
+        public async Task LogsTheStatusCodeOnNonSuccess()
+        {
+            var log = new CapturingLogger<Auth0UserInfoClient>();
+            var client = ClientReturning(() => new HttpResponseMessage(HttpStatusCode.Unauthorized), log);
+
+            Assert.Null(await client.GetEmailAsync("token"));
+            Assert.Contains(log.Warnings, w => w.Contains("401"));
+        }
+
+        private sealed class CapturingLogger<T> : ILogger<T>
+        {
+            public List<string> Warnings { get; } = [];
+
+            public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+            public bool IsEnabled(LogLevel logLevel) => true;
+
+            public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+            {
+                if (logLevel == LogLevel.Warning)
+                    Warnings.Add(formatter(state, exception));
+            }
         }
 
         private sealed class StubHandler(Func<HttpResponseMessage> respond) : HttpMessageHandler
