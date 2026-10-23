@@ -98,6 +98,10 @@ module "container_app_gh_riskgovernance_ui" {
           {
             name  = "AUTH0_AUDIENCE"
             value = local.AUTH0_AUDIENCE
+          },
+          {
+            name  = "AUTH0_CLIENT_ID"
+            value = local.AUTH0_CLIENT_ID
           }
         ]
       }
