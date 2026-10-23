@@ -5,8 +5,10 @@
 -- One-shot setup for Humaid.RiskGovernance.MockSystems: creates the 'mock_systems' schema,
 -- its 3 tables, every stored function the service calls, and seeds synthetic dev data -
 -- against the SAME Postgres instance/database the Workbench uses (different schema, not a
--- separate database - see README.md). Run once. Not idempotent by design, same as the
--- Workbench's own deploy_all.sql.
+-- separate database - see README.md). Idempotent: tables are CREATE ... IF NOT EXISTS,
+-- functions are CREATE OR REPLACE, seed rows are INSERT ... ON CONFLICT DO NOTHING, so a
+-- second run changes nothing and never overwrites data the Workbench has written back.
+-- The service applies the same files itself at startup (see MigrationRunner.cs).
 --
 -- Usage (against the same Docker Postgres the Workbench already uses):
 --   psql -U postgres -h localhost -p 5433 -d risk_governance_db -v ON_ERROR_STOP=1 -f deploy_all.sql
@@ -25,7 +27,7 @@ BEGIN;
 
 CREATE SCHEMA IF NOT EXISTS mock_systems;
 
-CREATE TABLE mock_systems.crm_customer (
+CREATE TABLE IF NOT EXISTS mock_systems.crm_customer (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     customer_name TEXT NOT NULL,
     customer_type TEXT NOT NULL CHECK (customer_type IN ('Individual','SmallBusiness','Corporate','MSB','NGO')),
@@ -36,7 +38,7 @@ CREATE TABLE mock_systems.crm_customer (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE TABLE mock_systems.core_banking_product (
+CREATE TABLE IF NOT EXISTS mock_systems.core_banking_product (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     product_name TEXT NOT NULL,
     product_type TEXT NOT NULL, -- e.g. WireTransfer, PrepaidCard, TradeFinance, CorrespondentBanking
@@ -48,7 +50,7 @@ CREATE TABLE mock_systems.core_banking_product (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE TABLE mock_systems.vendor_registry (
+CREATE TABLE IF NOT EXISTS mock_systems.vendor_registry (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     vendor_name TEXT NOT NULL,
     vendor_risk_rating TEXT NOT NULL CHECK (vendor_risk_rating IN ('Low','Medium','High')), -- as originally on file

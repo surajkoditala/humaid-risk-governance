@@ -35,6 +35,11 @@ RUN find /usr/local/share/ca-certificates/ -maxdepth 1 \( -name '*.crt' -o -name
 
 COPY --from=build /app/publish .
 
+# schema.sql, functions/ and seed.sql applied by MigrationRunner at startup (Program.cs resolves
+# them at ./db). Without this the image started cleanly against an empty database and every
+# request failed on a missing func_*.
+COPY --from=build /src/src/6-MockExternalSystems/Humaid.RiskGovernance.MockSystems/db ./db
+
 ENV ASPNETCORE_URLS=http://+:8080
 EXPOSE 8080
 

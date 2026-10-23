@@ -10,19 +10,28 @@ thing allowed to read this service, and only over HTTP — nothing shares a data
 ## Run locally
 
 Uses the same Docker Postgres instance as the Workbench (`ops/docker-compose.yml`, port 5433), but
-its own schema. One command applies everything (schema + functions + seed, in order, in a
-transaction) — same `deploy_all.sql` convention as
-`Humaid.RiskGovernance.AdminUI.DB` (regenerate with `db/generate_deploy_all.sh` after editing
-`db/schema.sql`, `db/functions/`, or `db/seed.sql` — never hand-edit `deploy_all.sql` itself):
+its own schema. The service applies its own database at startup (`MigrationRunner.cs`): `db/schema.sql`,
+then `db/functions/**`, then `db/seed.sql`, before it accepts requests. Every file is idempotent
+(tables `CREATE ... IF NOT EXISTS`, functions `CREATE OR REPLACE`, seed rows `ON CONFLICT DO NOTHING`),
+so this runs safely on every start and never overwrites a risk flag the Workbench has written back.
+In the image, `db/` is copied next to the binary.
+
+```powershell
+dotnet run --project src/6-MockExternalSystems/Humaid.RiskGovernance.MockSystems
+```
+
+`db/deploy_all.sql` is the same three files concatenated (regenerate with `db/generate_deploy_all.sh`
+after editing `db/schema.sql`, `db/functions/`, or `db/seed.sql` — never hand-edit it; the PR
+pipeline checks it is current). It is idempotent too, so it is still handy for applying by hand:
 
 ```powershell
 $env:PGPASSWORD = "postgres"
 psql -U postgres -h localhost -p 5433 -d risk_governance_db -v ON_ERROR_STOP=1 -f db/deploy_all.sql
-dotnet run --project src/6-MockExternalSystems/Humaid.RiskGovernance.MockSystems
 ```
 
-(Or apply `db/schema.sql`, `db/functions/**/*.sql`, then `db/seed.sql` individually if you're
-adding to an already-partially-applied database.)
+The connection's role needs `CREATE` on the database (first start) and must own `mock_systems`
+objects to re-apply functions - if the objects were created by a different role (for example a
+hand-run `deploy_all.sql` as an admin), transfer ownership to the service's role first.
 
 Listens on `http://localhost:5220` (vs. the Workbench's `5210`).
 
