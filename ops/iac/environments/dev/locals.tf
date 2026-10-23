@@ -8,7 +8,7 @@ locals {
   BLOB_STORAGE_SERVICE_URI              = "https://${module.storage.storage_account_blob_public_fqdn}" #Azure will resolve this to the private IP via the Private DNS Zone using the private endpoint;this way DNS name matches the certificate and traffic still routes privately
   ASPNETCORE_ENVIRONMENT                = var.ASPNETCORE_ENVIRONMENT
   AI_PROVIDER                           = "Anthropic" #"AzureFoundry"
-  ANTHROPIC_WORKSPACE_ID                = "wrkspc_01HwxvHoGR8YbpUrNZr1bYSM"
+  ANTHROPIC_WORKSPACE_ID                = "wrkspc_0174fwKGboLgMrCLAbVALqmU"
   FOUNDRY_PROJECT_ENDPOINT              = "https://proj-gh.services.ai.azure.com/api/projects/proj-gh"
   FOUNDRY_MODEL_DEPLOYMENT              = "gpt-4.1-mini"
   ANTHROPIC_MODEL                       = "claude-sonnet-5"
@@ -17,6 +17,7 @@ locals {
   APPLICATIONINSIGHTS_CONNECTION_STRING = module.log_analytics_workspace.application_insights_connection_string
   AUTH0_DOMAIN                          = "dev-sqeqegefs2iv4taa.us.auth0.com"
   AUTH0_AUDIENCE                        = "https://risk-governance-api"
+  AUTH0_CLIENT_ID                       = "sIPanUVyZAEdlgDk4ef7D2aMCAjqEiqX"
 
   # workbench variables
   AZURE_POSTGRESQL_ENDPOINT = "Server=${module.pgsql.postgresql_server_fqdn};Database=risk_governance_db;Port=5432;Ssl Mode=Require;User Id=ca-${var.container_app_ui_name}-${var.tags.environment};"
