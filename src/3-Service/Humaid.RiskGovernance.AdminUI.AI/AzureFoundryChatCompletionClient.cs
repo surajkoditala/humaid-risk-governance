@@ -74,6 +74,12 @@ namespace Humaid.RiskGovernance.AdminUI.AI
 
             var parsed = JsonSerializer.Deserialize<FoundryChatResponse>(body)
                 ?? throw new InvalidOperationException("Azure AI Foundry returned an empty response.");
+
+            // Recorded before the text is read: a response with no message content was still billed.
+            AiUsageTelemetry.Record(
+                _logger, "az.ai.inference", parsed.Model ?? _model,
+                parsed.Usage?.PromptTokens, parsed.Usage?.CompletionTokens);
+
             var text = parsed.Choices.FirstOrDefault()?.Message?.Content;
             return text ?? throw new InvalidOperationException("Azure AI Foundry response had no message content.");
         }
@@ -92,7 +98,15 @@ namespace Humaid.RiskGovernance.AdminUI.AI
 
         private class FoundryChatResponse
         {
+            [JsonPropertyName("model")] public string? Model { get; set; }
             [JsonPropertyName("choices")] public List<FoundryChatChoice> Choices { get; set; } = [];
+            [JsonPropertyName("usage")] public FoundryUsage? Usage { get; set; }
+        }
+
+        private class FoundryUsage
+        {
+            [JsonPropertyName("prompt_tokens")] public long? PromptTokens { get; set; }
+            [JsonPropertyName("completion_tokens")] public long? CompletionTokens { get; set; }
         }
 
         private class FoundryChatChoice

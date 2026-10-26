@@ -98,6 +98,13 @@ namespace Humaid.RiskGovernance.AdminUI.AI
 
             var parsed = JsonSerializer.Deserialize<ClaudeResponse>(body)
                 ?? throw new InvalidOperationException("Anthropic API returned an empty response.");
+
+            // Recorded before the text is read: a response with no usable text block was still billed.
+            AiUsageTelemetry.Record(
+                _logger, "anthropic", parsed.Model ?? _model,
+                parsed.Usage?.InputTokens, parsed.Usage?.OutputTokens,
+                parsed.Usage?.CacheReadInputTokens, parsed.Usage?.CacheCreationInputTokens);
+
             var text = parsed.Content.FirstOrDefault(c => c.Type == "text")?.Text;
             return text ?? throw new InvalidOperationException("Anthropic API response had no text content block.");
         }
@@ -118,7 +125,17 @@ namespace Humaid.RiskGovernance.AdminUI.AI
 
         private class ClaudeResponse
         {
+            [JsonPropertyName("model")] public string? Model { get; set; }
             [JsonPropertyName("content")] public List<ClaudeContentBlock> Content { get; set; } = [];
+            [JsonPropertyName("usage")] public ClaudeUsage? Usage { get; set; }
+        }
+
+        private class ClaudeUsage
+        {
+            [JsonPropertyName("input_tokens")] public long? InputTokens { get; set; }
+            [JsonPropertyName("output_tokens")] public long? OutputTokens { get; set; }
+            [JsonPropertyName("cache_read_input_tokens")] public long? CacheReadInputTokens { get; set; }
+            [JsonPropertyName("cache_creation_input_tokens")] public long? CacheCreationInputTokens { get; set; }
         }
 
         private class ClaudeContentBlock

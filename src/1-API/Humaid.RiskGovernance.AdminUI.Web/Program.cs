@@ -67,6 +67,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using OpenTelemetry;
+using OpenTelemetry.Metrics;
 
 // Every stored function returns snake_case columns (request_number, submitted_at, ...); this maps
 // them onto this codebase's PascalCase model properties (RequestNumber, SubmittedAt, ...) without
@@ -150,7 +151,11 @@ builder.Host.UseDefaultServiceProvider((context, options) =>
 var appInsightsConnectionString = builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"];
 if (!string.IsNullOrWhiteSpace(appInsightsConnectionString))
 {
-    builder.Services.AddOpenTelemetry().UseAzureMonitor(options => options.ConnectionString = appInsightsConnectionString);
+    // WithMetrics adds the AI token-usage meter (AiUsageTelemetry) to what is exported, so tokens per step/model
+    // reach the AppMetrics table alongside the request and dependency telemetry above.
+    builder.Services.AddOpenTelemetry()
+        .UseAzureMonitor(options => options.ConnectionString = appInsightsConnectionString)
+        .WithMetrics(metrics => metrics.AddMeter(AiUsageTelemetry.MeterName));
 }
 
 builder.Services.AddControllers();

@@ -63,6 +63,8 @@ namespace Humaid.RiskGovernance.AdminUI.AI
                 {{JsonSerializer.Serialize(defaults)}}
                 """;
 
+            // Tags this call's token usage with the step that made it (see AiUsageTelemetry).
+            using var _ = AiUsageTelemetry.BeginOperation("category_mapping");
             var raw = await _chatCompletionClient.CompleteAsync(SystemPrompt, userPrompt, cancellationToken);
             var json = JsonExtraction.ExtractJson(raw);
 
