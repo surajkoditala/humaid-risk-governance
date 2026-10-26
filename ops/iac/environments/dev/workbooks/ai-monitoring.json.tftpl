@@ -4,7 +4,7 @@
     {
       "type": 1,
       "content": {
-        "json": "## Workbench AI monitoring\nCalls the Risk Assessment Workbench makes to its AI provider (Anthropic directly, or Azure AI Foundry), read from Application Insights dependency telemetry. A call is attributed to the Workbench step that made it (category mapping, document extraction, narrative drafting). **Token counts are not recorded yet** - see the note at the bottom."
+        "json": "## Workbench AI monitoring\nCalls the Risk Assessment Workbench makes to its AI provider (Anthropic directly, or Azure AI Foundry), read from Application Insights dependency telemetry. A call is attributed to the Workbench step that made it (category mapping, document extraction, narrative drafting). Token use is charted in the last section."
       },
       "name": "intro"
     },
@@ -149,9 +149,60 @@
       "name": "workbench-requests"
     },
     {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "title": "Token totals",
+        "query": "AppMetrics | where Name == 'gen_ai.client.token.usage' | extend TokenType = tostring(Properties['gen_ai.token.type']), Step = tostring(Properties['humaid.ai.operation']), Model = tostring(Properties['gen_ai.request.model']) | summarize Input = sumif(Sum, TokenType == 'input'), Output = sumif(Sum, TokenType == 'output'), CacheRead = sumif(Sum, TokenType == 'cache_read'), CacheWrite = sumif(Sum, TokenType == 'cache_creation')",
+        "size": 4,
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "crossComponentResources": [
+          "${workspace_id}"
+        ],
+        "visualization": "table"
+      },
+      "name": "token-totals"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "title": "Tokens over time, by type",
+        "query": "AppMetrics | where Name == 'gen_ai.client.token.usage' | extend TokenType = tostring(Properties['gen_ai.token.type']), Step = tostring(Properties['humaid.ai.operation']), Model = tostring(Properties['gen_ai.request.model']) | summarize Tokens = sum(Sum) by bin(TimeGenerated, {TimeRange:grain}), TokenType | order by TimeGenerated asc",
+        "size": 0,
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "crossComponentResources": [
+          "${workspace_id}"
+        ],
+        "visualization": "timechart"
+      },
+      "name": "tokens-over-time"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "title": "Tokens by Workbench step, model and type",
+        "query": "AppMetrics | where Name == 'gen_ai.client.token.usage' | extend TokenType = tostring(Properties['gen_ai.token.type']), Step = tostring(Properties['humaid.ai.operation']), Model = tostring(Properties['gen_ai.request.model']) | summarize Tokens = sum(Sum), Measurements = sum(ItemCount), AvgPerCall = round(sum(Sum) / sum(ItemCount), 0) by Step, Model, TokenType | order by Step asc, TokenType asc",
+        "size": 4,
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "crossComponentResources": [
+          "${workspace_id}"
+        ],
+        "visualization": "table"
+      },
+      "name": "tokens-by-step"
+    },
+    {
       "type": 1,
       "content": {
-        "json": "**Not shown yet: token usage.** The Workbench's AI clients currently discard the token counts the providers return, so tokens per step, per model and estimated cost cannot be charted. Once the clients record them (planned), add panels over the recorded metric here."
+        "json": "**Token panels are empty until the token-capture change is deployed and an AI step has run.** Counts are exactly what the AI provider reports for each successful call (input, output and, for Anthropic, cache read and cache write tokens), recorded by the Workbench as the `gen_ai.client.token.usage` metric. Failed calls carry no usage. Tokens per change request are not recorded yet."
       },
       "name": "tokens-note"
     }
