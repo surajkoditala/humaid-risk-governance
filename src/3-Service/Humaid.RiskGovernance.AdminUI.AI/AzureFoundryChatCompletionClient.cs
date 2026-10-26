@@ -1,9 +1,11 @@
 namespace Humaid.RiskGovernance.AdminUI.AI
 {
+    using System.Diagnostics;
     using System.Net.Http.Json;
     using System.Text.Json;
     using System.Text.Json.Serialization;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Ai;
+    using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.AiUsage;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.Logging;
 
@@ -28,9 +30,12 @@ namespace Humaid.RiskGovernance.AdminUI.AI
         private readonly HttpClient _httpClient;
         private readonly string? _model;
         private readonly ILogger<AzureFoundryChatCompletionClient> _logger;
+        private readonly IAiCallLogRepo? _callLog;
 
-        public AzureFoundryChatCompletionClient(IHttpClientFactory httpClientFactory, IConfiguration configuration, ILogger<AzureFoundryChatCompletionClient> logger)
+        // callLog is optional - see ClaudeApiClient.
+        public AzureFoundryChatCompletionClient(IHttpClientFactory httpClientFactory, IConfiguration configuration, ILogger<AzureFoundryChatCompletionClient> logger, IAiCallLogRepo? callLog = null)
         {
+            _callLog = callLog;
             _httpClient = httpClientFactory.CreateClient("AzureFoundry");
             _logger = logger;
             _model = configuration["FOUNDRY_MODEL_DEPLOYMENT"];
@@ -63,6 +68,7 @@ namespace Humaid.RiskGovernance.AdminUI.AI
                 ],
             };
 
+            var started = Stopwatch.GetTimestamp();
             using var response = await _httpClient.PostAsJsonAsync("/models/chat/completions?api-version=2024-05-01-preview", request, cancellationToken);
             var body = await response.Content.ReadAsStringAsync(cancellationToken);
 
@@ -79,6 +85,10 @@ namespace Humaid.RiskGovernance.AdminUI.AI
             AiUsageTelemetry.Record(
                 _logger, "az.ai.inference", parsed.Model ?? _model,
                 parsed.Usage?.PromptTokens, parsed.Usage?.CompletionTokens);
+            await AiCallLogWriter.TryWriteAsync(
+                _callLog, _logger, "az.ai.inference", parsed.Model ?? _model,
+                parsed.Usage?.PromptTokens, parsed.Usage?.CompletionTokens, null, null,
+                (int)Stopwatch.GetElapsedTime(started).TotalMilliseconds);
 
             var text = parsed.Choices.FirstOrDefault()?.Message?.Content;
             return text ?? throw new InvalidOperationException("Azure AI Foundry response had no message content.");

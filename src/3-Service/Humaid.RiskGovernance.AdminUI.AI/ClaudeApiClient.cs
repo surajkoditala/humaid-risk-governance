@@ -1,10 +1,12 @@
 namespace Humaid.RiskGovernance.AdminUI.AI
 {
+    using System.Diagnostics;
     using System.Net.Http.Headers;
     using System.Net.Http.Json;
     using System.Text.Json;
     using System.Text.Json.Serialization;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Ai;
+    using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.AiUsage;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.Logging;
 
@@ -29,11 +31,15 @@ namespace Humaid.RiskGovernance.AdminUI.AI
         private readonly string? _model;
         private readonly bool _isConfigured;
         private readonly ILogger<ClaudeApiClient> _logger;
+        private readonly IAiCallLogRepo? _callLog;
 
-        public ClaudeApiClient(IHttpClientFactory httpClientFactory, IConfiguration configuration, ILogger<ClaudeApiClient> logger)
+        // callLog is optional: with none (the evals console app, local runs without a database) token use
+        // still goes to the metric and the log line, it just is not persisted per change request.
+        public ClaudeApiClient(IHttpClientFactory httpClientFactory, IConfiguration configuration, ILogger<ClaudeApiClient> logger, IAiCallLogRepo? callLog = null)
         {
             _httpClient = httpClientFactory.CreateClient("AnthropicApi");
             _logger = logger;
+            _callLog = callLog;
             _model = configuration["ANTHROPIC_MODEL"];
 
             var apiKey = configuration["ANTHROPIC_API_KEY"];
@@ -87,6 +93,7 @@ namespace Humaid.RiskGovernance.AdminUI.AI
                 Messages = [new ClaudeMessage { Role = "user", Content = userPrompt }],
             };
 
+            var started = Stopwatch.GetTimestamp();
             using var response = await _httpClient.PostAsJsonAsync("/v1/messages", request, cancellationToken);
             var body = await response.Content.ReadAsStringAsync(cancellationToken);
 
@@ -104,6 +111,11 @@ namespace Humaid.RiskGovernance.AdminUI.AI
                 _logger, "anthropic", parsed.Model ?? _model,
                 parsed.Usage?.InputTokens, parsed.Usage?.OutputTokens,
                 parsed.Usage?.CacheReadInputTokens, parsed.Usage?.CacheCreationInputTokens);
+            await AiCallLogWriter.TryWriteAsync(
+                _callLog, _logger, "anthropic", parsed.Model ?? _model,
+                parsed.Usage?.InputTokens, parsed.Usage?.OutputTokens,
+                parsed.Usage?.CacheReadInputTokens, parsed.Usage?.CacheCreationInputTokens,
+                (int)Stopwatch.GetElapsedTime(started).TotalMilliseconds);
 
             var text = parsed.Content.FirstOrDefault(c => c.Type == "text")?.Text;
             return text ?? throw new InvalidOperationException("Anthropic API response had no text content block.");

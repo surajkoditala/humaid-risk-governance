@@ -78,9 +78,17 @@ the provider did not report is skipped, never recorded as zero.
   ```
 
 - **Also logged:** one `AI usage: ...` line per call (visible in the container logs and `AppTraces`).
-- **Not (yet) recorded:** tokens per change request / assessment — that needs the request id carried
-  into the AI clients and a table to hold it. The metric answers "how many tokens does each step use";
-  it does not yet answer "what did this one assessment cost".
+- **Per change request:** each successful call is also appended to the `ai_call_log` table
+  (`schema/016_ai_call_log.sql`; append-only at the data layer like `audit_event`). The service that makes
+  the call names the request with `AiCallContext.Begin(changeRequestId, assessmentId)` (Infrastructure),
+  and the provider client writes the row through `IAiCallLogRepo` / `func_logAiCall` — the database derives
+  the request from the assessment when only that is known. The Audit tab of the assessment workspace shows
+  the calls and totals for the request (`GET api/AiUsage/{changeRequestId}`, Analyst and Admin only).
+  A token column is NULL when the provider did not report it, never 0. Recording is best-effort: a database
+  failure is logged and never fails the AI call. With no repository (the evals console app) nothing is
+  persisted; the metric and log line still are.
+- **Not recorded:** a cost in currency (prices change and differ per model/contract — multiply the token
+  counts by your current rates), and failed calls (they carry no usage).
 
 ## See also
 

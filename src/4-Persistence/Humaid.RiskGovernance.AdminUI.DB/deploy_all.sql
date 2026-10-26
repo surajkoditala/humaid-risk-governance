@@ -511,7 +511,98 @@ CREATE TRIGGER trg_sla_status_changed
     FOR EACH ROW WHEN (OLD.status IS DISTINCT FROM NEW.status)
     EXECUTE FUNCTION fn_trg_sla_status_changed();
 
+-- ---- schema/016_ai_call_log.sql ----
+-- Measured token use, per change request. One append-only row per successful call the Workbench
+-- makes to its AI provider: exactly the token counts the provider reported (and bills on), tagged
+-- with the Workbench step that made the call. The same figures also go out as an OpenTelemetry
+-- metric for fleet-wide monitoring; this table is what answers "what did THIS request cost".
+--
+-- Append-only at the data layer like audit_event (no update or delete function exists, and the
+-- trigger below blocks them from any other client): a recorded cost must not be editable.
+-- A token column is NULL when the provider did not report it - never 0 - so a missing figure
+-- cannot be read as a free call. Informational only: nothing here gates, scores or decides.
+--
+-- Identical DDL to migrations/0011_ai_call_log.sql by design (every statement is IF NOT EXISTS /
+-- DROP IF EXISTS, so it is safe either way).
+
+CREATE TABLE IF NOT EXISTS ai_call_log (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    change_request_id UUID REFERENCES change_request(id),
+    assessment_id UUID REFERENCES assessment(id),
+    operation TEXT NOT NULL,   -- the Workbench step: 'category_mapping', 'document_extraction', 'narrative_drafting'
+    provider TEXT NOT NULL,    -- 'anthropic' or 'az.ai.inference'
+    model TEXT,                -- the model the provider reports having used
+    input_tokens BIGINT CHECK (input_tokens >= 0),
+    output_tokens BIGINT CHECK (output_tokens >= 0),
+    cache_read_tokens BIGINT CHECK (cache_read_tokens >= 0),
+    cache_creation_tokens BIGINT CHECK (cache_creation_tokens >= 0),
+    duration_ms INT CHECK (duration_ms >= 0),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_ai_call_log_change_request ON ai_call_log (change_request_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_ai_call_log_assessment ON ai_call_log (assessment_id, created_at);
+
+CREATE OR REPLACE FUNCTION fn_block_ai_call_log_mutation() RETURNS TRIGGER AS $$
+BEGIN
+    RAISE EXCEPTION 'ai_call_log is append-only: % is not permitted', TG_OP;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_block_ai_call_log_mutation ON ai_call_log;
+CREATE TRIGGER trg_block_ai_call_log_mutation
+    BEFORE UPDATE OR DELETE ON ai_call_log
+    FOR EACH ROW EXECUTE FUNCTION fn_block_ai_call_log_mutation();
+
 -- ============================== functions ============================================
+
+-- ---- functions/ai_usage/func_getAiCallsForRequest.sql ----
+-- Measured token use: every AI call recorded against one change request, oldest first - rows
+-- written with the request id directly, plus rows that only carried the request's assessment id.
+CREATE OR REPLACE FUNCTION func_getAiCallsForRequest(p_change_request_id UUID)
+RETURNS TABLE (
+    id UUID, change_request_id UUID, assessment_id UUID, operation TEXT, provider TEXT, model TEXT,
+    input_tokens BIGINT, output_tokens BIGINT, cache_read_tokens BIGINT, cache_creation_tokens BIGINT,
+    duration_ms INT, created_at TIMESTAMPTZ
+) AS $$
+    SELECT l.id, l.change_request_id, l.assessment_id, l.operation, l.provider, l.model,
+           l.input_tokens, l.output_tokens, l.cache_read_tokens, l.cache_creation_tokens,
+           l.duration_ms, l.created_at
+    FROM ai_call_log l
+    WHERE l.change_request_id = p_change_request_id
+       OR l.assessment_id IN (SELECT a.id FROM assessment a WHERE a.change_request_id = p_change_request_id)
+    ORDER BY l.created_at ASC;
+$$ LANGUAGE sql STABLE;
+
+-- ---- functions/ai_usage/func_logAiCall.sql ----
+-- Measured token use: appends one ai_call_log row for a successful AI call. Called by the AI
+-- provider clients with whatever request context the calling service established; either id may be
+-- NULL. When only the assessment is known, the change request is derived from it, so a row for the
+-- narrative step (which knows the assessment, not the request) still lands on the right request.
+-- A token count the provider did not report stays NULL - it is never defaulted to 0.
+CREATE OR REPLACE FUNCTION func_logAiCall(
+    p_change_request_id UUID, p_assessment_id UUID, p_operation TEXT, p_provider TEXT, p_model TEXT,
+    p_input_tokens BIGINT, p_output_tokens BIGINT, p_cache_read_tokens BIGINT, p_cache_creation_tokens BIGINT,
+    p_duration_ms INT
+) RETURNS UUID AS $$
+DECLARE
+    v_change_request_id UUID := p_change_request_id;
+    v_id UUID;
+BEGIN
+    IF v_change_request_id IS NULL AND p_assessment_id IS NOT NULL THEN
+        SELECT a.change_request_id INTO v_change_request_id FROM assessment a WHERE a.id = p_assessment_id;
+    END IF;
+
+    INSERT INTO ai_call_log (
+        change_request_id, assessment_id, operation, provider, model,
+        input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens, duration_ms)
+    VALUES (
+        v_change_request_id, p_assessment_id, p_operation, p_provider, p_model,
+        p_input_tokens, p_output_tokens, p_cache_read_tokens, p_cache_creation_tokens, p_duration_ms)
+    RETURNING id INTO v_id;
+
+    RETURN v_id;
+END;
+$$ LANGUAGE plpgsql;
 
 -- ---- functions/assessment/func_finalizeAssessment.sql ----
 -- US-6.3: the completeness checks (no outstanding AI-drafted sections, etc.) run in
@@ -868,15 +959,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql STABLE;
 
--- ---- functions/change_requests/func_getAttachments.sql ----
-CREATE OR REPLACE FUNCTION func_getAttachments(p_change_request_id UUID)
-RETURNS TABLE (id UUID, file_name TEXT, content_type TEXT, storage_path TEXT, version_number INT, uploaded_at TIMESTAMPTZ) AS $$
-    SELECT a.id, a.file_name, a.content_type, a.storage_path, a.version_number, a.uploaded_at
-    FROM change_request_attachment a
-    WHERE a.change_request_id = p_change_request_id AND a.superseded_by_attachment_id IS NULL
-    ORDER BY a.uploaded_at;
-$$ LANGUAGE sql STABLE;
-
 -- ---- functions/change_requests/func_getAttachmentText.sql ----
 -- DEF-020: extraction must run on the attachment's own server-extracted text, not whatever the
 -- client happened to pass as documentText (the webapp was sending the file NAME). This lets the
@@ -890,6 +972,15 @@ CREATE OR REPLACE FUNCTION func_getAttachmentText(p_change_request_id UUID, p_at
 RETURNS TEXT AS $$
     SELECT extracted_text FROM change_request_attachment
     WHERE id = p_attachment_id AND change_request_id = p_change_request_id;
+$$ LANGUAGE sql STABLE;
+
+-- ---- functions/change_requests/func_getAttachments.sql ----
+CREATE OR REPLACE FUNCTION func_getAttachments(p_change_request_id UUID)
+RETURNS TABLE (id UUID, file_name TEXT, content_type TEXT, storage_path TEXT, version_number INT, uploaded_at TIMESTAMPTZ) AS $$
+    SELECT a.id, a.file_name, a.content_type, a.storage_path, a.version_number, a.uploaded_at
+    FROM change_request_attachment a
+    WHERE a.change_request_id = p_change_request_id AND a.superseded_by_attachment_id IS NULL
+    ORDER BY a.uploaded_at;
 $$ LANGUAGE sql STABLE;
 
 -- ---- functions/change_requests/func_getChangeRequestById.sql ----
