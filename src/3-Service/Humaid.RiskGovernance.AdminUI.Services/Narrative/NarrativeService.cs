@@ -79,6 +79,8 @@ namespace Humaid.RiskGovernance.AdminUI.Services.Narrative
                 .Select(f => $"{f.FieldKey}: {f.FieldValue}")
                 .ToList();
 
+            // Measured token use: the AI client records this call's tokens against this request.
+            using var aiCall = AiCallContext.Begin(changeRequest.Id, assessmentId);
             var draft = await _aiClient.DraftAsync(new NarrativeDraftInput
             {
                 ChangeType = changeRequest.ChangeType,

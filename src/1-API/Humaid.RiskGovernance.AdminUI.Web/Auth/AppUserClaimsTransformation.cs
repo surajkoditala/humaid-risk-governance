@@ -102,7 +102,17 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Auth
 
             var accessToken = authHeader["Bearer ".Length..];
             var email = await _auth0UserInfoClient.GetEmailAsync(accessToken);
-            return string.IsNullOrWhiteSpace(email) ? null : await _userService.LinkAuth0ByEmailAsync(email, subject);
+            if (string.IsNullOrWhiteSpace(email))
+                return null; // the client has already logged why
+
+            var linked = await _userService.LinkAuth0ByEmailAsync(email, subject);
+            if (linked is null)
+            {
+                _logger.LogWarning(
+                    "Auth0 verified the email {Email} for {Subject}, but no active, unlinked app_user row matches it.",
+                    email, subject);
+            }
+            return linked;
         }
     }
 }

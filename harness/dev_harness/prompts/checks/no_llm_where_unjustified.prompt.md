@@ -1,0 +1,1 @@
+Does this diff add a new call to IChatCompletionClient or get_chat_model() inside an area that is deliberately deterministic today (Policy Research / func_searchPolicyChunks, or Scoring / ScoringService)? If so, flag it as worth a second look, not an automatic fail - this project treats 'when NOT to use an LLM' as a deliberate design choice.

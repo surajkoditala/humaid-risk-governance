@@ -51,6 +51,8 @@ namespace Humaid.RiskGovernance.AdminUI.Services.CategoryMapping
 
             var defaults = await _categoryMappingRepo.GetChangeTypeDefaultsAsync(changeRequest.ChangeType);
             var externalContextSummary = await BuildExternalContextSummaryAsync(changeRequestId);
+            // Measured token use: the AI client records this call's tokens against this request.
+            using var aiCall = AiCallContext.Begin(changeRequestId, assessmentId);
             var proposals = await _aiClient.ProposeAsync(
                 changeRequest.ChangeType, changeRequest.Title, changeRequest.Description, defaults, externalContextSummary);
 

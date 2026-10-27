@@ -37,6 +37,9 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Auth
                 using var response = await _httpClient.SendAsync(request, cancellationToken);
                 if (!response.IsSuccessStatusCode)
                 {
+                    _logger.LogWarning(
+                        "Auth0 /userinfo returned {StatusCode}; the caller cannot be auto-linked by email.",
+                        (int)response.StatusCode);
                     return null;
                 }
                 var profile = await response.Content.ReadFromJsonAsync<Auth0UserInfo>(cancellationToken: cancellationToken);
@@ -46,6 +49,13 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Auth
                 // role already granted on it.
                 if (profile is null || !profile.EmailVerified)
                 {
+                    _logger.LogWarning(
+                        "Auth0 /userinfo reported email_verified=false (or no profile); not auto-linking by email.");
+                    return null;
+                }
+                if (string.IsNullOrWhiteSpace(profile.Email))
+                {
+                    _logger.LogWarning("Auth0 /userinfo returned no email for the caller; not auto-linking by email.");
                     return null;
                 }
                 return profile.Email;

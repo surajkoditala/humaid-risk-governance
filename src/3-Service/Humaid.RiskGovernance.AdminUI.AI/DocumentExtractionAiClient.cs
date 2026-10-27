@@ -39,6 +39,8 @@ namespace Humaid.RiskGovernance.AdminUI.AI
                 return [];
 
             var userPrompt = $"Change type: {changeType}\n\nDocument text:\n{documentText}";
+            // Tags this call's token usage with the step that made it (see AiUsageTelemetry).
+            using var _ = AiUsageTelemetry.BeginOperation("document_extraction");
             var raw = await _chatCompletionClient.CompleteAsync(SystemPrompt, userPrompt, cancellationToken);
             var json = JsonExtraction.ExtractJson(raw);
 

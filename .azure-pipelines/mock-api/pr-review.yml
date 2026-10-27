@@ -78,9 +78,14 @@ steps:
     condition: and(succeeded(), eq(variables.runFull, 'true'))
 
   - script: |
-      set -e
-      pip install --quiet semgrep==1.136.0
-      semgrep scan --config auto --json-output "$(Build.ArtifactStagingDirectory)/semgrep-results.json" src/6-MockExternalSystems
+      # Informational only (see the header): Semgrep failing to install or run - e.g. a
+      # Python/protobuf incompatibility on a new runner image - must not fail the required
+      # check or skip the AI review. Findings, when it does run, are still published.
+      if pip install --quiet semgrep==1.136.0 && semgrep scan --config auto --json-output "$(Build.ArtifactStagingDirectory)/semgrep-results.json" src/6-MockExternalSystems; then
+        echo "Semgrep scan completed."
+      else
+        echo "##vso[task.logissue type=warning]Semgrep could not complete; it is informational, so the review continues."
+      fi
     displayName: 'Semgrep scan (informational)'
     condition: and(succeeded(), eq(variables.runFull, 'true'))
 

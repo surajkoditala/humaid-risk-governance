@@ -1,0 +1,1 @@
+Does this diff respect the 4-layer Clean Architecture (1-API -> 2-Infrastructure -> 3-Service -> 4-Persistence)? Flag: business logic added to a controller, persistence logic added to a controller/service, or an interface implemented outside 3-Service/4-Persistence.

@@ -34,6 +34,10 @@ query someone has to remember to run: `DbMigrationRunner` logs the `func_*` rout
 couple of key seed-table row counts (`risk_category`, `app_user`) after applying everything above -
 see the deployed environment's own logs/Application Insights trace for the current numbers.
 
+## Measured token use (`ai_call_log`)
+
+`schema/016_ai_call_log.sql` (mirrored by `migrations/0011_ai_call_log.sql` for already-deployed databases) adds one append-only row per successful AI call: the step, provider, model and the exact token counts the provider reported, against the change request (`func_logAiCall` derives the request from the assessment when only that is given; `func_getAiCallsForRequest` reads them). Like `audit_event`, a trigger blocks `UPDATE`/`DELETE`; a count the provider did not report is `NULL`, never 0. Informational only - nothing gates or decides on it, and no AI is involved in reading it.
+
 ## SLA tracking (Epic 19)
 
 `schema/015_sla.sql` (and its mirror `migrations/0010_epic19_sla_tracking.sql` for already-deployed databases) adds the SLA tables and two thin triggers on `change_request`; `functions/sla/` holds the logic, and `seed/seed_sla_config.sql` seeds the default (an overall start-to-decision target of 2 business days for every request type, no per-stage targets, 80% warning; stage targets are optional and an Admin can add them) and backfills requests that existed before the epic.

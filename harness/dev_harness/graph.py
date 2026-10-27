@@ -25,48 +25,13 @@ from app.llm import get_chat_model  # noqa: E402
 
 load_dotenv(_LANGGRAPH_APP_ROOT / ".env")
 
-from .rules import load_review_rules  # noqa: E402
+from .rules import load_check_prompts, load_review_rules, load_system_prompt  # noqa: E402
 
-# One check per row in dev_harness/review-rules.md. Each is a narrow, single-concern prompt against
-# the raw diff only - not the whole repo - same grounding discipline as the product AI clients.
-_CHECKS: dict[str, str] = {
-    "architecture": (
-        "Does this diff respect the 4-layer Clean Architecture (1-API -> 2-Infrastructure -> "
-        "3-Service -> 4-Persistence)? Flag: business logic added to a controller, persistence "
-        "logic added to a controller/service, or an interface implemented outside "
-        "3-Service/4-Persistence."
-    ),
-    "database_gate": (
-        "If this diff adds or changes a method that overrides an AI-generated or calculated "
-        "value, does it take a mandatory 'reason' parameter, and does the underlying stored "
-        "function/func_ write an audit_event row in the same transaction? Also flag any schema "
-        "change made by hand-editing a generated deploy script instead of the SQL project's "
-        "source function/table definitions."
-    ),
-    "citation_guard": (
-        "If this diff touches an AI client (anything calling IChatCompletionClient, or a "
-        "LangGraph node calling get_chat_model()), does it still drop or flag any model output "
-        "that cannot be traced back to its supplied input (allow-list filter, needsReview, or "
-        "unsupportedClaims - whichever applies)? Also flag if a SystemPrompt constant changed "
-        "without its mirrored ai/prompts/*.md file changing, or vice versa."
-    ),
-    "no_llm_where_unjustified": (
-        "Does this diff add a new call to IChatCompletionClient or get_chat_model() inside an "
-        "area that is deliberately deterministic today (Policy Research / func_searchPolicyChunks, "
-        "or Scoring / ScoringService)? If so, flag it as worth a second look, not an automatic "
-        "fail - this project treats 'when NOT to use an LLM' as a deliberate design choice."
-    ),
-    "async_and_config": (
-        "Does this diff use .Result or .Wait() anywhere, or fail to forward a CancellationToken "
-        "through a new async service/persistence call? Does any new AI-adjacent or external-"
-        "integration config silently default instead of failing loudly when missing?"
-    ),
-    "coding_standards": (
-        "Compare this diff against the project's coding standards for naming, comments, and "
-        "layer conventions (summarized in the rules below). Flag only clear, concrete "
-        "violations - not style nitpicks the rules don't actually mention."
-    ),
-}
+# One check per file in dev_harness/prompts/checks/ (the file name is the node name). Each is a
+# narrow, single-concern prompt run against the raw diff only - not the whole repo - same
+# grounding discipline as the product AI clients. The shared system prompt is
+# prompts/system.prompt.md; edit those files, not this module, to change what a check asks.
+_CHECKS: dict[str, str] = load_check_prompts()
 
 
 def _merge_findings(left: dict[str, str], right: dict[str, str]) -> dict[str, str]:
@@ -87,18 +52,7 @@ def _run_check(check_name: str, instruction: str, state: _State) -> str:
         return "No diff to review."
 
     model = get_chat_model()
-    system_prompt = (
-        "You are a focused code reviewer for one specific rule area. You are given the "
-        "project's review rules for context and a git diff to check against that one area "
-        "only. Do not comment on anything outside your assigned concern. If the diff has no "
-        "violation for this concern, respond with exactly: OK - no issues found.\n\n"
-        "Otherwise respond with one finding per issue, each as:\n"
-        "Severity: <Critical|High|Medium|Low>\n"
-        "File: <path>\n"
-        "Line: <number or 'unknown'>\n"
-        "Rule: <short rule name>\n"
-        "Recommendation: <one or two sentences>\n"
-    )
+    system_prompt = load_system_prompt()
     user_prompt = (
         f"Your assigned concern:\n{instruction}\n\n"
         f"Project review rules (for grounding only - only report on your assigned concern):\n"
