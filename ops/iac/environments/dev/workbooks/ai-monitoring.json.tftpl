@@ -1,0 +1,211 @@
+{
+  "version": "Notebook/1.0",
+  "items": [
+    {
+      "type": 1,
+      "content": {
+        "json": "## Workbench AI monitoring\nCalls the Risk Assessment Workbench makes to its AI provider (Anthropic directly, or Azure AI Foundry), read from Application Insights dependency telemetry. A call is attributed to the Workbench step that made it (category mapping, document extraction, narrative drafting). Token use is charted in the last section."
+      },
+      "name": "intro"
+    },
+    {
+      "type": 9,
+      "content": {
+        "version": "KqlParameterItem/1.0",
+        "parameters": [
+          {
+            "id": "7f1d3c52-6a52-4b6c-9a62-0d7a1f5b8a01",
+            "version": "KqlParameterItem/1.0",
+            "name": "TimeRange",
+            "label": "Time range",
+            "type": 4,
+            "isRequired": true,
+            "value": {
+              "durationMs": 604800000
+            },
+            "typeSettings": {
+              "selectableValues": [
+                { "durationMs": 3600000 },
+                { "durationMs": 86400000 },
+                { "durationMs": 259200000 },
+                { "durationMs": 604800000 },
+                { "durationMs": 2592000000 }
+              ],
+              "allowCustom": true
+            }
+          }
+        ],
+        "style": "pills",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces"
+      },
+      "name": "parameters"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "title": "Summary",
+        "query": "AppDependencies | where Target has 'anthropic' or Target has 'services.ai.azure.com' | summarize Calls = count(), Failed = countif(Success == false), FailureRatePct = round(100.0 * countif(Success == false) / count(), 1), AvgMs = round(avg(DurationMs), 0), P95Ms = round(percentile(DurationMs, 95), 0)",
+        "size": 4,
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "crossComponentResources": ["${workspace_id}"],
+        "visualization": "table"
+      },
+      "name": "summary"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "title": "AI calls over time",
+        "query": "AppDependencies | where Target has 'anthropic' or Target has 'services.ai.azure.com' | summarize Calls = count(), Failed = countif(Success == false) by bin(TimeGenerated, {TimeRange:grain}) | order by TimeGenerated asc",
+        "size": 0,
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "crossComponentResources": ["${workspace_id}"],
+        "visualization": "timechart"
+      },
+      "name": "calls-over-time"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "title": "Latency (ms): average and 95th percentile",
+        "query": "AppDependencies | where Target has 'anthropic' or Target has 'services.ai.azure.com' | summarize AvgMs = avg(DurationMs), P95Ms = percentile(DurationMs, 95) by bin(TimeGenerated, {TimeRange:grain}) | order by TimeGenerated asc",
+        "size": 0,
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "crossComponentResources": ["${workspace_id}"],
+        "visualization": "timechart"
+      },
+      "name": "latency"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "title": "By Workbench step",
+        "query": "AppDependencies | where Target has 'anthropic' or Target has 'services.ai.azure.com' | join kind=leftouter (AppRequests | project OperationId, Step = Name) on OperationId | extend Step = coalesce(Step, '(unknown)') | summarize Calls = count(), Failed = countif(Success == false), AvgMs = round(avg(DurationMs), 0) by Step | order by Calls desc",
+        "size": 0,
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "crossComponentResources": ["${workspace_id}"],
+        "visualization": "table"
+      },
+      "customWidth": "50",
+      "name": "by-step"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "title": "By provider and result code",
+        "query": "AppDependencies | where Target has 'anthropic' or Target has 'services.ai.azure.com' | summarize Calls = count(), Failed = countif(Success == false), AvgMs = round(avg(DurationMs), 0) by Target, ResultCode | order by Calls desc",
+        "size": 0,
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "crossComponentResources": ["${workspace_id}"],
+        "visualization": "table"
+      },
+      "customWidth": "50",
+      "name": "by-result-code"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "title": "Recent failed AI calls",
+        "query": "AppDependencies | where Target has 'anthropic' or Target has 'services.ai.azure.com' | where Success == false | join kind=leftouter (AppRequests | project OperationId, Step = Name) on OperationId | project TimeGenerated, Step, Target, ResultCode, DurationMs | top 20 by TimeGenerated desc",
+        "size": 0,
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "crossComponentResources": ["${workspace_id}"],
+        "visualization": "table"
+      },
+      "name": "recent-failures"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "title": "Workbench requests and failures",
+        "query": "AppRequests | where AppRoleName has 'workbench' | summarize Requests = count(), Failed = countif(Success == false) by bin(TimeGenerated, {TimeRange:grain}) | order by TimeGenerated asc",
+        "size": 0,
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "crossComponentResources": ["${workspace_id}"],
+        "visualization": "timechart"
+      },
+      "name": "workbench-requests"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "title": "Token totals",
+        "query": "AppMetrics | where Name == 'gen_ai.client.token.usage' | extend TokenType = tostring(Properties['gen_ai.token.type']), Step = tostring(Properties['humaid.ai.operation']), Model = tostring(Properties['gen_ai.request.model']) | summarize Input = sumif(Sum, TokenType == 'input'), Output = sumif(Sum, TokenType == 'output'), CacheRead = sumif(Sum, TokenType == 'cache_read'), CacheWrite = sumif(Sum, TokenType == 'cache_creation')",
+        "size": 4,
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "crossComponentResources": [
+          "${workspace_id}"
+        ],
+        "visualization": "table"
+      },
+      "name": "token-totals"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "title": "Tokens over time, by type",
+        "query": "AppMetrics | where Name == 'gen_ai.client.token.usage' | extend TokenType = tostring(Properties['gen_ai.token.type']), Step = tostring(Properties['humaid.ai.operation']), Model = tostring(Properties['gen_ai.request.model']) | summarize Tokens = sum(Sum) by bin(TimeGenerated, {TimeRange:grain}), TokenType | order by TimeGenerated asc",
+        "size": 0,
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "crossComponentResources": [
+          "${workspace_id}"
+        ],
+        "visualization": "timechart"
+      },
+      "name": "tokens-over-time"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "title": "Tokens by Workbench step, model and type",
+        "query": "AppMetrics | where Name == 'gen_ai.client.token.usage' | extend TokenType = tostring(Properties['gen_ai.token.type']), Step = tostring(Properties['humaid.ai.operation']), Model = tostring(Properties['gen_ai.request.model']) | summarize Tokens = sum(Sum), Measurements = sum(ItemCount), AvgPerCall = round(sum(Sum) / sum(ItemCount), 0) by Step, Model, TokenType | order by Step asc, TokenType asc",
+        "size": 4,
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "crossComponentResources": [
+          "${workspace_id}"
+        ],
+        "visualization": "table"
+      },
+      "name": "tokens-by-step"
+    },
+    {
+      "type": 1,
+      "content": {
+        "json": "**Token panels are empty until the token-capture change is deployed and an AI step has run.** Counts are exactly what the AI provider reports for each successful call (input, output and, for Anthropic, cache read and cache write tokens), recorded by the Workbench as the `gen_ai.client.token.usage` metric. Failed calls carry no usage. Tokens per change request are not recorded yet."
+      },
+      "name": "tokens-note"
+    }
+  ],
+  "$schema": "https://github.com/Microsoft/Application-Insights-Workbooks/blob/master/schema/workbook.json"
+}
