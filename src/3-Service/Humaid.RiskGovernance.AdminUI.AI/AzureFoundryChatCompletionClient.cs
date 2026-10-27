@@ -56,6 +56,7 @@ namespace Humaid.RiskGovernance.AdminUI.AI
             var request = new FoundryChatRequest
             {
                 Model = _model,
+                MaxTokens = 4096,
                 Messages =
                 [
                     new FoundryChatMessage { Role = "system", Content = systemPrompt },
@@ -81,6 +82,7 @@ namespace Humaid.RiskGovernance.AdminUI.AI
         private class FoundryChatRequest
         {
             [JsonPropertyName("model")] public string Model { get; set; } = string.Empty;
+            [JsonPropertyName("max_tokens")] public int MaxTokens { get; set; }
             [JsonPropertyName("messages")] public List<FoundryChatMessage> Messages { get; set; } = [];
         }
 

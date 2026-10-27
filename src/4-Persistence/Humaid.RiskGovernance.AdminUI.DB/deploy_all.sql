@@ -2467,7 +2467,8 @@ BEGIN
         RETURN;
     END IF;
 
-    UPDATE app_user SET auth0_subject = p_auth0_subject WHERE id = v_user_id;
+    -- Qualified: the RETURNS TABLE column "id" is also a PL/pgSQL variable here, so a bare "id" is ambiguous.
+    UPDATE app_user SET auth0_subject = p_auth0_subject WHERE app_user.id = v_user_id;
 
     INSERT INTO audit_event (entity_type, entity_id, action, actor_label, after_value, reason)
     VALUES ('AppUser', v_user_id, 'Auth0SubjectLinked', 'system',
