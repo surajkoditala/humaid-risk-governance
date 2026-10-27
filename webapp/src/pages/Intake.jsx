@@ -110,6 +110,8 @@ export default function Intake() {
       setDetails('')
       setTypeSpecificFields({})
       setLinkedEntityId('')
+      // Preselect the new request in the attach card so the next step is just choosing a file.
+      setAttachToId(created.id)
       refetchMyRequests()
     } catch (err) {
       toast.error(err.message)
@@ -247,18 +249,20 @@ export default function Intake() {
       <Card>
         <CardHeader>
           <CardTitle>Attach a supporting document</CardTitle>
-          <CardDescription>PDF, DOCX, or XLSX.</CardDescription>
+          <CardDescription>
+            Optional. Submit your request above first, then choose it here to attach a document. You can also come back and attach one later.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form className="space-y-4" onSubmit={attach}>
             <div className="space-y-1.5">
               <Label>
-                Request
+                Request to attach to
                 <RequiredMark />
               </Label>
               <Select value={attachToId} onValueChange={setAttachToId}>
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select one of my requests *">
+                  <SelectValue placeholder="Choose a submitted request">
                     {(() => {
                       const r = myRequests?.find((req) => req.id === attachToId)
                       return r ? `${r.requestNumber} — ${r.title}` : undefined
@@ -273,6 +277,9 @@ export default function Intake() {
                   ))}
                 </SelectContent>
               </Select>
+              {myRequests && myRequests.length === 0 && (
+                <p className="text-xs text-muted-foreground">You have no submitted requests yet. Submit one above first.</p>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="file">
