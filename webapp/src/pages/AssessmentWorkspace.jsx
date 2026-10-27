@@ -394,22 +394,27 @@ function ExtractionTab({ changeRequest, bump }) {
                     Correct
                   </Button>
                 </div>
-                <div className="flex items-center gap-2">
-                  <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <input
-                      type="checkbox"
-                      checked={correctIsMaterial[f.fieldKey] ?? true}
-                      onChange={(e) => setCorrectIsMaterial((c) => ({ ...c, [f.fieldKey]: e.target.checked }))}
+                {correcting[f.fieldKey] && (
+                  <div className="flex items-center gap-2">
+                    <label
+                      className="flex items-center gap-1.5 text-xs text-muted-foreground"
+                      title="Leave ticked when the correction changes what the value means. Untick it for a typo or formatting fix, where a reason is optional."
+                    >
+                      <input
+                        type="checkbox"
+                        checked={correctIsMaterial[f.fieldKey] ?? true}
+                        onChange={(e) => setCorrectIsMaterial((c) => ({ ...c, [f.fieldKey]: e.target.checked }))}
+                      />
+                      Changes the meaning (reason required)
+                    </label>
+                    <Input
+                      placeholder={(correctIsMaterial[f.fieldKey] ?? true) ? 'Reason for this correction *' : 'Reason for this correction (optional)'}
+                      className="h-8 flex-1 text-xs"
+                      value={correctReason[f.fieldKey] || ''}
+                      onChange={(e) => setCorrectReason((c) => ({ ...c, [f.fieldKey]: e.target.value }))}
                     />
-                    Material change (reason required)
-                  </label>
-                  <Input
-                    placeholder={(correctIsMaterial[f.fieldKey] ?? true) ? 'Reason for this correction *' : 'Reason for this correction (optional)'}
-                    className="h-8 flex-1 text-xs"
-                    value={correctReason[f.fieldKey] || ''}
-                    onChange={(e) => setCorrectReason((c) => ({ ...c, [f.fieldKey]: e.target.value }))}
-                  />
-                </div>
+                  </div>
+                )}
               </div>
             </div>
           ))}
