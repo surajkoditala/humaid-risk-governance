@@ -65,8 +65,9 @@ namespace Humaid.RiskGovernance.AdminUI.AI
                 return JsonSerializer.Deserialize<NarrativeDraftResult>(json, JsonExtraction.CaseInsensitive)
                     ?? UnparseableResult();
             }
-            catch (JsonException)
+            catch (JsonException ex)
             {
+                System.Diagnostics.Trace.TraceError("Narrative response unparseable: {0}; raw: {1}", ex.Message, raw.Length > 500 ? raw[..500] : raw);
                 return UnparseableResult();
             }
         }
