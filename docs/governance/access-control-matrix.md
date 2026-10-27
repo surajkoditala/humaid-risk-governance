@@ -123,6 +123,11 @@ request's `SubmittedByUserId` against the caller (Product Owner only; Analyst is
 | `GET {changeRequestId}` | | ✅ | | ✅ | US-9.1. "Auditor/Examiner" isn't an `AppRoles` value — mapped to Analyst + Admin, see below |
 | `GET {changeRequestId}/Export` | | ✅ | | ✅ | US-9.3 |
 
+### Measured token use (`AiUsageController`)
+| Action | PO | AN | CM | AD | Notes |
+|---|---|---|---|---|---|
+| `GET {changeRequestId}` | | ✅ | | ✅ | Per-request AI calls and the tokens the provider reported. Read-only and informational; same audience as the audit trail. No write endpoint: rows are appended by the AI clients. |
+
 ### Epic 10 — Platform Configuration (`WorkflowRuleController`)
 | Action | PO | AN | CM | AD | Notes |
 |---|---|---|---|---|---|

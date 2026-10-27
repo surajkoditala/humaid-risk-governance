@@ -169,6 +169,10 @@ export const Endpoints = {
     trail: (changeRequestId) => api(`Audit/${changeRequestId}`),
     exportPdf: (changeRequestId) => api(`Audit/${changeRequestId}/Export`),
   },
+
+  aiUsage: {
+    forRequest: (changeRequestId) => api(`AiUsage/${changeRequestId}`),
+  },
 }
 
 /**

@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { useDevUser } from '../auth/DevUserContext.jsx'
 import { RequiredMark } from '../components/RequiredMark.jsx'
+import AiUsageCard from '../components/AiUsageCard.jsx'
 import SlaStrip from '../components/SlaStrip.jsx'
 import { Endpoints, apiFetch, downloadFile } from '../lib/api.js'
 import { useFetch } from '../lib/useFetch.js'
@@ -793,44 +794,47 @@ function AuditTab({ changeRequest, bump }) {
   }
 
   return (
-    <Card>
-      <CardHeader className="flex-row items-start justify-between space-y-0">
-        <div>
-          <CardTitle>Audit trail</CardTitle>
-          <CardDescription>Every AI output, human edit, and reason, in order.</CardDescription>
-        </div>
-        <button
-          type="button"
-          onClick={handleExportPdf}
-          className={buttonVariants({ variant: 'outline', size: 'sm' })}
-        >
-          Export PDF
-        </button>
-      </CardHeader>
-      <CardContent className="space-y-2">
-        {(trail || []).map((e) => {
-          const before = summarizeAuditJson(e.beforeValueJson)
-          const after = summarizeAuditJson(e.afterValueJson)
-          return (
-            <div key={e.id} className="border-b pb-2 text-sm last:border-0">
-              <span className="text-xs text-muted-foreground">{new Date(e.createdAt).toLocaleString()}</span>{' '}
-              <strong>{e.entityType}.{e.action}</strong> by {e.actorName || e.actorLabel}
-              {e.reason && <span className="text-muted-foreground"> — {e.reason}</span>}
-              {(before || after) && (
-                <details className="mt-1">
-                  <summary className="cursor-pointer text-xs text-muted-foreground">What changed</summary>
-                  <div className="mt-1 space-y-0.5 pl-3 text-xs">
-                    {before && <p><span className="text-muted-foreground">Before:</span> {before}</p>}
-                    {after && <p><span className="text-muted-foreground">After:</span> {after}</p>}
-                  </div>
-                </details>
-              )}
-            </div>
-          )
-        })}
-        {(!trail || trail.length === 0) && <p className="text-sm text-muted-foreground">No events yet.</p>}
-      </CardContent>
-    </Card>
+    <div className="space-y-4">
+      <Card>
+        <CardHeader className="flex-row items-start justify-between space-y-0">
+          <div>
+            <CardTitle>Audit trail</CardTitle>
+            <CardDescription>Every AI output, human edit, and reason, in order.</CardDescription>
+          </div>
+          <button
+            type="button"
+            onClick={handleExportPdf}
+            className={buttonVariants({ variant: 'outline', size: 'sm' })}
+          >
+            Export PDF
+          </button>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {(trail || []).map((e) => {
+            const before = summarizeAuditJson(e.beforeValueJson)
+            const after = summarizeAuditJson(e.afterValueJson)
+            return (
+              <div key={e.id} className="border-b pb-2 text-sm last:border-0">
+                <span className="text-xs text-muted-foreground">{new Date(e.createdAt).toLocaleString()}</span>{' '}
+                <strong>{e.entityType}.{e.action}</strong> by {e.actorName || e.actorLabel}
+                {e.reason && <span className="text-muted-foreground"> — {e.reason}</span>}
+                {(before || after) && (
+                  <details className="mt-1">
+                    <summary className="cursor-pointer text-xs text-muted-foreground">What changed</summary>
+                    <div className="mt-1 space-y-0.5 pl-3 text-xs">
+                      {before && <p><span className="text-muted-foreground">Before:</span> {before}</p>}
+                      {after && <p><span className="text-muted-foreground">After:</span> {after}</p>}
+                    </div>
+                  </details>
+                )}
+              </div>
+            )
+          })}
+          {(!trail || trail.length === 0) && <p className="text-sm text-muted-foreground">No events yet.</p>}
+        </CardContent>
+      </Card>
+      <AiUsageCard changeRequestId={changeRequest.id} />
+    </div>
   )
 }
 
