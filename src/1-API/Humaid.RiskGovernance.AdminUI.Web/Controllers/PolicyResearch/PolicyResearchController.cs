@@ -22,11 +22,12 @@ namespace Humaid.RiskGovernance.AdminUI.Web.Controllers.PolicyResearch
             _policyResearchService = policyResearchService;
         }
 
+        // queryText is optional: empty text browses every excerpt (narrowed by category), see func_searchPolicyChunks.
         [HttpGet("Search")]
-        public Task<IActionResult> Search([FromQuery] string queryText, [FromQuery] Guid? riskCategoryId, [FromQuery] int topK = 5) =>
+        public Task<IActionResult> Search([FromQuery] string? queryText, [FromQuery] Guid? riskCategoryId, [FromQuery] int topK = 5) =>
             ExecuteAsync(async () =>
             {
-                var results = await _policyResearchService.SearchAsync(queryText, riskCategoryId, topK);
+                var results = await _policyResearchService.SearchAsync(queryText ?? string.Empty, riskCategoryId, topK);
                 return OperationResult<IReadOnlyList<PolicyChunkSearchResult>>.Success(results);
             }, "Failed to search policy corpus.");
 
