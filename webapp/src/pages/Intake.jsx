@@ -33,6 +33,10 @@ const LINKED_ENTITY_BY_CHANGE_TYPE = {
   Vendor: 'vendor',
   Geography: 'product',
 }
+// Select items can't carry an empty value, so the optional linked-entity dropdown offers this
+// sentinel as its "clear" choice and maps it back to ''. Without it a picked value could never be unselected.
+const NO_SELECTION = '__none__'
+
 // US-1.1: submit a change request. US-1.2: attach supporting documents to one already submitted.
 export default function Intake() {
   const { currentUser } = useDevUser()
@@ -106,6 +110,8 @@ export default function Intake() {
       setDetails('')
       setTypeSpecificFields({})
       setLinkedEntityId('')
+      // Preselect the new request in the attach card so the next step is just choosing a file.
+      setAttachToId(created.id)
       refetchMyRequests()
     } catch (err) {
       toast.error(err.message)
@@ -216,13 +222,14 @@ export default function Intake() {
             {linkedEntityKind && (
               <div className="space-y-1.5">
                 <Label>Linked {linkedEntityKind} (optional — grounds the AI category proposal)</Label>
-                <Select value={linkedEntityId} onValueChange={setLinkedEntityId}>
+                <Select value={linkedEntityId} onValueChange={(v) => setLinkedEntityId(v === NO_SELECTION ? '' : v)}>
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder={`Select a ${linkedEntityKind} from the bank's systems`}>
                       {linkedOptions?.find((o) => o.id === linkedEntityId)?.label}
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
+                    {linkedEntityId && <SelectItem value={NO_SELECTION}>None (clear selection)</SelectItem>}
                     {(linkedOptions || []).map((o) => (
                       <SelectItem key={o.id} value={o.id}>
                         {o.label}
@@ -242,18 +249,20 @@ export default function Intake() {
       <Card>
         <CardHeader>
           <CardTitle>Attach a supporting document</CardTitle>
-          <CardDescription>PDF, DOCX, or XLSX.</CardDescription>
+          <CardDescription>
+            Optional. Submit your request above first, then choose it here to attach a document. You can also come back and attach one later.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form className="space-y-4" onSubmit={attach}>
             <div className="space-y-1.5">
               <Label>
-                Request
+                Request to attach to
                 <RequiredMark />
               </Label>
               <Select value={attachToId} onValueChange={setAttachToId}>
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select one of my requests *">
+                  <SelectValue placeholder="Choose a submitted request">
                     {(() => {
                       const r = myRequests?.find((req) => req.id === attachToId)
                       return r ? `${r.requestNumber} — ${r.title}` : undefined
@@ -268,6 +277,9 @@ export default function Intake() {
                   ))}
                 </SelectContent>
               </Select>
+              {myRequests && myRequests.length === 0 && (
+                <p className="text-xs text-muted-foreground">You have no submitted requests yet. Submit one above first.</p>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="file">
