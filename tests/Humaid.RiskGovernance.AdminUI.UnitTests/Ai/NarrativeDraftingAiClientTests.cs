@@ -2,6 +2,7 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Ai
 {
     using Humaid.RiskGovernance.AdminUI.AI;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Ai;
+    using Microsoft.Extensions.Logging.Abstractions;
     using Xunit;
 
     public class NarrativeDraftingAiClientTests
@@ -23,7 +24,7 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Ai
         public async Task DraftAsync_ParsesNarrativeTextAndUnsupportedClaims()
         {
             const string response = """{"narrativeText": "This is the drafted narrative.", "unsupportedClaims": ["an unverifiable claim"]}""";
-            var sut = new NarrativeDraftingAiClient(new FakeChatCompletionClient(response));
+            var sut = new NarrativeDraftingAiClient(new FakeChatCompletionClient(response), NullLogger<NarrativeDraftingAiClient>.Instance);
 
             var result = await sut.DraftAsync(Input());
 
@@ -34,7 +35,7 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Ai
         [Fact]
         public async Task DraftAsync_FallsBackToAReviewableResultOnUnparseableResponse()
         {
-            var sut = new NarrativeDraftingAiClient(new FakeChatCompletionClient("not json"));
+            var sut = new NarrativeDraftingAiClient(new FakeChatCompletionClient("not json"), NullLogger<NarrativeDraftingAiClient>.Instance);
 
             var result = await sut.DraftAsync(Input());
 
@@ -48,7 +49,7 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Ai
         public async Task DraftAsync_IncludesRegenerationFeedbackInThePromptWhenSupplied()
         {
             var fake = new FakeChatCompletionClient("""{"narrativeText": "revised", "unsupportedClaims": []}""");
-            var sut = new NarrativeDraftingAiClient(fake);
+            var sut = new NarrativeDraftingAiClient(fake, NullLogger<NarrativeDraftingAiClient>.Instance);
 
             await sut.DraftAsync(Input(regenerationFeedback: "Emphasize the correspondent banking risk more strongly."));
 
