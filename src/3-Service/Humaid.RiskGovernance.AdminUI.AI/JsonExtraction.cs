@@ -11,13 +11,19 @@ namespace Humaid.RiskGovernance.AdminUI.AI
         public static string ExtractJson(string text)
         {
             var trimmed = text.Trim();
-            if (!trimmed.StartsWith("```")) return trimmed;
+            if (trimmed.StartsWith("```"))
+            {
+                var firstNewline = trimmed.IndexOf('\n');
+                var lastFence = trimmed.LastIndexOf("```", StringComparison.Ordinal);
+                if (firstNewline >= 0 && lastFence > firstNewline)
+                    trimmed = trimmed[(firstNewline + 1)..lastFence].Trim();
+            }
 
-            var firstNewline = trimmed.IndexOf('\n');
-            var lastFence = trimmed.LastIndexOf("```", StringComparison.Ordinal);
-            if (firstNewline < 0 || lastFence <= firstNewline) return trimmed;
-
-            return trimmed[(firstNewline + 1)..lastFence].Trim();
+            // Some models add prose before or after the JSON; keep only the outermost object/array.
+            var start = trimmed.IndexOfAny(['{', '[']);
+            if (start < 0) return trimmed;
+            var end = trimmed.LastIndexOf(trimmed[start] == '{' ? '}' : ']');
+            return end > start ? trimmed[start..(end + 1)] : trimmed;
         }
     }
 }
