@@ -486,7 +486,7 @@ function NarrativeTab({ assessmentId, mapping, bump, isFinalized }) {
               {section ? <p className="text-sm">{section.narrativeText}</p> : <p className="text-sm text-muted-foreground">Not drafted yet.</p>}
               <div className="flex gap-2">
                 <Button size="sm" onClick={() => draft(m.riskCategoryId)} disabled={drafting === m.riskCategoryId || isFinalized}>
-                  {section ? 'Regenerate' : 'Draft'} with AI
+                  {drafting === m.riskCategoryId ? 'Drafting…' : `${section ? 'Regenerate' : 'Draft'} with AI`}
                 </Button>
                 {section && section.status === 'AiDrafted' && (
                   <Button size="sm" variant="outline" disabled={isFinalized} onClick={() => review(m.riskCategoryId)}>
