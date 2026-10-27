@@ -868,15 +868,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql STABLE;
 
--- ---- functions/change_requests/func_getAttachments.sql ----
-CREATE OR REPLACE FUNCTION func_getAttachments(p_change_request_id UUID)
-RETURNS TABLE (id UUID, file_name TEXT, content_type TEXT, storage_path TEXT, version_number INT, uploaded_at TIMESTAMPTZ) AS $$
-    SELECT a.id, a.file_name, a.content_type, a.storage_path, a.version_number, a.uploaded_at
-    FROM change_request_attachment a
-    WHERE a.change_request_id = p_change_request_id AND a.superseded_by_attachment_id IS NULL
-    ORDER BY a.uploaded_at;
-$$ LANGUAGE sql STABLE;
-
 -- ---- functions/change_requests/func_getAttachmentText.sql ----
 -- DEF-020: extraction must run on the attachment's own server-extracted text, not whatever the
 -- client happened to pass as documentText (the webapp was sending the file NAME). This lets the
@@ -890,6 +881,15 @@ CREATE OR REPLACE FUNCTION func_getAttachmentText(p_change_request_id UUID, p_at
 RETURNS TEXT AS $$
     SELECT extracted_text FROM change_request_attachment
     WHERE id = p_attachment_id AND change_request_id = p_change_request_id;
+$$ LANGUAGE sql STABLE;
+
+-- ---- functions/change_requests/func_getAttachments.sql ----
+CREATE OR REPLACE FUNCTION func_getAttachments(p_change_request_id UUID)
+RETURNS TABLE (id UUID, file_name TEXT, content_type TEXT, storage_path TEXT, version_number INT, uploaded_at TIMESTAMPTZ) AS $$
+    SELECT a.id, a.file_name, a.content_type, a.storage_path, a.version_number, a.uploaded_at
+    FROM change_request_attachment a
+    WHERE a.change_request_id = p_change_request_id AND a.superseded_by_attachment_id IS NULL
+    ORDER BY a.uploaded_at;
 $$ LANGUAGE sql STABLE;
 
 -- ---- functions/change_requests/func_getChangeRequestById.sql ----
@@ -2467,7 +2467,9 @@ BEGIN
         RETURN;
     END IF;
 
-    UPDATE app_user SET auth0_subject = p_auth0_subject WHERE id = v_user_id;
+    -- Aliased and qualified: RETURNS TABLE (id, ...) makes `id` an output variable, so a bare
+    -- `WHERE id = ...` is ambiguous (42702) and the auto-link fails on every first login.
+    UPDATE app_user AS au SET auth0_subject = p_auth0_subject WHERE au.id = v_user_id;
 
     INSERT INTO audit_event (entity_type, entity_id, action, actor_label, after_value, reason)
     VALUES ('AppUser', v_user_id, 'Auth0SubjectLinked', 'system',
