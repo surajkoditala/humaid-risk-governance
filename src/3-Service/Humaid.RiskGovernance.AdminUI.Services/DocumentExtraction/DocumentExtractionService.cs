@@ -36,6 +36,8 @@ namespace Humaid.RiskGovernance.AdminUI.Services.DocumentExtraction
             if (string.IsNullOrWhiteSpace(documentText))
                 throw new ValidationException("No extracted text is available for this attachment yet.");
 
+            // Measured token use: the AI client records this call's tokens against this request.
+            using var aiCall = AiCallContext.Begin(changeRequestId, null);
             var proposals = await _aiClient.ExtractAsync(changeType, documentText);
             foreach (var proposal in proposals)
             {

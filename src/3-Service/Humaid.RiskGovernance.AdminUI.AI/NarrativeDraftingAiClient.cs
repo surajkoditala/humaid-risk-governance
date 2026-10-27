@@ -55,6 +55,8 @@ namespace Humaid.RiskGovernance.AdminUI.AI
             if (!string.IsNullOrWhiteSpace(input.RegenerationFeedback))
                 prompt.AppendLine($"regenerationFeedback: {input.RegenerationFeedback}");
 
+            // Tags this call's token usage with the step that made it (see AiUsageTelemetry).
+            using var _ = AiUsageTelemetry.BeginOperation("narrative_drafting");
             var raw = await _chatCompletionClient.CompleteAsync(SystemPrompt, prompt.ToString(), cancellationToken);
             var json = JsonExtraction.ExtractJson(raw);
 

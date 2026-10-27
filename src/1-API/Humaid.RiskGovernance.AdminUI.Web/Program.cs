@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Humaid.RiskGovernance.AdminUI.AI;
 using Humaid.RiskGovernance.AdminUI.DA;
 using Humaid.RiskGovernance.AdminUI.DA.Migrations;
+using Humaid.RiskGovernance.AdminUI.DA.Repos.AiUsage;
 using Humaid.RiskGovernance.AdminUI.DA.Repos.Assessment;
 using Humaid.RiskGovernance.AdminUI.DA.Repos.Audit;
 using Humaid.RiskGovernance.AdminUI.DA.Repos.CategoryMapping;
@@ -16,6 +17,7 @@ using Humaid.RiskGovernance.AdminUI.DA.Repos.Scoring;
 using Humaid.RiskGovernance.AdminUI.DA.Repos.Sla;
 using Humaid.RiskGovernance.AdminUI.DA.Repos.Users;
 using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Ai;
+using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.AiUsage;
 using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.Assessment;
 using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.Audit;
 using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.CategoryMapping;
@@ -29,6 +31,7 @@ using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.Polic
 using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.Scoring;
 using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.Sla;
 using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.Users;
+using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.AiUsage;
 using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.Assessment;
 using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.Audit;
 using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.CategoryMapping;
@@ -44,6 +47,7 @@ using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.Scoring;
 using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.Sla;
 using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.Users;
 using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Users;
+using Humaid.RiskGovernance.AdminUI.Services.AiUsage;
 using Humaid.RiskGovernance.AdminUI.Services.Assessment;
 using Humaid.RiskGovernance.AdminUI.Services.Audit;
 using Humaid.RiskGovernance.AdminUI.Services.CategoryMapping;
@@ -67,6 +71,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using OpenTelemetry;
+using OpenTelemetry.Metrics;
 
 // Every stored function returns snake_case columns (request_number, submitted_at, ...); this maps
 // them onto this codebase's PascalCase model properties (RequestNumber, SubmittedAt, ...) without
@@ -150,7 +155,11 @@ builder.Host.UseDefaultServiceProvider((context, options) =>
 var appInsightsConnectionString = builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"];
 if (!string.IsNullOrWhiteSpace(appInsightsConnectionString))
 {
-    builder.Services.AddOpenTelemetry().UseAzureMonitor(options => options.ConnectionString = appInsightsConnectionString);
+    // WithMetrics adds the AI token-usage meter (AiUsageTelemetry) to what is exported, so tokens per step/model
+    // reach the AppMetrics table alongside the request and dependency telemetry above.
+    builder.Services.AddOpenTelemetry()
+        .UseAzureMonitor(options => options.ConnectionString = appInsightsConnectionString)
+        .WithMetrics(metrics => metrics.AddMeter(AiUsageTelemetry.MeterName));
 }
 
 builder.Services.AddControllers();
@@ -249,6 +258,7 @@ builder.Services.AddScoped<INarrativeSectionRepo, NarrativeSectionRepo>();
 builder.Services.AddScoped<IAssessmentRepo, AssessmentRepo>();
 builder.Services.AddScoped<IRiskScoreRepo, RiskScoreRepo>();
 builder.Services.AddScoped<IAuditRepo, AuditRepo>();
+builder.Services.AddScoped<IAiCallLogRepo, AiCallLogRepo>();
 builder.Services.AddScoped<ICommitteeRepo, CommitteeRepo>();
 builder.Services.AddScoped<IWorkflowRuleRepo, WorkflowRuleRepo>();
 builder.Services.AddScoped<ISlaRepo, SlaRepo>();
@@ -328,6 +338,7 @@ builder.Services.AddScoped<INarrativeService, NarrativeService>();
 builder.Services.AddScoped<IAssessmentService, AssessmentService>();
 builder.Services.AddScoped<IScoringService, ScoringService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
+builder.Services.AddScoped<IAiUsageService, AiUsageService>();
 builder.Services.AddScoped<IAuditExportService, AuditExportService>();
 builder.Services.AddScoped<ICommitteeService, CommitteeService>();
 builder.Services.AddScoped<IWorkflowRuleService, WorkflowRuleService>();

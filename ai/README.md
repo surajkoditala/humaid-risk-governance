@@ -51,6 +51,45 @@ dependency) and are mirrored below for review/audit — if you change one, chang
 - [`prompts/document-extraction.md`](prompts/document-extraction.md) ↔ `DocumentExtractionAiClient.SystemPrompt`
 - [`prompts/narrative-drafting.md`](prompts/narrative-drafting.md) ↔ `NarrativeDraftingAiClient.SystemPrompt`
 
+## Measured token use
+
+Both provider clients record the token counts the provider reports for every successful call
+(`AiUsageTelemetry` in `src/3-Service/.../AI`) — exact figures, nothing estimated locally. Each
+touchpoint client tags its calls with its step (`category_mapping`, `document_extraction`,
+`narrative_drafting`) through an ambient scope, so the provider clients and `IChatCompletionClient`
+keep their signatures. A failed call (401, 404, 5xx) carries no usage and records nothing; a count
+the provider did not report is skipped, never recorded as zero.
+
+- **Metric:** `gen_ai.client.token.usage` (OpenTelemetry GenAI semantic-convention name), meter
+  `Humaid.RiskGovernance.AI`, one measurement per token type: `input`, `output`, and for Anthropic
+  `cache_read` / `cache_creation`. Dimensions: `gen_ai.system` (`anthropic`, `az.ai.inference`),
+  `gen_ai.request.model`, `humaid.ai.operation`.
+- **Where it lands:** `Program.cs` registers the meter with the Azure Monitor exporter, so with
+  `APPLICATIONINSIGHTS_CONNECTION_STRING` set it appears in the Log Analytics `AppMetrics` table. Tokens
+  per step and model:
+
+  ```kusto
+  AppMetrics
+  | where Name == "gen_ai.client.token.usage"
+  | extend TokenType = tostring(Properties["gen_ai.token.type"]),
+           Step = tostring(Properties["humaid.ai.operation"]),
+           Model = tostring(Properties["gen_ai.request.model"])
+  | summarize Tokens = sum(Sum) by Step, Model, TokenType
+  ```
+
+- **Also logged:** one `AI usage: ...` line per call (visible in the container logs and `AppTraces`).
+- **Per change request:** each successful call is also appended to the `ai_call_log` table
+  (`schema/016_ai_call_log.sql`; append-only at the data layer like `audit_event`). The service that makes
+  the call names the request with `AiCallContext.Begin(changeRequestId, assessmentId)` (Infrastructure),
+  and the provider client writes the row through `IAiCallLogRepo` / `func_logAiCall` — the database derives
+  the request from the assessment when only that is known. The Audit tab of the assessment workspace shows
+  the calls and totals for the request (`GET api/AiUsage/{changeRequestId}`, Analyst and Admin only).
+  A token column is NULL when the provider did not report it, never 0. Recording is best-effort: a database
+  failure is logged and never fails the AI call. With no repository (the evals console app) nothing is
+  persisted; the metric and log line still are.
+- **Not recorded:** a cost in currency (prices change and differ per model/contract — multiply the token
+  counts by your current rates), and failed calls (they carry no usage).
+
 ## See also
 
 - [`docs/architecture/langgraph-evaluation.md`](../docs/architecture/langgraph-evaluation.md) — whether an orchestration framework (LangGraph) should replace the harness described above, and why the current recommendation is no (proposal, pending team decision).
