@@ -13,6 +13,7 @@ import { RequiredMark } from '../components/RequiredMark.jsx'
 import AiUsageCard from '../components/AiUsageCard.jsx'
 import SlaStrip from '../components/SlaStrip.jsx'
 import { Endpoints, apiFetch, downloadFile } from '../lib/api.js'
+import { formatFieldKey } from '../lib/labels.js'
 import { useFetch } from '../lib/useFetch.js'
 
 const NARRATIVE_STATUS_LABEL = {
@@ -372,7 +373,9 @@ function ExtractionTab({ changeRequest, bump }) {
           {(fields || []).map((f) => (
             <div key={f.id} className="rounded-md border p-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">{f.fieldKey}</span>
+                <span className="text-sm font-medium" title={f.fieldKey}>
+                  {formatFieldKey(f.fieldKey)}
+                </span>
                 <div className="flex items-center gap-2">
                   {f.needsReview && <Badge variant="destructive">Needs review</Badge>}
                   <Badge variant="secondary">{f.source}</Badge>
