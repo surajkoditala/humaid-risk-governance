@@ -33,6 +33,19 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Ai
         }
 
         [Fact]
+        public async Task DraftAsync_ParsesParagraphsSentAsRawLineBreaksInsideTheJsonString()
+        {
+            // CR-2026-00109 in dev: the model put literal newlines between paragraphs instead of \n.
+            const string response = "{\"narrativeText\": \"First paragraph.\n\nSecond \\\"quoted\\\" paragraph.\r\n\tThird.\",\n  \"unsupportedClaims\": [\"a claim\nover two lines\"]\n}";
+            var sut = new NarrativeDraftingAiClient(new FakeChatCompletionClient(response), NullLogger<NarrativeDraftingAiClient>.Instance);
+
+            var result = await sut.DraftAsync(Input());
+
+            Assert.Equal("First paragraph.\n\nSecond \"quoted\" paragraph.\r\n\tThird.", result.NarrativeText);
+            Assert.Equal(["a claim\nover two lines"], result.UnsupportedClaims);
+        }
+
+        [Fact]
         public async Task DraftAsync_FallsBackToAReviewableResultOnUnparseableResponse()
         {
             var sut = new NarrativeDraftingAiClient(new FakeChatCompletionClient("not json"), NullLogger<NarrativeDraftingAiClient>.Instance);
