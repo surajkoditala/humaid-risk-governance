@@ -1,0 +1,1 @@
+Compare this diff against the project's coding standards for naming, comments, and layer conventions (summarized in the rules below). Flag only clear, concrete violations - not style nitpicks the rules don't actually mention.

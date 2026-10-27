@@ -2,10 +2,9 @@ import { isAuth0Configured } from '../auth/authConfig.js'
 import { getAuthHeader } from '../auth/authToken.js'
 import { getDevUserId } from '../auth/devUserId.js'
 
-// This webapp's own backend (Humaid.RiskGovernance.AdminUI.Web). Empty string (the production
-// default) means same-origin - deliberately using ?? rather than || so an explicit empty string
-// isn't overridden.
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5210'
+// This webapp's own backend - see apiBase.js for why it lives there (authConfig.js needs it too).
+import { API_BASE_URL } from './apiBase.js'
+export { API_BASE_URL }
 
 // Epic 11: exactly one of these two paths is live at a time, matching RequireAuth.jsx's own
 // isAuth0Configured branch (it never renders the dev bypass once a tenant is configured, so
@@ -153,9 +152,26 @@ export const Endpoints = {
     upsert: () => api('WorkflowRule'),
   },
 
+  // Service levels (SLA): configured by an Admin, viewed by Analysts and Admins. Every call carries
+  // the acting user so the server can check their role - same pattern as the other role-gated screens.
+  sla: {
+    config: (actorUserId) => api(`Sla/Config?actorUserId=${actorUserId}`),
+    saveConfig: () => api('Sla/Config'),
+    addHoliday: () => api('Sla/Holiday'),
+    removeHoliday: (id) => api(`Sla/Holiday/${id}/Remove`),
+    view: (actorUserId, query) => api(`Sla/View${toQueryString({ actorUserId, ...query })}`),
+    summary: (actorUserId, query) => api(`Sla/Summary${toQueryString({ actorUserId, ...query })}`),
+    performance: (actorUserId, query) => api(`Sla/Performance${toQueryString({ actorUserId, ...query })}`),
+    forRequest: (changeRequestId, actorUserId) => api(`Sla/Request/${changeRequestId}?actorUserId=${actorUserId}`),
+  },
+
   audit: {
     trail: (changeRequestId) => api(`Audit/${changeRequestId}`),
     exportPdf: (changeRequestId) => api(`Audit/${changeRequestId}/Export`),
+  },
+
+  aiUsage: {
+    forRequest: (changeRequestId) => api(`AiUsage/${changeRequestId}`),
   },
 }
 

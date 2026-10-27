@@ -22,7 +22,9 @@ BEGIN
         RETURN;
     END IF;
 
-    UPDATE app_user SET auth0_subject = p_auth0_subject WHERE id = v_user_id;
+    -- Aliased and qualified: RETURNS TABLE (id, ...) makes `id` an output variable, so a bare
+    -- `WHERE id = ...` is ambiguous (42702) and the auto-link fails on every first login.
+    UPDATE app_user AS au SET auth0_subject = p_auth0_subject WHERE au.id = v_user_id;
 
     INSERT INTO audit_event (entity_type, entity_id, action, actor_label, after_value, reason)
     VALUES ('AppUser', v_user_id, 'Auth0SubjectLinked', 'system',

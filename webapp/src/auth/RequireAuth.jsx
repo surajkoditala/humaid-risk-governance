@@ -14,9 +14,13 @@ function SetupNotice({ onBypass }) {
       <div className="w-full max-w-lg space-y-4 rounded-lg border border-amber-300 bg-amber-50 p-6 text-sm text-amber-900">
         <p className="font-semibold">Auth0 is not configured</p>
         <p>
-          Copy <code>webapp/.env.example</code> to <code>webapp/.env.local</code>, set
+          Locally: copy <code>webapp/.env.example</code> to <code>webapp/.env.local</code>, set
           VITE_AUTH0_DOMAIN and VITE_AUTH0_CLIENT_ID from your Auth0 application, and restart the
           dev server.
+        </p>
+        <p>
+          Deployed: set AUTH0_DOMAIN, AUTH0_CLIENT_ID and AUTH0_AUDIENCE as environment variables on
+          the API (container app) and restart it; the app reads them from <code>/config.json</code>.
         </p>
         <button
           type="button"

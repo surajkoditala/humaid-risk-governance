@@ -1,4 +1,6 @@
 -- US-1.3: "all my requests with current status and days elapsed since submission."
+-- Epic 19 (US-19.5 AC4): also the due date and whether the request is on track - the requester sees
+-- only that, never other requests or the internal SLA reporting.
 -- DEF-022: status alone only ever says "Decisioned" - the Product Owner never saw the actual
 -- outcome or its conditions (US-8.3 AC3). The committee's resolution lives in committee_decision,
 -- not on change_request itself (see func_recordCommitteeDecision.sql), so it's left-joined in here
@@ -20,7 +22,7 @@ CREATE OR REPLACE FUNCTION func_getChangeRequestsForUser(
 RETURNS TABLE (
     id UUID, request_number TEXT, change_type TEXT, title TEXT, status TEXT,
     submitted_at TIMESTAMPTZ, days_elapsed INT, decision_resolution TEXT, decision_conditions_text TEXT,
-    total_count BIGINT
+    due_at TIMESTAMPTZ, sla_state TEXT, total_count BIGINT
 ) AS $$
 DECLARE
     v_column TEXT := CASE p_sort_by
@@ -46,14 +48,21 @@ BEGIN
         v_direction := 'DESC';
     END IF;
 
+    -- Epic 19: due_at is when the DECISION is due (the overall target) - what a requester or analyst wants to
+    -- know; the current stage's own due date is only used when no overall target is set.
     RETURN QUERY EXECUTE format(
         'SELECT c.id, c.request_number, c.change_type, c.title, c.status, c.submitted_at,
                 EXTRACT(DAY FROM now() - c.submitted_at)::INT AS days_elapsed,
                 d.resolution, d.conditions_text,
+                CASE WHEN c.status = ''Decisioned'' THEN NULL ELSE COALESCE(o.e2e_due_at, o.due_at) END AS due_at,
+                CASE WHEN c.status = ''Decisioned'' THEN (CASE WHEN ms.e2e_met THEN ''Met'' WHEN ms.e2e_met = false THEN ''Missed'' END)
+                     ELSE o.overall_state END AS sla_state,
                 COUNT(*) OVER()::BIGINT AS total_count
          FROM change_request c
          LEFT JOIN assessment a ON a.change_request_id = c.id
          LEFT JOIN committee_decision d ON d.assessment_id = a.id
+         LEFT JOIN fn_sla_open_status() o ON o.change_request_id = c.id
+         LEFT JOIN change_request_sla ms ON ms.change_request_id = c.id
          WHERE c.submitted_by_user_id = $1
            AND ($2::TEXT IS NULL OR c.status = $2)
            AND ($3::TEXT IS NULL OR c.change_type = $3)

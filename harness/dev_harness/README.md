@@ -9,6 +9,8 @@ under `harness/` — see [`../README.md`](../README.md) for the others).
 | [`review-rules.md`](review-rules.md) | The checklist a human (or the CLI below) reviews every change against |
 | [`ai-assisted-development.md`](ai-assisted-development.md) | Human-in-the-loop policy for AI-drafted code in this repo |
 | [`prompts/code-review.prompt.md`](prompts/code-review.prompt.md) | Manual/conversational review prompt mirroring `review-rules.md` |
+| [`prompts/system.prompt.md`](prompts/system.prompt.md) | System prompt every graph node runs with (output format, "stay in your lane") |
+| [`prompts/checks/`](prompts/checks/) | One `<node>.prompt.md` per graph node - the single concern that node reviews. The file name is the node name; add a file to add a check |
 
 A LangGraph CLI that reviews a local git diff against [`review-rules.md`](review-rules.md)
 before you commit. It is **dev tooling only** — never called by the deployed Workbench, and

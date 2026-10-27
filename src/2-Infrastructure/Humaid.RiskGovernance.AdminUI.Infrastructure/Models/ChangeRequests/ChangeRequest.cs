@@ -33,6 +33,12 @@ namespace Humaid.RiskGovernance.AdminUI.Infrastructure.Models.ChangeRequests
         /// ApprovedWithConditions) and any conditions - null until Status is "Decisioned".</summary>
         public string? DecisionResolution { get; set; }
         public string? DecisionConditionsText { get; set; }
+
+        /// <summary>Epic 19: when the request's current stage is due, and whether it is on track -
+        /// OnTrack | AtRisk | Breached while open, Met | Missed once decided (null if no SLA applies).
+        /// A requester sees only these two, never the internal SLA reporting (US-19.5 AC4).</summary>
+        public DateTimeOffset? DueAt { get; set; }
+        public string? SlaState { get; set; }
     }
 
     public class ChangeRequestAttachment

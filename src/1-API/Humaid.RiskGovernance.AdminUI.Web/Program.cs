@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Humaid.RiskGovernance.AdminUI.AI;
 using Humaid.RiskGovernance.AdminUI.DA;
 using Humaid.RiskGovernance.AdminUI.DA.Migrations;
+using Humaid.RiskGovernance.AdminUI.DA.Repos.AiUsage;
 using Humaid.RiskGovernance.AdminUI.DA.Repos.Assessment;
 using Humaid.RiskGovernance.AdminUI.DA.Repos.Audit;
 using Humaid.RiskGovernance.AdminUI.DA.Repos.CategoryMapping;
@@ -13,8 +14,10 @@ using Humaid.RiskGovernance.AdminUI.DA.Repos.DocumentExtraction;
 using Humaid.RiskGovernance.AdminUI.DA.Repos.Narrative;
 using Humaid.RiskGovernance.AdminUI.DA.Repos.PolicyResearch;
 using Humaid.RiskGovernance.AdminUI.DA.Repos.Scoring;
+using Humaid.RiskGovernance.AdminUI.DA.Repos.Sla;
 using Humaid.RiskGovernance.AdminUI.DA.Repos.Users;
 using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Ai;
+using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.AiUsage;
 using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.Assessment;
 using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.Audit;
 using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.CategoryMapping;
@@ -26,7 +29,9 @@ using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.Docum
 using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.Narrative;
 using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.PolicyResearch;
 using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.Scoring;
+using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.Sla;
 using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.Users;
+using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.AiUsage;
 using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.Assessment;
 using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.Audit;
 using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.CategoryMapping;
@@ -39,8 +44,10 @@ using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.DocumentP
 using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.Narrative;
 using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.PolicyResearch;
 using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.Scoring;
+using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.Sla;
 using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.Users;
 using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Users;
+using Humaid.RiskGovernance.AdminUI.Services.AiUsage;
 using Humaid.RiskGovernance.AdminUI.Services.Assessment;
 using Humaid.RiskGovernance.AdminUI.Services.Audit;
 using Humaid.RiskGovernance.AdminUI.Services.CategoryMapping;
@@ -53,6 +60,7 @@ using Humaid.RiskGovernance.AdminUI.Services.DocumentProcessing;
 using Humaid.RiskGovernance.AdminUI.Services.Narrative;
 using Humaid.RiskGovernance.AdminUI.Services.PolicyResearch;
 using Humaid.RiskGovernance.AdminUI.Services.Scoring;
+using Humaid.RiskGovernance.AdminUI.Services.Sla;
 using Humaid.RiskGovernance.AdminUI.Services.Startup;
 using Humaid.RiskGovernance.AdminUI.Services.Users;
 using Humaid.RiskGovernance.AdminUI.Web.Auth;
@@ -63,6 +71,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using OpenTelemetry;
+using OpenTelemetry.Metrics;
 
 // Every stored function returns snake_case columns (request_number, submitted_at, ...); this maps
 // them onto this codebase's PascalCase model properties (RequestNumber, SubmittedAt, ...) without
@@ -146,7 +155,11 @@ builder.Host.UseDefaultServiceProvider((context, options) =>
 var appInsightsConnectionString = builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"];
 if (!string.IsNullOrWhiteSpace(appInsightsConnectionString))
 {
-    builder.Services.AddOpenTelemetry().UseAzureMonitor(options => options.ConnectionString = appInsightsConnectionString);
+    // WithMetrics adds the AI token-usage meter (AiUsageTelemetry) to what is exported, so tokens per step/model
+    // reach the AppMetrics table alongside the request and dependency telemetry above.
+    builder.Services.AddOpenTelemetry()
+        .UseAzureMonitor(options => options.ConnectionString = appInsightsConnectionString)
+        .WithMetrics(metrics => metrics.AddMeter(AiUsageTelemetry.MeterName));
 }
 
 builder.Services.AddControllers();
@@ -245,8 +258,10 @@ builder.Services.AddScoped<INarrativeSectionRepo, NarrativeSectionRepo>();
 builder.Services.AddScoped<IAssessmentRepo, AssessmentRepo>();
 builder.Services.AddScoped<IRiskScoreRepo, RiskScoreRepo>();
 builder.Services.AddScoped<IAuditRepo, AuditRepo>();
+builder.Services.AddScoped<IAiCallLogRepo, AiCallLogRepo>();
 builder.Services.AddScoped<ICommitteeRepo, CommitteeRepo>();
 builder.Services.AddScoped<IWorkflowRuleRepo, WorkflowRuleRepo>();
+builder.Services.AddScoped<ISlaRepo, SlaRepo>();
 builder.Services.AddScoped<IUserRepo, UserRepo>();
 builder.Services.AddScoped<IExternalSnapshotRepo, ExternalSnapshotRepo>();
 
@@ -323,9 +338,11 @@ builder.Services.AddScoped<INarrativeService, NarrativeService>();
 builder.Services.AddScoped<IAssessmentService, AssessmentService>();
 builder.Services.AddScoped<IScoringService, ScoringService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
+builder.Services.AddScoped<IAiUsageService, AiUsageService>();
 builder.Services.AddScoped<IAuditExportService, AuditExportService>();
 builder.Services.AddScoped<ICommitteeService, CommitteeService>();
 builder.Services.AddScoped<IWorkflowRuleService, WorkflowRuleService>();
+builder.Services.AddScoped<ISlaService, SlaService>();
 builder.Services.AddScoped<IUserService, UserService>();
 
 var app = builder.Build();
@@ -406,6 +423,23 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// Runtime config for the SPA (see ClientAuthConfig). Anonymous on purpose - the SPA needs it before
+// it has a token - and never cached, so changing the container app's env vars takes effect on the
+// next page load without a rebuild or a stale browser/CDN copy.
+var clientAuthConfig = ClientAuthConfig.FromConfiguration(app.Configuration);
+if (clientAuthConfig.IsHalfConfigured)
+{
+    app.Logger.LogWarning(
+        "AUTH0_DOMAIN is set but AUTH0_CLIENT_ID is not: the API will validate tokens, but the webapp " +
+        "cannot start a login and will show 'Auth0 is not configured'. Set AUTH0_CLIENT_ID to the Auth0 " +
+        "application's Client ID.");
+}
+app.MapGet("/config.json", (HttpContext context) =>
+{
+    context.Response.Headers.CacheControl = "no-store";
+    return Results.Json(clientAuthConfig);
+}).AllowAnonymous();
 
 app.Run();
 
