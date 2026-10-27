@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { useDevUser } from '../auth/DevUserContext.jsx'
 import { RequiredMark } from '../components/RequiredMark.jsx'
 import AiUsageCard from '../components/AiUsageCard.jsx'
+import { PolicyHelp } from '../components/PolicyHelp.jsx'
 import SlaStrip from '../components/SlaStrip.jsx'
 import { Endpoints, apiFetch, downloadFile } from '../lib/api.js'
 import { formatFieldKey } from '../lib/labels.js'
@@ -202,8 +203,11 @@ function PolicyTab({ assessmentId, mapping, bump }) {
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle>Search the policy corpus</CardTitle>
-          <CardDescription>Search FFIEC policy excerpts by keyword.</CardDescription>
+          <CardTitle className="flex items-center gap-2">
+            Search the policy corpus
+            <PolicyHelp />
+          </CardTitle>
+          <CardDescription>Search FFIEC guidance excerpts (paraphrased) by keyword.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
