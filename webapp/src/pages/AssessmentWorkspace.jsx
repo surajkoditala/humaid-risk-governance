@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
@@ -15,6 +15,7 @@ import { PolicyHelp } from '../components/PolicyHelp.jsx'
 import SlaStrip from '../components/SlaStrip.jsx'
 import { Endpoints, apiFetch, downloadFile } from '../lib/api.js'
 import { formatFieldKey } from '../lib/labels.js'
+import { useDebouncedValue } from '../lib/useDebouncedValue.js'
 import { useFetch } from '../lib/useFetch.js'
 
 const NARRATIVE_STATUS_LABEL = {
@@ -170,21 +171,34 @@ function PolicyTab({ assessmentId, mapping, bump }) {
   const { currentUser } = useDevUser()
   const { data: reliance } = useFetch(assessmentId ? Endpoints.policyResearch.reliance(assessmentId) : null, [assessmentId, bump])
   const [query, setQuery] = useState('')
-  const [results, setResults] = useState(null)
+  const [results, setResults] = useState(null) // { text, rows } - what was searched, and what came back
   const [searching, setSearching] = useState(false)
   const [categoryId, setCategoryId] = useState('')
+  const debouncedQuery = useDebouncedValue(query, 300)
+  const latestSearch = useRef(0)
 
-  const search = async () => {
-    if (!query.trim()) return
-    setSearching(true)
-    try {
-      setResults(await apiFetch(Endpoints.policyResearch.search(query, categoryId || null)))
-    } catch (err) {
-      toast.error(err.message)
-    } finally {
-      setSearching(false)
-    }
-  }
+  // Results follow the box: a search runs after a short pause in typing and whenever the category
+  // changes, and an empty box lists every excerpt (func_searchPolicyChunks). Only the newest request
+  // may update the screen, so a slow earlier one cannot overwrite what was typed since.
+  const search = useCallback(
+    async (text) => {
+      const thisSearch = ++latestSearch.current
+      setSearching(true)
+      try {
+        const rows = await apiFetch(Endpoints.policyResearch.search(text, categoryId || null, text.trim() ? 10 : 50))
+        if (thisSearch === latestSearch.current) setResults({ text, rows })
+      } catch (err) {
+        if (thisSearch === latestSearch.current) toast.error(err.message)
+      } finally {
+        if (thisSearch === latestSearch.current) setSearching(false)
+      }
+    },
+    [categoryId],
+  )
+
+  useEffect(() => {
+    search(debouncedQuery)
+  }, [debouncedQuery, search])
 
   const decide = async (policyChunkId, decision) => {
     try {
@@ -207,7 +221,9 @@ function PolicyTab({ assessmentId, mapping, bump }) {
             Search the policy corpus
             <PolicyHelp />
           </CardTitle>
-          <CardDescription>Search FFIEC guidance excerpts (paraphrased) by keyword.</CardDescription>
+          <CardDescription>
+            FFIEC guidance excerpts (paraphrased). Type to find the closest ones, or leave the box empty to browse them all.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
@@ -228,25 +244,33 @@ function PolicyTab({ assessmentId, mapping, bump }) {
             </Select>
             <Input
               className="sm:flex-1"
-              placeholder="e.g. beneficial ownership, correspondent banking…"
+              placeholder="e.g. beneficial ownership, correspondent banking… or leave empty to browse"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && search()}
+              onKeyDown={(e) => e.key === 'Enter' && search(query)}
             />
-            <Button onClick={search} disabled={searching}>
-              {searching ? 'Searching…' : 'Search'}
-            </Button>
+            <Button onClick={() => search(query)}>Search</Button>
           </div>
 
           <div className="space-y-2">
-            {(results || []).map((r) => (
+            {results && (
+              <p className="text-xs text-muted-foreground" aria-live="polite">
+                {results.text.trim()
+                  ? `Closest matches for "${results.text.trim()}"`
+                  : `All excerpts${categoryId ? ` for ${mapping?.find((m) => m.riskCategoryId === categoryId)?.categoryName ?? 'this category'}` : ''}`}
+                {searching ? ' …' : ''}
+              </p>
+            )}
+            {(results?.rows || []).map((r) => (
               <div key={r.id} className="rounded-md border p-3">
                 <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                   <p className="text-xs font-medium text-muted-foreground">
                     {r.documentTitle ? `${r.documentTitle} — ` : ''}
                     {r.sectionRef}
                   </p>
-                  <span className="text-xs text-muted-foreground">Relevance rank: {r.rank?.toFixed?.(3) ?? r.rank}</span>
+                  {results.text.trim() && (
+                    <span className="text-xs text-muted-foreground">Relevance rank: {r.rank?.toFixed?.(3) ?? r.rank}</span>
+                  )}
                 </div>
                 <p className="mt-1 text-sm">{r.chunkText}</p>
                 <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
@@ -267,7 +291,13 @@ function PolicyTab({ assessmentId, mapping, bump }) {
                 </div>
               </div>
             ))}
-            {results && results.length === 0 && <p className="text-sm text-muted-foreground">No matches.</p>}
+            {results && results.rows.length === 0 && (
+              <p className="text-sm text-muted-foreground">
+                {results.text.trim()
+                  ? 'No close matches. Try different or fewer words, or clear the box to browse every excerpt.'
+                  : 'No excerpts for this category.'}
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>

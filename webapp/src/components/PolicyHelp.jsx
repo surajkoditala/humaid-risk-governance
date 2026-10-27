@@ -37,8 +37,12 @@ export function PolicyHelp() {
         <Section title="Searching">
           <ul className="list-disc space-y-1 pl-5">
             <li>Choose a category to see only its excerpts, or leave "Any category".</li>
-            <li>Type a topic, such as wire transfers, beneficial ownership, correspondent banking or high-risk jurisdictions, then press Enter or Search.</li>
-            <li>No matches? Try fewer or simpler words. A result has to contain every word you type.</li>
+            <li>Leave the box empty to browse every excerpt.</li>
+            <li>
+              Or type a topic, such as wire transfers, beneficial ownership, correspondent banking or high-risk jurisdictions. The closest excerpts appear as you type, best match first. Part of a
+              word is enough ("benef" finds beneficial ownership), and an excerpt only needs to match some of your words.
+            </li>
+            <li>Spelling is not corrected. If nothing matches, check the spelling or try a different word.</li>
           </ul>
         </Section>
 
