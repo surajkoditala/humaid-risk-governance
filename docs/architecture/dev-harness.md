@@ -111,18 +111,21 @@ flowchart TB
             INIT["__init__.py<br/>module docstring + usage"]
             MAIN["__main__.py<br/>CLI entrypoint (argparse)"]
             DIFFSRC["diff_source.py<br/>wraps git diff"]
-            RULESPY["rules.py<br/>loads review-rules.md"]
+            RULESPY["rules.py<br/>loads review-rules.md<br/>+ the node prompts"]
+            NODEPROMPTS["prompts/system.prompt.md<br/>prompts/checks/*.prompt.md<br/>(one file per graph node)"]
             GRAPH["graph.py<br/>the LangGraph itself"]
         end
     end
 
     RULES -.->|"loaded at runtime"| RULESPY
+    NODEPROMPTS -.->|"loaded at runtime"| RULESPY
     MAIN --> DIFFSRC
     MAIN --> GRAPH
     RULESPY --> GRAPH
 ```
 
 - **`review-rules.md` is the single source of truth.** `rules.py` loads this file's raw text directly — there is no separate copy of the rules baked into the Python code, so the checklist can't drift out of sync between what a human reads and what the harness checks against.
+- **The prompts each node runs are files, not Python strings.** `prompts/system.prompt.md` is shared by every node; `prompts/checks/<node>.prompt.md` is the one concern a node owns, and the file name is the node name. `rules.py` loads them, so adding or tuning a check is a prompt-file edit with no change to `graph.py`.
 - **`__main__.py` is the only entrypoint.** It wires `diff_source.get_diff()` and `graph.run_harness()` together and handles CLI flags (`--since`, `--out`).
 - **`graph.py` owns all LangGraph-specific code.** Nothing else in the module imports `langgraph` directly.
 
