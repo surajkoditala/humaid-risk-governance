@@ -33,6 +33,10 @@ const LINKED_ENTITY_BY_CHANGE_TYPE = {
   Vendor: 'vendor',
   Geography: 'product',
 }
+// Select items can't carry an empty value, so the optional linked-entity dropdown offers this
+// sentinel as its "clear" choice and maps it back to ''. Without it a picked value could never be unselected.
+const NO_SELECTION = '__none__'
+
 // US-1.1: submit a change request. US-1.2: attach supporting documents to one already submitted.
 export default function Intake() {
   const { currentUser } = useDevUser()
@@ -216,13 +220,14 @@ export default function Intake() {
             {linkedEntityKind && (
               <div className="space-y-1.5">
                 <Label>Linked {linkedEntityKind} (optional — grounds the AI category proposal)</Label>
-                <Select value={linkedEntityId} onValueChange={setLinkedEntityId}>
+                <Select value={linkedEntityId} onValueChange={(v) => setLinkedEntityId(v === NO_SELECTION ? '' : v)}>
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder={`Select a ${linkedEntityKind} from the bank's systems`}>
                       {linkedOptions?.find((o) => o.id === linkedEntityId)?.label}
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
+                    {linkedEntityId && <SelectItem value={NO_SELECTION}>None (clear selection)</SelectItem>}
                     {(linkedOptions || []).map((o) => (
                       <SelectItem key={o.id} value={o.id}>
                         {o.label}

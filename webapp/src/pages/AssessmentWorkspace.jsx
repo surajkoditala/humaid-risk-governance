@@ -206,13 +206,14 @@ function PolicyTab({ assessmentId, mapping, bump }) {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-            <Select value={categoryId} onValueChange={setCategoryId}>
+            <Select value={categoryId || 'all'} onValueChange={(v) => setCategoryId(v === 'all' ? '' : v)}>
               <SelectTrigger className="w-full sm:w-56">
                 <SelectValue placeholder="Any category">
-                  {mapping?.find((m) => m.riskCategoryId === categoryId)?.categoryName}
+                  {categoryId ? mapping?.find((m) => m.riskCategoryId === categoryId)?.categoryName : 'Any category'}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="all">Any category</SelectItem>
                 {(mapping || []).filter((m) => m.isActive).map((m) => (
                   <SelectItem key={m.riskCategoryId} value={m.riskCategoryId}>
                     {m.categoryName}
