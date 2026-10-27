@@ -1,7 +1,56 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 # Project Context — Genius Hacks Q3 2026: Risk Assessment Workbench
 ## Team: HumAId Risk Governance
 
 This file gives Claude Code full context on this hackathon project. Read this before starting any work. A companion file, `docs/requirements/user-stories.md`, has the full epics/acceptance criteria — read that too before writing code against any specific feature.
+
+---
+
+## Commands
+
+Prerequisites: .NET 10 SDK, Node.js LTS, Docker. First-time setup: copy `appsettings.Development.json.example` → `appsettings.Development.json` in both `src/1-API/Humaid.RiskGovernance.AdminUI.Web/` and `src/6-MockExternalSystems/Humaid.RiskGovernance.MockSystems/`, and `webapp/.env.example` → `webapp/.env.local` (no Auth0 domain set = Development-only `DevBypassAuthHandler`, "continue without signing in").
+
+```powershell
+bash ops/setup-local-db.sh            # Docker Postgres (localhost:5433, not 5432) + Azurite, applies both deploy_all.sql files; --reset to start clean
+dotnet build Humaid.RiskGovernance.AdminUI.slnx   # also runs `npm run build` for webapp via webapp.esproj
+
+# Run (Mock Systems first — the Workbench calls it at intake)
+dotnet run --project src/6-MockExternalSystems/Humaid.RiskGovernance.MockSystems   # :5220
+dotnet run --project src/1-API/Humaid.RiskGovernance.AdminUI.Web                   # :5210
+cd webapp; npm run dev                                                             # :3000
+
+# Tests (xUnit + Moq, no DB/HTTP/Docker needed)
+dotnet test tests/Humaid.RiskGovernance.AdminUI.UnitTests
+dotnet test tests/Humaid.RiskGovernance.AdminUI.UnitTests --filter "FullyQualifiedName~ScoringServiceTests"   # single class
+dotnet test tests/Humaid.RiskGovernance.AdminUI.UnitTests --filter "FullyQualifiedName~ScoringServiceTests.<MethodName>"
+
+# Frontend lint/format
+cd webapp; npm run lint; npm run format
+
+# Evals (AI cases report Skip, not Fail, without a key; reports land in evals/results/, gitignored)
+$env:AI_PROVIDER="Anthropic"; $env:ANTHROPIC_API_KEY="..."; $env:ANTHROPIC_MODEL="..."
+dotnet run --project evals/Humaid.RiskGovernance.AdminUI.Evals
+
+# Regenerate deploy_all.sql after editing schema/, functions/ or seed/ (never edit deploy_all.sql by hand; the Mock API PR pipeline fails on drift)
+cd src/4-Persistence/Humaid.RiskGovernance.AdminUI.DB; bash ./generate_deploy_all.sh
+
+# Dev harness: LangGraph review of the local diff against harness/dev_harness standards (uses ai/langgraph's venv)
+cd harness; ..\ai\langgraph\.venv\Scripts\python.exe -m dev_harness check --since HEAD~1
+```
+
+## How the code fits together (read before changing a feature)
+
+- **Request path:** Controller (`1-API`, role-restricted) → service interface in `2-Infrastructure` (returns `OperationResult<T>`) → implementation in `3-Service` → Dapper repo in `4-Persistence/DA` → a named Postgres function in `4-Persistence/DB/functions/<module>/`. A new feature usually touches all five, plus a new/changed SQL function file.
+- **Schema changes:** `DbMigrationRunner` (DA/Migrations) runs at Web startup — empty DB gets `deploy_all.sql`; an existing DB gets unseen `migrations/*.sql` (forward-only, numbered, tracked in `schema_migrations`) and then re-applies every `functions/` and `seed/` file (they must stay idempotent: `CREATE OR REPLACE`, `ON CONFLICT DO NOTHING`). A structural change to an already-deployed table needs both the `schema/` edit and a new `migrations/` file. Enumerated columns are `TEXT` + `CHECK`, not Postgres `ENUM`.
+- **Audit and overrides at the DB layer:** every function that writes an AI-generated or human-editable value writes its `audit_event` row in the same function call; `audit_event` rejects UPDATE/DELETE. Overrides keep the original plus the new value and a mandatory `reason`.
+- **AI layer:** the three AI clients (`CategoryMappingAiClient`, `DocumentExtractionAiClient`, `NarrativeDraftingAiClient`) depend only on `IChatCompletionClient`; `Program.cs` picks `ClaudeApiClient` or `AzureFoundryChatCompletionClient` by `AI_PROVIDER`. Each client drops/flags anything not traceable to its supplied input (citation-fabrication guard). Policy Research (Postgres full-text search) and Scoring are deliberately **not** AI. System prompts are C# constants next to each client and mirrored in `ai/prompts/*.md` — change both together.
+- **Roles** come from the `app_user`/`app_user_role` tables on every request, never from token claims.
+- **Mock Systems** is reached only over HTTP via `IMockSystemsClient` from the Data Ingestion Layer, which stores an immutable snapshot that everything downstream reads. A Mock Systems outage must never fail intake or a committee vote (covered by tests).
+- **Tests** mock each dependency by its interface; AI client tests use `Ai/FakeChatCompletionClient.cs` rather than mocking `HttpClient`.
+- `harness/` is development-process tooling only; nothing in it is called by the shipped app. `ai/langgraph/` is a standalone Python demonstrator, not the product's orchestration.
 
 ---
 
@@ -219,7 +268,7 @@ Orientation only, as of 5 Oct 2026; the acceptance criteria in the user stories 
 ## Instructions for Claude Code
 
 - Read `docs/requirements/user-stories.md` in full before implementing any epic — acceptance criteria there are the actual spec, this file is orientation only.
-- Follow the modular multi-tier structure above; keep `RAW.Domain` free of external dependencies.
+- Follow the modular multi-tier structure above; keep `2-Infrastructure` (the `RAW.Domain` equivalent) to interfaces and models only, with no implementations or external dependencies.
 - Every AI-generated output (category mapping, extracted fields, draft narrative, score) must be persisted alongside any human edit/override and the stated reason — never overwrite in place.
 - Audit entries are append-only; do not design any update/delete path for audit records.
 - Residual risk scoring must be mathematically incapable of reaching zero — validate this in both the calculation and the configuration-save path.
