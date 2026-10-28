@@ -1,6 +1,7 @@
 namespace Humaid.RiskGovernance.AdminUI.UnitTests.DataIngestion
 {
     using System.Net;
+    using System.Text.Json;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Repositories.DataIngestion;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Services.DataIngestion;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.DataIngestion;
@@ -78,6 +79,47 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.DataIngestion
             _snapshotRepo.Verify(r => r.SaveAsync(
                 It.IsAny<Guid>(), It.IsAny<Guid?>(), It.IsAny<string?>(), It.IsAny<Guid?>(), It.IsAny<string?>(), It.IsAny<Guid?>(), It.IsAny<string?>()),
                 Times.Never);
+        }
+
+        [Fact]
+        public async Task IngestAsync_SwallowsMockSystemsTimeoutRatherThanFailingIntake()
+        {
+            var customerId = Guid.NewGuid();
+            // An HttpClient timeout surfaces as TaskCanceledException, not HttpRequestException.
+            _mockSystemsClient.Setup(c => c.GetCustomerAsync(customerId, default))
+                .ThrowsAsync(new TaskCanceledException("The request was canceled due to the configured HttpClient.Timeout"));
+
+            await _sut.IngestAsync(Guid.NewGuid(), customerId, null, null);
+
+            _snapshotRepo.Verify(r => r.SaveAsync(
+                It.IsAny<Guid>(), It.IsAny<Guid?>(), It.IsAny<string?>(), It.IsAny<Guid?>(), It.IsAny<string?>(), It.IsAny<Guid?>(), It.IsAny<string?>()),
+                Times.Never);
+        }
+
+        [Fact]
+        public async Task IngestAsync_SwallowsMalformedMockSystemsResponseRatherThanFailingIntake()
+        {
+            var customerId = Guid.NewGuid();
+            _mockSystemsClient.Setup(c => c.GetCustomerAsync(customerId, default))
+                .ThrowsAsync(new JsonException("The JSON value could not be converted"));
+
+            await _sut.IngestAsync(Guid.NewGuid(), customerId, null, null);
+
+            _snapshotRepo.Verify(r => r.SaveAsync(
+                It.IsAny<Guid>(), It.IsAny<Guid?>(), It.IsAny<string?>(), It.IsAny<Guid?>(), It.IsAny<string?>(), It.IsAny<Guid?>(), It.IsAny<string?>()),
+                Times.Never);
+        }
+
+        [Fact]
+        public async Task IngestAsync_StillPropagatesCancellationRequestedByTheCaller()
+        {
+            var customerId = Guid.NewGuid();
+            using var cts = new CancellationTokenSource();
+            cts.Cancel();
+            _mockSystemsClient.Setup(c => c.GetCustomerAsync(customerId, cts.Token))
+                .ThrowsAsync(new TaskCanceledException());
+
+            await Assert.ThrowsAsync<TaskCanceledException>(() => _sut.IngestAsync(Guid.NewGuid(), customerId, null, null, cts.Token));
         }
 
         [Fact]

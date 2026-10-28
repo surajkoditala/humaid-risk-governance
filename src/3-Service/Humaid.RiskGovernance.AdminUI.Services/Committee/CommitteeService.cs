@@ -200,8 +200,10 @@ namespace Humaid.RiskGovernance.AdminUI.Services.Committee
                     await _mockSystemsClient.PushCustomerRiskFlagAsync(customerId, ratingSummary);
                 }
             }
-            catch (HttpRequestException ex)
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
             {
+                // The push passes no CancellationToken, so a TaskCanceledException here is always the
+                // HttpClient timeout, never a caller cancelling.
                 // Best-effort by design, same reasoning as DataIngestionService.IngestAsync - Mock
                 // Systems being unreachable must not undo or block a decision that's already final.
                 _logger.LogWarning(ex, "Could not push committee decision for change request {ChangeRequestId} back to Mock Systems.", changeRequestId);
