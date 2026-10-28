@@ -63,9 +63,10 @@ tool too — same as it does for the product graphs.
 
 - Only the diff's text is reviewed — no cross-referencing of whether a mentioned file (e.g. a
   mirrored prompt doc) was actually updated elsewhere in the repo.
-- CI integration is a draft, informational pipeline (`.azure-pipelines/harness/dev-harness.yml`)
-  that publishes the report as a build artifact; it is not a required check and does not comment
-  on the PR yet.
+- CI integration is an informational pipeline (`.azure-pipelines/harness/dev-harness.yml`) that
+  publishes the report as a build artifact and posts it on the PR as a single comment updated in
+  place. It is not a required check. Findings never fail it, but a check that fails to run does
+  (exit code 2 from the CLI), and the report then says it is incomplete.
 - Eval-dataset coverage checks and "gate table sync" (new epic added without a
   `human-in-the-loop-gates.md` row) are not yet separate nodes — currently folded loosely into
   `database_gate`/`citation_guard`. Fast-follow if this proves too coarse in practice.

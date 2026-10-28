@@ -71,18 +71,36 @@ def _run_check(check_name: str, instruction: str, state: _State) -> str:
     return content.strip()
 
 
+# A check that raised (API error, timeout, bad key) is recorded under this prefix instead of
+# aborting the run, so the other checks still report and the caller can tell "the check found
+# nothing" apart from "the check never ran".
+_FAILED_PREFIX = "CHECK FAILED TO RUN:"
+
+
 def _make_check_node(name: str, instruction: str):
     def _node(state: _State) -> dict:
         # Return only this node's delta (not the whole state) - fan-out nodes running
         # concurrently must each write a disjoint key, or LangGraph treats it as a conflicting
         # concurrent update to the same channel.
-        return {"findings": {name: _run_check(name, instruction, state)}}
+        try:
+            result = _run_check(name, instruction, state)
+        except Exception as exc:  # noqa: BLE001 - any failure of this check must not stop the others
+            result = f"{_FAILED_PREFIX} {type(exc).__name__}: {str(exc)[:300]}"
+        return {"findings": {name: result}}
 
     return _node
 
 
+def _failed_checks(findings: dict[str, str]) -> list[str]:
+    return [name for name, result in findings.items() if result.startswith(_FAILED_PREFIX)]
+
+
 def _compile_report(state: _State) -> dict:
     lines = ["# Dev Harness Report", ""]
+    failed = _failed_checks(state["findings"])
+    if failed:
+        lines.insert(1, f"**{len(failed)} of {len(state['findings'])} checks failed to run: {', '.join(failed)}.** "
+                        "The results below are incomplete.\n")
     any_issue = False
     for name, result in state["findings"].items():
         lines.append(f"## {name.replace('_', ' ').title()}")
@@ -106,7 +124,8 @@ def _build_graph():
     return graph.compile()
 
 
-def run_harness(diff: str) -> str:
+def run_harness_with_status(diff: str) -> tuple[str, list[str]]:
+    """Run every check; returns the report and the names of checks that failed to run."""
     state: _State = {
         "diff": diff,
         "rules": load_review_rules(),
@@ -115,4 +134,8 @@ def run_harness(diff: str) -> str:
     }
     compiled = _build_graph()
     result = compiled.invoke(state)
-    return result["report"]
+    return result["report"], _failed_checks(result["findings"])
+
+
+def run_harness(diff: str) -> str:
+    return run_harness_with_status(diff)[0]
