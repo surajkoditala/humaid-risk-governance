@@ -156,7 +156,10 @@ Details: [`evals/README.md`](../../evals/README.md).
 ### The dev harness — in one sentence
 > Before you commit, a LangGraph review reads your diff and checks it against our own rules —
 > architecture layering, the database pattern, citation guarding, deterministic-versus-AI judgement,
-> async and config safety, and coding standards — and prints a report; a human decides what to do.
+> async and config safety, coding standards, and three project-specific rules (residual risk never
+> reaches zero, the audit trail stays append-only, a Mock Systems failure never fails intake or a
+> vote) — and prints a report; a human decides what to do. In CI the same report is posted on the
+> pull request.
 
 ```mermaid
 flowchart TB
@@ -169,18 +172,28 @@ flowchart TB
     START --> N4["no_llm_where_unjustified<br/>keep deterministic things deterministic"]:::node
     START --> N5["async_and_config<br/>safe async, no silent defaults"]:::node
     START --> N6["coding_standards<br/>naming and comments"]:::node
+    START --> N7["scoring_invariants<br/>residual risk never zero"]:::node
+    START --> N8["audit_trail_integrity<br/>audit log append-only"]:::node
+    START --> N9["external_integration_resilience<br/>outage never fails intake or a vote"]:::node
     N1 --> REP["compile_report"]:::end_
     N2 --> REP
     N3 --> REP
     N4 --> REP
     N5 --> REP
     N6 --> REP
+    N7 --> REP
+    N8 --> REP
+    N9 --> REP
     REP --> H(["Markdown report<br/>a human decides"]):::end_
 ```
 
-- **Why six nodes instead of one big prompt:** each check is narrow, sees only the diff and one rule
+- **Why nine nodes instead of one big prompt:** each check is narrow, sees only the diff and one rule
   area, and runs independently. That is more reliable than one prompt asked to check everything.
   The rules live in prompt files, so tuning one needs no code change.
+- **The three project-specific checks only run when relevant files change** (a path match on the
+  diff), so most pull requests do not pay for them.
+- **In CI it is advice, not a gate:** the report is posted on the PR, and the pipeline goes red only
+  if a check could not run, never because of a finding.
 - **Nothing is auto-fixed or auto-committed.**
 
 ### Everything else on the build side
@@ -294,7 +307,7 @@ asking.
 
 **Where does LangGraph fit?**
 > Our development harnesses are LangGraph graphs: one reviews a developer's diff against our rules
-> with six narrow checks running in parallel, and one validates stories and creates them in Azure
+> with nine narrow checks running in parallel, and one validates stories and creates them in Azure
 > Boards. The product's own AI steps run on C# clients — we evaluated putting LangGraph in the
 > product and documented why we advise against it for this scope. We also built a working LangGraph
 > version of category mapping as a demonstrator, not wired in.
