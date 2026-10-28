@@ -10,7 +10,7 @@ import argparse
 import sys
 
 from .diff_source import get_diff
-from .graph import run_harness
+from .graph import run_harness_with_status
 
 
 def main() -> int:
@@ -40,13 +40,18 @@ def main() -> int:
 
     if args.command == "check":
         diff = get_diff(args.since, args.max_diff_bytes)
-        report = run_harness(diff)
+        report, failed = run_harness_with_status(diff)
         print(report)
         if args.out:
             from pathlib import Path
 
             Path(args.out).write_text(report, encoding="utf-8")
             print(f"\n(also written to {args.out})")
+        if failed:
+            # Findings never change the exit code (advice, not a gate), but a check that could not
+            # run does: the report is incomplete and the caller (CI) should flag it.
+            print(f"\nERROR: {len(failed)} check(s) failed to run: {', '.join(failed)}", file=sys.stderr)
+            return 2
         return 0
 
     return 1

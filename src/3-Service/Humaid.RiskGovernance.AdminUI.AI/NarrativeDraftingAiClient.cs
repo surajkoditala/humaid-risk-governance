@@ -4,6 +4,7 @@ namespace Humaid.RiskGovernance.AdminUI.AI
     using System.Text.Json;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Interfaces.Ai;
     using Humaid.RiskGovernance.AdminUI.Infrastructure.Models.Ai;
+    using Microsoft.Extensions.Logging;
 
     /// <summary>US-5.1/US-5.2. Prompt mirrored at /ai/prompts/narrative-drafting.md - keep the two in sync.</summary>
     public class NarrativeDraftingAiClient : INarrativeDraftingAiClient
@@ -30,10 +31,12 @@ namespace Humaid.RiskGovernance.AdminUI.AI
             """;
 
         private readonly IChatCompletionClient _chatCompletionClient;
+        private readonly ILogger<NarrativeDraftingAiClient> _logger;
 
-        public NarrativeDraftingAiClient(IChatCompletionClient chatCompletionClient)
+        public NarrativeDraftingAiClient(IChatCompletionClient chatCompletionClient, ILogger<NarrativeDraftingAiClient> logger)
         {
             _chatCompletionClient = chatCompletionClient;
+            _logger = logger;
         }
 
         public async Task<NarrativeDraftResult> DraftAsync(NarrativeDraftInput input, CancellationToken cancellationToken = default)
@@ -62,11 +65,17 @@ namespace Humaid.RiskGovernance.AdminUI.AI
 
             try
             {
-                return JsonSerializer.Deserialize<NarrativeDraftResult>(json, JsonExtraction.CaseInsensitive)
-                    ?? UnparseableResult();
+                var result = JsonSerializer.Deserialize<NarrativeDraftResult>(json, JsonExtraction.CaseInsensitive);
+                if (result is null)
+                {
+                    _logger.LogError("Narrative response deserialized to null; raw: {RawResponse}", raw.Length > 500 ? raw[..500] : raw);
+                    return UnparseableResult();
+                }
+                return result;
             }
-            catch (JsonException)
+            catch (JsonException ex)
             {
+                _logger.LogError(ex, "Narrative response unparseable: {Message}; raw: {RawResponse}", ex.Message, raw.Length > 500 ? raw[..500] : raw);
                 return UnparseableResult();
             }
         }

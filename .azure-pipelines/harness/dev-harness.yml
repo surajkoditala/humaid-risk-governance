@@ -1,13 +1,21 @@
 # Dev harness on PRs (informational): runs `python -m dev_harness check` over the PR's diff and
 # publishes the report as a build artifact. Draft - see the notes at the bottom.
 #
-# Deliberately NOT a required check: it never fails the build (the report is advice for the
-# human reviewer - "system prepares, humans decide"), so it can't block a merge or add a required
-# status to release/1.00. To make it visible on the PR, add a step that posts the report with the
-# same GITHUB_PAT used by .azure-pipelines/scripts/ai-review/post.sh.
+# Deliberately NOT a required check, so it can't block a merge or add a required status to
+# release/1.00. What it flags:
+#   * Findings never fail the build: the report is advice for the human reviewer ("system prepares,
+#     humans decide"). It is posted on the PR as one comment, updated in place on every push
+#     (scripts/dev-harness/post.sh, same GITHUB_PAT as scripts/ai-review/post.sh).
+#   * A check that fails to run (API error, timeout, bad key) does fail the step, so the PR shows a
+#     red gh-dev-harness status and an error in the log; the report is still published, marked
+#     incomplete. A missing ANTHROPIC_API_KEY is a deliberate skip and only warns.
 #
 # Needs the `ai-review-secrets` variable group to also hold ANTHROPIC_API_KEY (and optionally
 # ANTHROPIC_MODEL / ANTHROPIC_WORKSPACE_ID). Without a key the step skips with a warning.
+#
+# Manual runs (Run pipeline button) work too, so the setup can be tested without opening a PR:
+# the default `since` of HEAD^1 reviews the last commit's changes on the chosen branch (on
+# release/1.00 that is the last merged PR). PR runs always use HEAD^1 and ignore the parameter.
 trigger: none
 
 pr:
@@ -16,6 +24,12 @@ pr:
   paths:
     exclude:
       - docs/*
+
+parameters:
+  - name: since
+    displayName: 'Manual runs only: review changes since this git ref (PR runs ignore it)'
+    type: string
+    default: 'HEAD^1'
 
 variables:
   - group: ai-review-secrets
@@ -30,7 +44,7 @@ pool:
 
 steps:
   - checkout: self
-    fetchDepth: 0    # `--since HEAD^1` needs the PR merge commit's first parent
+    fetchDepth: 0    # `--since` needs history: HEAD^1 for PRs, any ref for manual runs
 
   - task: UsePythonVersion@0
     displayName: 'Install Python'
@@ -54,17 +68,33 @@ steps:
 
       mkdir -p "$BUILD_ARTIFACTSTAGINGDIRECTORY"
       # PR build: HEAD is GitHub's merge commit, its first parent is the target branch.
+      # Manual build: the `since` parameter (default HEAD^1, the last commit's changes).
+      if [ "$BUILD_REASON" = "PullRequest" ]; then SINCE='HEAD^1'; else SINCE="$HARNESS_SINCE"; fi
       cd harness
-      python -m dev_harness check --since 'HEAD^1' --max-diff-bytes "$HARNESS_MAX_DIFF_BYTES" \
-        --out "$BUILD_ARTIFACTSTAGINGDIRECTORY/dev-harness-report.md" \
-        || echo "##vso[task.logissue type=warning]Dev harness failed to run -- not blocking."
+      python -m dev_harness check --since "$SINCE" --max-diff-bytes "$HARNESS_MAX_DIFF_BYTES" \
+        --out "$BUILD_ARTIFACTSTAGINGDIRECTORY/dev-harness-report.md"
+      STATUS=$?
+      # Findings never fail the build, but the harness itself failing does: exit 2 means one or more
+      # checks could not run (the report is still written, marked incomplete); anything else is a crash.
+      if [ "$STATUS" -ne 0 ]; then
+        echo "##vso[task.logissue type=error]Dev harness did not complete (exit $STATUS): a check failed to run -- see the log and the report."
+        exit 1
+      fi
     displayName: 'Dev harness review (informational)'
-    condition: and(succeeded(), eq(variables['Build.Reason'], 'PullRequest'))
+    condition: and(succeeded(), in(variables['Build.Reason'], 'PullRequest', 'Manual'))
     timeoutInMinutes: 15
     env:
+      HARNESS_SINCE: ${{ parameters.since }}
       ANTHROPIC_API_KEY: $(ANTHROPIC_API_KEY)
       ANTHROPIC_MODEL: $(ANTHROPIC_MODEL)
       ANTHROPIC_WORKSPACE_ID: $(ANTHROPIC_WORKSPACE_ID)
+
+  # Separate step so the one that runs the model never sees the GitHub token.
+  - script: bash .azure-pipelines/scripts/dev-harness/post.sh
+    displayName: 'Post dev harness report to the PR'
+    condition: and(succeededOrFailed(), eq(variables['Build.Reason'], 'PullRequest'))
+    env:
+      GITHUB_PAT: $(GITHUB_PAT)
 
   - publish: $(Build.ArtifactStagingDirectory)
     artifact: 'dev-harness-report-$(Build.BuildId)'

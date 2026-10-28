@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
@@ -11,8 +11,11 @@ import { Textarea } from '@/components/ui/textarea'
 import { useDevUser } from '../auth/DevUserContext.jsx'
 import { RequiredMark } from '../components/RequiredMark.jsx'
 import AiUsageCard from '../components/AiUsageCard.jsx'
+import { PolicyHelp } from '../components/PolicyHelp.jsx'
 import SlaStrip from '../components/SlaStrip.jsx'
 import { Endpoints, apiFetch, downloadFile } from '../lib/api.js'
+import { formatFieldKey } from '../lib/labels.js'
+import { useDebouncedValue } from '../lib/useDebouncedValue.js'
 import { useFetch } from '../lib/useFetch.js'
 
 const NARRATIVE_STATUS_LABEL = {
@@ -168,21 +171,34 @@ function PolicyTab({ assessmentId, mapping, bump }) {
   const { currentUser } = useDevUser()
   const { data: reliance } = useFetch(assessmentId ? Endpoints.policyResearch.reliance(assessmentId) : null, [assessmentId, bump])
   const [query, setQuery] = useState('')
-  const [results, setResults] = useState(null)
+  const [results, setResults] = useState(null) // { text, rows } - what was searched, and what came back
   const [searching, setSearching] = useState(false)
   const [categoryId, setCategoryId] = useState('')
+  const debouncedQuery = useDebouncedValue(query, 300)
+  const latestSearch = useRef(0)
 
-  const search = async () => {
-    if (!query.trim()) return
-    setSearching(true)
-    try {
-      setResults(await apiFetch(Endpoints.policyResearch.search(query, categoryId || null)))
-    } catch (err) {
-      toast.error(err.message)
-    } finally {
-      setSearching(false)
-    }
-  }
+  // Results follow the box: a search runs after a short pause in typing and whenever the category
+  // changes, and an empty box lists every excerpt (func_searchPolicyChunks). Only the newest request
+  // may update the screen, so a slow earlier one cannot overwrite what was typed since.
+  const search = useCallback(
+    async (text) => {
+      const thisSearch = ++latestSearch.current
+      setSearching(true)
+      try {
+        const rows = await apiFetch(Endpoints.policyResearch.search(text, categoryId || null, text.trim() ? 10 : 50))
+        if (thisSearch === latestSearch.current) setResults({ text, rows })
+      } catch (err) {
+        if (thisSearch === latestSearch.current) toast.error(err.message)
+      } finally {
+        if (thisSearch === latestSearch.current) setSearching(false)
+      }
+    },
+    [categoryId],
+  )
+
+  useEffect(() => {
+    search(debouncedQuery)
+  }, [debouncedQuery, search])
 
   const decide = async (policyChunkId, decision) => {
     try {
@@ -201,18 +217,24 @@ function PolicyTab({ assessmentId, mapping, bump }) {
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle>Search the policy corpus</CardTitle>
-          <CardDescription>Search FFIEC policy excerpts by keyword.</CardDescription>
+          <CardTitle className="flex items-center gap-2">
+            Search the policy corpus
+            <PolicyHelp />
+          </CardTitle>
+          <CardDescription>
+            FFIEC guidance excerpts (paraphrased). Type to find the closest ones, or leave the box empty to browse them all.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-            <Select value={categoryId} onValueChange={setCategoryId}>
+            <Select value={categoryId || 'all'} onValueChange={(v) => setCategoryId(v === 'all' ? '' : v)}>
               <SelectTrigger className="w-full sm:w-56">
                 <SelectValue placeholder="Any category">
-                  {mapping?.find((m) => m.riskCategoryId === categoryId)?.categoryName}
+                  {categoryId ? mapping?.find((m) => m.riskCategoryId === categoryId)?.categoryName : 'Any category'}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="all">Any category</SelectItem>
                 {(mapping || []).filter((m) => m.isActive).map((m) => (
                   <SelectItem key={m.riskCategoryId} value={m.riskCategoryId}>
                     {m.categoryName}
@@ -222,25 +244,33 @@ function PolicyTab({ assessmentId, mapping, bump }) {
             </Select>
             <Input
               className="sm:flex-1"
-              placeholder="e.g. beneficial ownership, correspondent banking…"
+              placeholder="e.g. beneficial ownership, correspondent banking… or leave empty to browse"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && search()}
+              onKeyDown={(e) => e.key === 'Enter' && search(query)}
             />
-            <Button onClick={search} disabled={searching}>
-              {searching ? 'Searching…' : 'Search'}
-            </Button>
+            <Button onClick={() => search(query)}>Search</Button>
           </div>
 
           <div className="space-y-2">
-            {(results || []).map((r) => (
+            {results && (
+              <p className="text-xs text-muted-foreground" aria-live="polite">
+                {results.text.trim()
+                  ? `Closest matches for "${results.text.trim()}"`
+                  : `All excerpts${categoryId ? ` for ${mapping?.find((m) => m.riskCategoryId === categoryId)?.categoryName ?? 'this category'}` : ''}`}
+                {searching ? ' …' : ''}
+              </p>
+            )}
+            {(results?.rows || []).map((r) => (
               <div key={r.id} className="rounded-md border p-3">
                 <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                   <p className="text-xs font-medium text-muted-foreground">
                     {r.documentTitle ? `${r.documentTitle} — ` : ''}
                     {r.sectionRef}
                   </p>
-                  <span className="text-xs text-muted-foreground">Relevance rank: {r.rank?.toFixed?.(3) ?? r.rank}</span>
+                  {results.text.trim() && (
+                    <span className="text-xs text-muted-foreground">Relevance rank: {r.rank?.toFixed?.(3) ?? r.rank}</span>
+                  )}
                 </div>
                 <p className="mt-1 text-sm">{r.chunkText}</p>
                 <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
@@ -261,7 +291,13 @@ function PolicyTab({ assessmentId, mapping, bump }) {
                 </div>
               </div>
             ))}
-            {results && results.length === 0 && <p className="text-sm text-muted-foreground">No matches.</p>}
+            {results && results.rows.length === 0 && (
+              <p className="text-sm text-muted-foreground">
+                {results.text.trim()
+                  ? 'No close matches. Try different or fewer words, or clear the box to browse every excerpt.'
+                  : 'No excerpts for this category.'}
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -371,7 +407,9 @@ function ExtractionTab({ changeRequest, bump }) {
           {(fields || []).map((f) => (
             <div key={f.id} className="rounded-md border p-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">{f.fieldKey}</span>
+                <span className="text-sm font-medium" title={f.fieldKey}>
+                  {formatFieldKey(f.fieldKey)}
+                </span>
                 <div className="flex items-center gap-2">
                   {f.needsReview && <Badge variant="destructive">Needs review</Badge>}
                   <Badge variant="secondary">{f.source}</Badge>
@@ -390,22 +428,27 @@ function ExtractionTab({ changeRequest, bump }) {
                     Correct
                   </Button>
                 </div>
-                <div className="flex items-center gap-2">
-                  <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <input
-                      type="checkbox"
-                      checked={correctIsMaterial[f.fieldKey] ?? true}
-                      onChange={(e) => setCorrectIsMaterial((c) => ({ ...c, [f.fieldKey]: e.target.checked }))}
+                {correcting[f.fieldKey] && (
+                  <div className="flex items-center gap-2">
+                    <label
+                      className="flex items-center gap-1.5 text-xs text-muted-foreground"
+                      title="Leave ticked when the correction changes what the value means. Untick it for a typo or formatting fix, where a reason is optional."
+                    >
+                      <input
+                        type="checkbox"
+                        checked={correctIsMaterial[f.fieldKey] ?? true}
+                        onChange={(e) => setCorrectIsMaterial((c) => ({ ...c, [f.fieldKey]: e.target.checked }))}
+                      />
+                      Changes the meaning (reason required)
+                    </label>
+                    <Input
+                      placeholder={(correctIsMaterial[f.fieldKey] ?? true) ? 'Reason for this correction *' : 'Reason for this correction (optional)'}
+                      className="h-8 flex-1 text-xs"
+                      value={correctReason[f.fieldKey] || ''}
+                      onChange={(e) => setCorrectReason((c) => ({ ...c, [f.fieldKey]: e.target.value }))}
                     />
-                    Material change (reason required)
-                  </label>
-                  <Input
-                    placeholder={(correctIsMaterial[f.fieldKey] ?? true) ? 'Reason for this correction *' : 'Reason for this correction (optional)'}
-                    className="h-8 flex-1 text-xs"
-                    value={correctReason[f.fieldKey] || ''}
-                    onChange={(e) => setCorrectReason((c) => ({ ...c, [f.fieldKey]: e.target.value }))}
-                  />
-                </div>
+                  </div>
+                )}
               </div>
             </div>
           ))}
@@ -477,7 +520,7 @@ function NarrativeTab({ assessmentId, mapping, bump, isFinalized }) {
               {section ? <p className="text-sm">{section.narrativeText}</p> : <p className="text-sm text-muted-foreground">Not drafted yet.</p>}
               <div className="flex gap-2">
                 <Button size="sm" onClick={() => draft(m.riskCategoryId)} disabled={drafting === m.riskCategoryId || isFinalized}>
-                  {section ? 'Regenerate' : 'Draft'} with AI
+                  {drafting === m.riskCategoryId ? 'Drafting…' : `${section ? 'Regenerate' : 'Draft'} with AI`}
                 </Button>
                 {section && section.status === 'AiDrafted' && (
                   <Button size="sm" variant="outline" disabled={isFinalized} onClick={() => review(m.riskCategoryId)}>

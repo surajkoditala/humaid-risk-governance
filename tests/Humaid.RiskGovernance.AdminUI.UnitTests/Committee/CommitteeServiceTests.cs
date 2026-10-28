@@ -211,7 +211,40 @@ namespace Humaid.RiskGovernance.AdminUI.UnitTests.Committee
             _auditService.Verify(a => a.LogAsync(It.IsAny<AppendAuditEventInput>()), Times.Never); // never a silent/false "it worked" log
         }
 
-        private static CommitteeVote Vote(string vote, string? conditionsText = null, string memberName = "Committee Member") => new()
+        [Fact]
+        public async Task CastVoteAsync_SwallowsMockSystemsTimeoutRatherThanFailingTheVote()
+        {
+            _committeeRepo.Setup(r => r.GetVotesAsync(_assessmentId)).ReturnsAsync([Vote("Approve"), Vote("Approve")]);
+            var vendorId = Guid.NewGuid();
+            _dataIngestionService.Setup(s => s.GetSnapshotAsync(_changeRequestId, default))
+                .ReturnsAsync(new ExternalSnapshot { ChangeRequestId = _changeRequestId, MockVendorId = vendorId });
+            // An HttpClient timeout surfaces as TaskCanceledException, not HttpRequestException.
+            _mockSystemsClient.Setup(c => c.PushVendorRiskFlagAsync(vendorId, It.IsAny<string>(), default))
+                .ThrowsAsync(new TaskCanceledException("The request was canceled due to the configured HttpClient.Timeout"));
+
+            await _sut.CastVoteAsync(new CastCommitteeVoteInput { AssessmentId = _assessmentId, CommitteeMemberUserId = Guid.NewGuid(), Vote = "Approve" });
+
+            _committeeRepo.Verify(r => r.RecordDecisionAsync(_assessmentId, "Approved", It.IsAny<string?>()), Times.Once);
+            _auditService.Verify(a => a.LogAsync(It.IsAny<AppendAuditEventInput>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task CastVoteAsync_SwallowsMalformedMockSystemsResponseRatherThanFailingTheVote()
+        {
+            _committeeRepo.Setup(r => r.GetVotesAsync(_assessmentId)).ReturnsAsync([Vote("Approve"), Vote("Approve")]);
+            var vendorId = Guid.NewGuid();
+            _dataIngestionService.Setup(s => s.GetSnapshotAsync(_changeRequestId, default))
+                .ReturnsAsync(new ExternalSnapshot { ChangeRequestId = _changeRequestId, MockVendorId = vendorId });
+            _mockSystemsClient.Setup(c => c.PushVendorRiskFlagAsync(vendorId, It.IsAny<string>(), default))
+                .ThrowsAsync(new System.Text.Json.JsonException("The JSON value could not be converted"));
+
+            await _sut.CastVoteAsync(new CastCommitteeVoteInput { AssessmentId = _assessmentId, CommitteeMemberUserId = Guid.NewGuid(), Vote = "Approve" });
+
+            _committeeRepo.Verify(r => r.RecordDecisionAsync(_assessmentId, "Approved", It.IsAny<string?>()), Times.Once);
+            _auditService.Verify(a => a.LogAsync(It.IsAny<AppendAuditEventInput>()), Times.Never);
+        }
+
+        private static CommitteeVote Vote(string vote,string? conditionsText = null, string memberName = "Committee Member") => new()
         {
             Id = Guid.NewGuid(),
             CommitteeMemberUserId = Guid.NewGuid(),

@@ -318,6 +318,9 @@ builder.Services.AddHttpClient("MockSystems", client =>
 {
     var baseUrl = builder.Configuration["MOCK_SYSTEMS_BASE_URL"];
     client.BaseAddress = new Uri(string.IsNullOrWhiteSpace(baseUrl) ? "http://localhost:5220" : baseUrl);
+    // Intake and the committee push wait on this call, and both treat Mock Systems as best-effort;
+    // fail fast instead of holding a request open for the 100s default when it is hung.
+    client.Timeout = TimeSpan.FromSeconds(10);
 });
 builder.Services.AddScoped<IMockSystemsClient, MockSystemsClient>();
 builder.Services.AddScoped<IDataIngestionService, DataIngestionService>();

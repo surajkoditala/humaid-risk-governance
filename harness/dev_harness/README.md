@@ -30,6 +30,14 @@ the whole repo):
 | `no_llm_where_unjustified` | New LLM calls inside deliberately-deterministic areas |
 | `async_and_config` | `.Result`/`.Wait()`, `CancellationToken` forwarding, silent config defaults |
 | `coding_standards` | Naming/comment conventions from `coding-standards.md` |
+| `scoring_invariants` | Residual risk can never reach zero (mitigation cap, `residual_rating > 0`, in the calculation and the config-save path); score overrides keep their reason and role check |
+| `audit_trail_integrity` | `audit_event` stays append-only (no UPDATE/DELETE/TRUNCATE, guard trigger intact); AI/editable writes audit in the same call; the audit actor is the authenticated user |
+| `external_integration_resilience` | A Mock Systems outage, timeout or bad payload must never fail intake or a committee vote; external data is validated and read from the immutable snapshot |
+
+The last three only run when the diff touches files in their area (an `applies-to` regex on the
+first line of the check's prompt file, matched against changed file paths). Otherwise they report
+"not applicable" without a model call, so most PRs pay for the original six checks only. A check
+with no `applies-to` line runs on every diff.
 
 Findings are compiled into a single markdown report. Nothing is auto-fixed or auto-committed —
 you review the report yourself, consistent with this repo's "system prepares, humans decide" rule
@@ -63,9 +71,10 @@ tool too — same as it does for the product graphs.
 
 - Only the diff's text is reviewed — no cross-referencing of whether a mentioned file (e.g. a
   mirrored prompt doc) was actually updated elsewhere in the repo.
-- CI integration is a draft, informational pipeline (`.azure-pipelines/harness/dev-harness.yml`)
-  that publishes the report as a build artifact; it is not a required check and does not comment
-  on the PR yet.
+- CI integration is an informational pipeline (`.azure-pipelines/harness/dev-harness.yml`) that
+  publishes the report as a build artifact and posts it on the PR as a single comment updated in
+  place. It is not a required check. Findings never fail it, but a check that fails to run does
+  (exit code 2 from the CLI), and the report then says it is incomplete.
 - Eval-dataset coverage checks and "gate table sync" (new epic added without a
   `human-in-the-loop-gates.md` row) are not yet separate nodes — currently folded loosely into
   `database_gate`/`citation_guard`. Fast-follow if this proves too coarse in practice.

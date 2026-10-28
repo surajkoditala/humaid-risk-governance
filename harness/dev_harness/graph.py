@@ -25,13 +25,25 @@ from app.llm import get_chat_model  # noqa: E402
 
 load_dotenv(_LANGGRAPH_APP_ROOT / ".env")
 
-from .rules import load_check_prompts, load_review_rules, load_system_prompt  # noqa: E402
+import re  # noqa: E402
+
+from .rules import load_check_prompts, load_check_scopes, load_review_rules, load_system_prompt  # noqa: E402
 
 # One check per file in dev_harness/prompts/checks/ (the file name is the node name). Each is a
 # narrow, single-concern prompt run against the raw diff only - not the whole repo - same
 # grounding discipline as the product AI clients. The shared system prompt is
 # prompts/system.prompt.md; edit those files, not this module, to change what a check asks.
 _CHECKS: dict[str, str] = load_check_prompts()
+
+# Checks that declare `<!-- applies-to: regex -->` only call the model when a changed file path
+# matches, which keeps the extra domain checks off the many PRs that do not touch their area.
+_SCOPES: dict[str, re.Pattern[str]] = load_check_scopes()
+
+_DIFF_FILE_HEADER = re.compile(r"^diff --git a/(?P<old>\S+) b/(?P<new>\S+)$", re.MULTILINE)
+
+
+def _changed_files(diff: str) -> list[str]:
+    return [m.group("new") for m in _DIFF_FILE_HEADER.finditer(diff)]
 
 
 def _merge_findings(left: dict[str, str], right: dict[str, str]) -> dict[str, str]:
@@ -50,6 +62,10 @@ class _State(TypedDict):
 def _run_check(check_name: str, instruction: str, state: _State) -> str:
     if not state["diff"].strip():
         return "No diff to review."
+
+    scope = _SCOPES.get(check_name)
+    if scope is not None and not any(scope.search(path) for path in _changed_files(state["diff"])):
+        return "OK - not applicable: the diff changes no files this check covers (no model call made)."
 
     model = get_chat_model()
     system_prompt = load_system_prompt()
@@ -71,18 +87,36 @@ def _run_check(check_name: str, instruction: str, state: _State) -> str:
     return content.strip()
 
 
+# A check that raised (API error, timeout, bad key) is recorded under this prefix instead of
+# aborting the run, so the other checks still report and the caller can tell "the check found
+# nothing" apart from "the check never ran".
+_FAILED_PREFIX = "CHECK FAILED TO RUN:"
+
+
 def _make_check_node(name: str, instruction: str):
     def _node(state: _State) -> dict:
         # Return only this node's delta (not the whole state) - fan-out nodes running
         # concurrently must each write a disjoint key, or LangGraph treats it as a conflicting
         # concurrent update to the same channel.
-        return {"findings": {name: _run_check(name, instruction, state)}}
+        try:
+            result = _run_check(name, instruction, state)
+        except Exception as exc:  # noqa: BLE001 - any failure of this check must not stop the others
+            result = f"{_FAILED_PREFIX} {type(exc).__name__}: {str(exc)[:300]}"
+        return {"findings": {name: result}}
 
     return _node
 
 
+def _failed_checks(findings: dict[str, str]) -> list[str]:
+    return [name for name, result in findings.items() if result.startswith(_FAILED_PREFIX)]
+
+
 def _compile_report(state: _State) -> dict:
     lines = ["# Dev Harness Report", ""]
+    failed = _failed_checks(state["findings"])
+    if failed:
+        lines.insert(1, f"**{len(failed)} of {len(state['findings'])} checks failed to run: {', '.join(failed)}.** "
+                        "The results below are incomplete.\n")
     any_issue = False
     for name, result in state["findings"].items():
         lines.append(f"## {name.replace('_', ' ').title()}")
@@ -106,7 +140,8 @@ def _build_graph():
     return graph.compile()
 
 
-def run_harness(diff: str) -> str:
+def run_harness_with_status(diff: str) -> tuple[str, list[str]]:
+    """Run every check; returns the report and the names of checks that failed to run."""
     state: _State = {
         "diff": diff,
         "rules": load_review_rules(),
@@ -115,4 +150,8 @@ def run_harness(diff: str) -> str:
     }
     compiled = _build_graph()
     result = compiled.invoke(state)
-    return result["report"]
+    return result["report"], _failed_checks(result["findings"])
+
+
+def run_harness(diff: str) -> str:
+    return run_harness_with_status(diff)[0]
