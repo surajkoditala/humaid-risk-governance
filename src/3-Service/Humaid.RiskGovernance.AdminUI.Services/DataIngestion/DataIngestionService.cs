@@ -46,8 +46,13 @@ namespace Humaid.RiskGovernance.AdminUI.Services.DataIngestion
                     if (vendor is not null) vendorJson = JsonSerializer.Serialize(vendor);
                 }
             }
-            catch (HttpRequestException ex)
+            catch (Exception ex) when (
+                ex is HttpRequestException or JsonException
+                || (ex is TaskCanceledException && !cancellationToken.IsCancellationRequested))
             {
+                // HttpRequestException is an outage or non-2xx; JsonException is a malformed body;
+                // TaskCanceledException is the HttpClient timeout (a caller's own cancellation still
+                // propagates, hence the filter).
                 // Best-effort by design: Mock Systems being unreachable must not block intake -
                 // Epic 1's own submission flow doesn't depend on this ecosystem being up. The
                 // change request is still created; it just has no external context to ground the
