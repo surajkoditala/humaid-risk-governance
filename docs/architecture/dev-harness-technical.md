@@ -1,7 +1,15 @@
 # Dev Harness — Technical Deep Dive (LangGraph Implementation)
 
 **Location of the tool itself:** `harness/dev_harness/`
-**Status:** Working locally; draft informational CI pipeline in `.azure-pipelines/harness/dev-harness.yml`
+**Status:** Working locally; informational CI pipeline in `.azure-pipelines/harness/dev-harness.yml` (runs on PRs and manually, posts its report on the PR)
+
+> **Update:** this document was written when the graph had six check nodes, and the diagrams and
+> counts below still say six. There are now nine: `scoring_invariants`, `audit_trail_integrity`
+> and `external_integration_resilience` were added. Those three declare an `applies-to` path regex
+> on the first line of their prompt file and are skipped without a model call when the diff
+> touches no matching file. A check that raises is recorded as "CHECK FAILED TO RUN" instead of
+> aborting the run, and the CLI then exits 2. See `harness/dev_harness/README.md` for the current
+> list; the graph shape (fan-out, fan-in, delta-returning nodes) is unchanged.
 **Related:** [`harness/README.md`](../../harness/README.md) · [`dev-harness.md`](dev-harness.md) (the
 high-level/non-technical explainer this document expands on) · [`ba-harness.md`](ba-harness.md)
 (sibling harness, same documentation format) · [`langgraph-integration.md`](langgraph-integration.md)

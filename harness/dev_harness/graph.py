@@ -25,13 +25,25 @@ from app.llm import get_chat_model  # noqa: E402
 
 load_dotenv(_LANGGRAPH_APP_ROOT / ".env")
 
-from .rules import load_check_prompts, load_review_rules, load_system_prompt  # noqa: E402
+import re  # noqa: E402
+
+from .rules import load_check_prompts, load_check_scopes, load_review_rules, load_system_prompt  # noqa: E402
 
 # One check per file in dev_harness/prompts/checks/ (the file name is the node name). Each is a
 # narrow, single-concern prompt run against the raw diff only - not the whole repo - same
 # grounding discipline as the product AI clients. The shared system prompt is
 # prompts/system.prompt.md; edit those files, not this module, to change what a check asks.
 _CHECKS: dict[str, str] = load_check_prompts()
+
+# Checks that declare `<!-- applies-to: regex -->` only call the model when a changed file path
+# matches, which keeps the extra domain checks off the many PRs that do not touch their area.
+_SCOPES: dict[str, re.Pattern[str]] = load_check_scopes()
+
+_DIFF_FILE_HEADER = re.compile(r"^diff --git a/(?P<old>\S+) b/(?P<new>\S+)$", re.MULTILINE)
+
+
+def _changed_files(diff: str) -> list[str]:
+    return [m.group("new") for m in _DIFF_FILE_HEADER.finditer(diff)]
 
 
 def _merge_findings(left: dict[str, str], right: dict[str, str]) -> dict[str, str]:
@@ -50,6 +62,10 @@ class _State(TypedDict):
 def _run_check(check_name: str, instruction: str, state: _State) -> str:
     if not state["diff"].strip():
         return "No diff to review."
+
+    scope = _SCOPES.get(check_name)
+    if scope is not None and not any(scope.search(path) for path in _changed_files(state["diff"])):
+        return "OK - not applicable: the diff changes no files this check covers (no model call made)."
 
     model = get_chat_model()
     system_prompt = load_system_prompt()
