@@ -1,7 +1,7 @@
 # Dev Harness — LangGraph Architecture & Flow
 
 **Location of the tool itself:** `harness/dev_harness/`
-**Status:** Working locally; draft informational CI pipeline in `.azure-pipelines/harness/dev-harness.yml`
+**Status:** Working locally; informational CI pipeline in `.azure-pipelines/harness/dev-harness.yml` (ADO pipeline `gh-dev-harness`, runs on PRs to `release/1.00` and manually, posts its report on the PR)
 **Related:** [`harness/README.md`](../../harness/README.md) · [`dev_harness/review-rules.md`](../../harness/dev_harness/review-rules.md) · [`langgraph-integration.md`](langgraph-integration.md) (the *product* LangGraph service — unrelated at runtime) · [`langgraph-evaluation.md`](langgraph-evaluation.md)
 
 ---
@@ -53,19 +53,25 @@ flowchart TB
     START --> N4["no_llm_where_unjustified<br/>deliberately-deterministic areas"]
     START --> N5["async_and_config<br/>.Result/.Wait(), CancellationToken, silent config"]
     START --> N6["coding_standards<br/>naming/comment conventions"]
+    START --> N7["scoring_invariants<br/>residual risk never zero<br/>(runs only when relevant files change)"]
+    START --> N8["audit_trail_integrity<br/>audit_event stays append-only<br/>(runs only when relevant files change)"]
+    START --> N9["external_integration_resilience<br/>Mock Systems failure never fails intake or a vote<br/>(runs only when relevant files change)"]
 
-    N1 --> COMPILE["compile_report<br/>merges all 6 findings<br/>into one markdown report"]
+    N1 --> COMPILE["compile_report<br/>merges all 9 findings<br/>into one markdown report"]
     N2 --> COMPILE
     N3 --> COMPILE
     N4 --> COMPILE
     N5 --> COMPILE
     N6 --> COMPILE
+    N7 --> COMPILE
+    N8 --> COMPILE
+    N9 --> COMPILE
 
     COMPILE --> END(["END"])
 ```
 
-- **Fan-out:** all six check nodes run from `START` independently — each gets the same `diff` and `rules` state, but a different single-concern instruction.
-- **Fan-in:** `compile_report` is the only node every check feeds into; it waits for all six before producing the final report.
+- **Fan-out:** all nine check nodes run from `START` independently — each gets the same `diff` and `rules` state, but a different single-concern instruction.
+- **Fan-in:** `compile_report` is the only node every check feeds into; it waits for all nine before producing the final report.
 - **State merge rule:** each check node only writes to its *own* key in a shared `findings` dictionary (`Annotated[dict[str, str], _merge_findings]`). This is required because LangGraph runs fanned-out nodes concurrently — if two nodes tried to write the same state key, it would raise a conflicting-update error. Each node's return value is scoped to just `{"findings": {<its own name>: <its own result>}}`.
 
 ---
@@ -93,6 +99,21 @@ flowchart TB
 - **`coding_standards`**
   - Compares the diff against naming, comment, and layer conventions summarized in `dev_harness/coding-standards.md`.
   - Scoped to flag only clear, concrete violations — not general style nitpicks the rules don't mention.
+- **`scoring_invariants`** *(runs only when a changed path contains `scor`, `mitigat`, `residual` or `/configuration/`)*
+  - Flags a change that would let residual risk reach zero: a weakened mitigation cap (the factor must stay below 1.0), a dropped `residual_rating > 0` rule, in either the calculation or the config-save path.
+  - Flags a score override that no longer needs a reason, a role check or a not-yet-finalized state.
+  - Flags a non-deterministic calculation or a silent default for a missing config value.
+- **`audit_trail_integrity`** *(runs only when a changed path contains `DB/schema|functions|migrations/` or `audit`)*
+  - Flags any UPDATE, DELETE or TRUNCATE of `audit_event`, or anything that disables its guard trigger.
+  - Flags an AI-generated or human-editable write that has no audit row in the same call.
+  - Flags an audit actor taken from the request body instead of the signed-in user, a wrong `actor_label`, and raw payloads or PII in audit values.
+  - Leaves "an override needs a reason" to `database_gate`.
+- **`external_integration_resilience`** *(runs only when a changed path contains `DataIngestion`, `MockSystems`, `MockExternalSystems`, `HttpClient`, `Committee` or `Program.cs`)*
+  - Flags a failure path that can fail intake or a committee vote. It notes that catching only `HttpRequestException` misses timeouts (`TaskCanceledException`) and bad JSON (`JsonException`).
+  - Flags an outbound call with no timeout or cancellation token, and external data used without validation.
+  - Flags downstream code reading live external data instead of the immutable snapshot stored at intake, and a new inbound endpoint for an external caller that is unauthenticated or too broad.
+
+**Path gating.** The last three checks carry a one-line `<!-- applies-to: regex -->` directive at the top of their prompt file. The harness matches it against the changed file paths in the diff; if nothing matches, the check reports "OK - not applicable ... (no model call made)" and costs nothing. A check without the directive runs on every diff. The generic web-security checklist (secrets, injection, auth, TLS, error exposure, dependencies) is deliberately not a harness check: the Copilot PR reviewer covers it.
 
 ---
 
@@ -111,7 +132,7 @@ flowchart TB
             INIT["__init__.py<br/>module docstring + usage"]
             MAIN["__main__.py<br/>CLI entrypoint (argparse)"]
             DIFFSRC["diff_source.py<br/>wraps git diff"]
-            RULESPY["rules.py<br/>loads review-rules.md<br/>+ the node prompts"]
+            RULESPY["rules.py<br/>loads review-rules.md<br/>+ the node prompts<br/>+ their applies-to scopes"]
             NODEPROMPTS["prompts/system.prompt.md<br/>prompts/checks/*.prompt.md<br/>(one file per graph node)"]
             GRAPH["graph.py<br/>the LangGraph itself"]
         end
@@ -126,7 +147,7 @@ flowchart TB
 
 - **`review-rules.md` is the single source of truth.** `rules.py` loads this file's raw text directly — there is no separate copy of the rules baked into the Python code, so the checklist can't drift out of sync between what a human reads and what the harness checks against.
 - **The prompts each node runs are files, not Python strings.** `prompts/system.prompt.md` is shared by every node; `prompts/checks/<node>.prompt.md` is the one concern a node owns, and the file name is the node name. `rules.py` loads them, so adding or tuning a check is a prompt-file edit with no change to `graph.py`.
-- **`__main__.py` is the only entrypoint.** It wires `diff_source.get_diff()` and `graph.run_harness()` together and handles CLI flags (`--since`, `--out`).
+- **`__main__.py` is the only entrypoint.** It wires `diff_source.get_diff()` and `graph.run_harness_with_status()` together and handles CLI flags (`--since`, `--out`, `--max-diff-bytes`). It exits 2 when a check failed to run (see section 9).
 - **`graph.py` owns all LangGraph-specific code.** Nothing else in the module imports `langgraph` directly.
 
 ---
@@ -164,14 +185,26 @@ $env:SSL_CERT_FILE="$env:USERPROFILE\.azure\corp_cacert.pem"   # only behind TLS
 
 - **Review a specific range** instead of the working tree: `... check --since HEAD~1`
 - **Save the report to a file**: `... check --out last-report.md`
-- **Reading the output:** each section heading matches a node name above; `OK - no issues found` means that concern had nothing to flag. Findings include severity, file, line (if known), rule violated, and a recommendation.
+- **Reading the output:** each section heading matches a node name above; `OK - no issues found` means that concern had nothing to flag, and `OK - not applicable` means a path-gated check skipped itself. Findings include severity, file, line (if known), rule violated, and a recommendation.
+- **A check that could not run** (API error, timeout, bad key) shows `CHECK FAILED TO RUN: <error>` in its section, the report opens with "N of M checks failed to run ... incomplete", and the command exits with code 2. Findings never change the exit code.
 
 ---
 
-## 9. Current limitations (fast-follow candidates)
+## 9. In CI (Azure DevOps)
+
+- **Pipeline:** `gh-dev-harness` (`.azure-pipelines/harness/dev-harness.yml`). It runs on PRs to `release/1.00` (not for `docs/*`-only changes) and can be run manually. A manual run reviews the changes since a `since` ref, default `HEAD^1`; a PR run always reviews the PR's own diff.
+- **Model:** the same `get_chat_model()` as locally, configured from the `ai-review-secrets` variable group (`ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL`, `ANTHROPIC_WORKSPACE_ID`). With no key the step skips and only warns.
+- **Report on the PR:** `scripts/dev-harness/post.sh` posts the report as one PR comment (marked `<!-- dev-harness-report -->`) and edits that same comment on every new push, so the PR never fills up with copies. A failed post only warns. It runs as its own step, so the model step never sees the GitHub token.
+- **Report as an artifact:** the report is also published as a build artifact, including when a check failed.
+- **When it goes red:** if any check failed to run, the review step logs an error and fails, so `gh-dev-harness` shows red on the PR. Findings alone never fail it.
+- **Not a required check:** it can never block a merge on its own judgement. It is advice for the human reviewer.
+
+---
+
+## 10. Current limitations (fast-follow candidates)
 
 - Only the diff text is reviewed — the harness doesn't check whether a file *mentioned* as needing an update (e.g. a mirrored prompt doc) was actually changed elsewhere in the repo.
-- CI integration is a draft, informational pipeline (`.azure-pipelines/harness/dev-harness.yml`)
-  that publishes the report as a build artifact; it is not a required check and does not comment
-  on the PR yet.
+- Only the three domain checks are path-gated; the original six run on every diff.
+- The three domain checks were verified for loading and path gating, but their prompts have not yet been tuned against real model output. Treat early findings as a first read, and expect to adjust the prompt files.
+- The harness has no model-free fallback: if the key is invalid or expires (the current Anthropic key expires Nov 27, 2026), the checks fail to run rather than silently pass.
 - "Gate table sync" (a new epic/AI touchpoint added without a matching row in `docs/governance/human-in-the-loop-gates.md`) and eval-dataset coverage are currently folded loosely into the `database_gate`/`citation_guard` nodes rather than being their own dedicated checks.

@@ -242,7 +242,7 @@ Orientation only, as of 5 Oct 2026; the acceptance criteria in the user stories 
 | Workbench PR review | `workbench/pr-review.yml` | PR to `release/1.00` touching Workbench paths | build, unit tests, webapp build, dependency audit, AI review blockers |
 | Mock API PR review | `mock-api/pr-review.yml` | PR to `release/1.00` touching `src/6-MockExternalSystems` | `deploy_all.sql` drift, build, dependency audit, AI review blockers |
 | Image build, scan, deploy | `workbench/workbench.yml`, `mock-api/mock-api.yml` | push to `release/*` (not `release/dev`) touching the component's paths | Docker build, push to ACR, Trivy HIGH/CRITICAL, `az containerapp update` to dev |
-| Dev harness report | `harness/dev-harness.yml` | PR to `release/1.00` (draft, not a required check) | none — informational LangGraph review report |
+| Dev harness report | `harness/dev-harness.yml` (ADO `gh-dev-harness`) | PR to `release/1.00` (not for `docs/*`-only changes), or a manual run | none — not a required check. Posts one self-updating report comment on the PR; the step goes red only if a check fails to run, never for findings |
 | SRE watchdog | `observability/sre-watchdog.yml` | every 30 minutes, from `main` | none — opens, updates, and closes GitHub issues (see Observability) |
 
 - Informational only (never fail a build): Trivy MEDIUM, Checkov (soft-fail, skipped checks are justified in `.azure-pipelines/iac/.checkov.yml`), TFLint warnings, Semgrep.

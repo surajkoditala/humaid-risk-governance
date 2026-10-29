@@ -3,13 +3,6 @@
 **Location of the tool itself:** `harness/dev_harness/`
 **Status:** Working locally; informational CI pipeline in `.azure-pipelines/harness/dev-harness.yml` (runs on PRs and manually, posts its report on the PR)
 
-> **Update:** this document was written when the graph had six check nodes, and the diagrams and
-> counts below still say six. There are now nine: `scoring_invariants`, `audit_trail_integrity`
-> and `external_integration_resilience` were added. Those three declare an `applies-to` path regex
-> on the first line of their prompt file and are skipped without a model call when the diff
-> touches no matching file. A check that raises is recorded as "CHECK FAILED TO RUN" instead of
-> aborting the run, and the CLI then exits 2. See `harness/dev_harness/README.md` for the current
-> list; the graph shape (fan-out, fan-in, delta-returning nodes) is unchanged.
 **Related:** [`harness/README.md`](../../harness/README.md) · [`dev-harness.md`](dev-harness.md) (the
 high-level/non-technical explainer this document expands on) · [`ba-harness.md`](ba-harness.md)
 (sibling harness, same documentation format) · [`langgraph-integration.md`](langgraph-integration.md)
@@ -32,7 +25,7 @@ one in turn:
 |---|---|
 | State (`TypedDict` / schema) | Yes |
 | Reducers (`Annotated[...]`) | Yes — required for concurrent fan-out writes |
-| Nodes | Yes — six check nodes + one compile node |
+| Nodes | Yes — nine check nodes + one compile node |
 | Normal edges | Yes — every edge in this graph |
 | Conditional edges | No — candidate fast-follow |
 | `StateGraph` / `START` / `END` | Yes |
@@ -46,9 +39,10 @@ one in turn:
 
 ## 2. The idea in one sentence
 
-A single `StateGraph` fans a `git diff` out to six independent, single-concern review nodes that
+A single `StateGraph` fans a `git diff` out to nine independent, single-concern review nodes that
 each call the same chat model with a narrow instruction, then fans back in to one node that
-merges their findings into a single markdown report.
+merges their findings into a single markdown report. Three of the nine only call the model when
+the diff touches files in their area (section 5).
 
 ```mermaid
 flowchart TB
@@ -82,7 +76,7 @@ flowchart LR
     subgraph state["_State (TypedDict)"]
         D["diff: str<br/>(read-only input)"]
         R["rules: str<br/>(read-only input)"]
-        F["findings: dict[str, str]<br/>(written concurrently by 6 nodes)"]
+        F["findings: dict[str, str]<br/>(written concurrently by 9 nodes)"]
         REP["report: str<br/>(written once, at the end)"]
     end
 ```
@@ -103,17 +97,17 @@ def _merge_findings(left: dict[str, str], right: dict[str, str]) -> dict[str, st
     return merged
 ```
 
-`findings` is declared as `Annotated[dict[str, str], _merge_findings]`, so when all six check
+`findings` is declared as `Annotated[dict[str, str], _merge_findings]`, so when all nine check
 nodes fan out from `START` and run in the same step, each returning `{"findings": {<own key>:
-<own result>}}`, LangGraph calls `_merge_findings` repeatedly to fold all six partial dicts into
-one combined `findings` dict — instead of the last writer silently clobbering the other five.
+<own result>}}`, LangGraph calls `_merge_findings` repeatedly to fold all nine partial dicts into
+one combined `findings` dict — instead of the last writer silently clobbering the other eight.
 
 ```mermaid
 flowchart TB
     N1["architecture node returns:<br/>{findings: {architecture: ...}}"] --> MERGE
     N2["database_gate node returns:<br/>{findings: {database_gate: ...}}"] --> MERGE
-    N3["...4 more nodes..."] --> MERGE
-    MERGE["_merge_findings called<br/>once per incoming write,<br/>folding into one dict"] --> RESULT["findings = {<br/>  architecture: ...,<br/>  database_gate: ...,<br/>  ...6 keys total<br/>}"]
+    N3["...7 more nodes..."] --> MERGE
+    MERGE["_merge_findings called<br/>once per incoming write,<br/>folding into one dict"] --> RESULT["findings = {<br/>  architecture: ...,<br/>  database_gate: ...,<br/>  ...9 keys total<br/>}"]
 ```
 
 This is the single most important LangGraph detail in this graph — without the reducer, the
@@ -127,9 +121,15 @@ A LangGraph node is just a callable: `(state) -> partial_state_update`. Every no
 the same shape, built by a shared factory:
 
 ```python
+_FAILED_PREFIX = "CHECK FAILED TO RUN:"
+
 def _make_check_node(name: str, instruction: str):
     def _node(state: _State) -> dict:
-        return {"findings": {name: _run_check(name, instruction, state)}}
+        try:
+            result = _run_check(name, instruction, state)
+        except Exception as exc:  # any failure of this check must not stop the others
+            result = f"{_FAILED_PREFIX} {type(exc).__name__}: {str(exc)[:300]}"
+        return {"findings": {name: result}}
     return _node
 ```
 
@@ -137,15 +137,46 @@ def _make_check_node(name: str, instruction: str):
 - **Work:** `_run_check()` pairs the shared system prompt (`prompts/system.prompt.md`) with the
   one concern this node owns (e.g. `architecture`, `citation_guard` - its instruction text comes
   from `prompts/checks/<node>.prompt.md`), calls `get_chat_model().invoke([...])`, and returns
-  the model's text response.
+  the model's text response. Before calling the model it applies the path gate described below.
 - **Output:** a *partial* state update — `{"findings": {name: result}}` — never the full state.
-  Returning only the delta is what lets six of these run side by side safely (combined with the
+  Returning only the delta is what lets nine of these run side by side safely (combined with the
   reducer in section 4).
+- **Failure handling:** if a check raises (API error, timeout, bad key), the node records
+  `CHECK FAILED TO RUN: <ExcType>: <message>` as its result instead of letting the exception abort
+  the run, so the other checks still report. `run_harness_with_status()` returns the list of
+  failed checks, `__main__.py` exits with code 2 when it is not empty, and the report opens with
+  "N of M checks failed to run ... incomplete". Findings never change the exit code.
 
-There are seven node functions total: six built by `_make_check_node()` (one per file in
-`prompts/checks/`, loaded into the `_CHECKS` dict — `architecture`, `database_gate`, `citation_guard`, `no_llm_where_unjustified`,
-`async_and_config`, `coding_standards`), plus `_compile_report`, which is hand-written because its
-job (merge + format) is different in kind from the other six (review + report one concern).
+There are ten node functions total: nine built by `_make_check_node()` (one per file in
+`prompts/checks/`, loaded into the `_CHECKS` dict — `architecture`, `database_gate`,
+`citation_guard`, `no_llm_where_unjustified`, `async_and_config`, `coding_standards`,
+`scoring_invariants`, `audit_trail_integrity`, `external_integration_resilience`), plus
+`_compile_report`, which is hand-written because its job (merge + format) is different in kind
+from the other nine (review + report one concern).
+
+### Path gating (inside the node, not a conditional edge)
+
+The last three checks are domain checks that only matter when the diff touches their area. A
+prompt file may start with a directive:
+
+```
+<!-- applies-to: (?i)(scor|mitigat|residual|/configuration/) -->
+```
+
+`rules.py` strips the directive from the prompt text (`load_check_prompts()`) and compiles the
+regex separately (`load_check_scopes()`). `_run_check()` then reads the changed paths from the
+`diff --git a/X b/Y` lines (`_changed_files()`); if the check declares a scope and no changed path
+matches (`re.search`), it returns "OK - not applicable ... (no model call made)" without calling
+the model. A check with no directive always runs.
+
+| Check | `applies-to` matches paths containing |
+|---|---|
+| `scoring_invariants` | `scor`, `mitigat`, `residual`, `/configuration/` |
+| `audit_trail_integrity` | `DB/(schema\|functions\|migrations)/`, `audit` |
+| `external_integration_resilience` | `DataIngestion`, `MockSystems`, `MockExternalSystems`, `HttpClient`, `Committee`, `Program.cs` |
+
+All nine nodes are still scheduled from `START` on every run; the gate decides inside the node
+whether it spends a model call. That keeps the graph's edges static (section 6).
 
 ```mermaid
 flowchart LR
@@ -161,6 +192,9 @@ and writes `report` — it's a fan-in aggregation node, not a review node:
 ```python
 def _compile_report(state: _State) -> dict:
     lines = ["# Dev Harness Report", ""]
+    failed = _failed_checks(state["findings"])   # results starting with _FAILED_PREFIX
+    if failed:
+        lines.insert(1, f"**{len(failed)} of {len(state['findings'])} checks failed to run: ...**")
     any_issue = False
     for name, result in state["findings"].items():
         lines.append(f"## {name.replace('_', ' ').title()}")
@@ -199,24 +233,31 @@ flowchart TB
     START --> N4["no_llm_where_unjustified"]
     START --> N5["async_and_config"]
     START --> N6["coding_standards"]
+    START --> N7["scoring_invariants<br/>(path-gated)"]
+    START --> N8["audit_trail_integrity<br/>(path-gated)"]
+    START --> N9["external_integration_resilience<br/>(path-gated)"]
     N1 --> COMPILE["compile_report"]
     N2 --> COMPILE
     N3 --> COMPILE
     N4 --> COMPILE
     N5 --> COMPILE
     N6 --> COMPILE
+    N7 --> COMPILE
+    N8 --> COMPILE
+    N9 --> COMPILE
     COMPILE --> END(["END"])
 ```
 
-- **Fan-out:** six `add_edge(START, name)` calls mean all six check nodes are scheduled in the
+- **Fan-out:** nine `add_edge(START, name)` calls mean all nine check nodes are scheduled in the
   same superstep, with no ordering guarantee or dependency between them.
-- **Fan-in:** six `add_edge(name, "compile_report")` calls mean `compile_report` only runs once
-  *all* six predecessors have completed and written their piece of `findings` — LangGraph waits
+- **Fan-in:** nine `add_edge(name, "compile_report")` calls mean `compile_report` only runs once
+  *all* nine predecessors have completed and written their piece of `findings` — LangGraph waits
   for every incoming edge before running a node, so this is a true join, not a race.
 - **No conditional edges today.** A conditional edge would look like
-  `graph.add_conditional_edges(START, route_fn, {"yes": "database_gate", "no": "compile_report"})`
-  — e.g. skipping `database_gate` entirely if the diff touches no `.sql`/persistence files. This
-  is the clearest fast-follow candidate called out in the companion doc's limitations section.
+  `graph.add_conditional_edges(START, route_fn, {"yes": "database_gate", "no": "compile_report"})`.
+  The path-gated checks achieve the same saving without one: the node itself returns "not
+  applicable" when no changed file matches (section 5), so the edges stay static. Moving that
+  decision into a routing function would only change where the check runs, not what it costs.
 
 ---
 
@@ -227,19 +268,22 @@ builder into an immutable, runnable graph (a `CompiledGraph`); `.invoke(state)` 
 synchronously, start to finish, and returns the final state:
 
 ```python
-def run_harness(diff: str) -> str:
+def run_harness_with_status(diff: str) -> tuple[str, list[str]]:
     state: _State = {"diff": diff, "rules": load_review_rules(), "findings": {}, "report": ""}
     compiled = _build_graph()          # StateGraph(...).compile()
     result = compiled.invoke(state)    # runs START -> fan-out -> fan-in -> END, synchronously
-    return result["report"]
+    return result["report"], _failed_checks(result["findings"])
 ```
 
+`run_harness(diff)` is a thin wrapper that returns only the report; the CLI uses
+`run_harness_with_status()` so it can exit 2 when a check failed to run.
+
 - The graph is rebuilt and recompiled on **every CLI invocation** (`_build_graph()` is called
-  fresh inside `run_harness()`) — there's no module-level singleton graph. This is cheap enough
+  fresh inside `run_harness_with_status()`) — there's no module-level singleton graph. This is cheap enough
   for a one-shot CLI tool and avoids any shared mutable graph state across runs.
 - `.invoke()` is used, not `.stream()`. The harness waits for the entire run to finish and returns
   one final report string — there's no need to stream intermediate node output to the terminal
-  incrementally, since the six checks all need to finish before the report is meaningful anyway.
+  incrementally, since all the checks need to finish before the report is meaningful anyway.
 
 ---
 
@@ -256,9 +300,10 @@ LangGraph supports several more advanced primitives that this harness intentiona
   resuming a paused run, and no need to persist state between invocations. This would become
   relevant if the harness ever needed to remember prior findings across commits or pause
   mid-graph for a human approval step.
-- **Conditional edges** — see section 6; every check always runs, unconditionally, regardless of
-  what the diff actually touches.
-- **Subgraphs** — the graph is flat; none of the six check nodes is itself a compiled graph.
+- **Conditional edges** — see section 6; every check node is always scheduled. The three
+  path-gated checks skip their model call from inside the node when the diff touches nothing in
+  their area.
+- **Subgraphs** — the graph is flat; none of the nine check nodes is itself a compiled graph.
 - **Human-in-the-loop interrupts (`interrupt()`)** — the harness is already a reporting-only tool
   that never auto-applies anything, so there's no in-graph decision point that needs a pause; the
   human-in-the-loop step happens entirely *after* the graph finishes, when a person reads the
@@ -272,25 +317,28 @@ LangGraph supports several more advanced primitives that this harness intentiona
 flowchart TB
     A["__main__.py: check command"] --> B["diff_source.get_diff()<br/>(git diff HEAD or --since ref)"]
     B --> C["rules.load_review_rules()<br/>(reads review-rules.md text)"]
-    C --> D["run_harness(diff)"]
+    C --> D["run_harness_with_status(diff)"]
     D --> E["_build_graph():<br/>StateGraph(_State) -> compile()"]
     E --> F["compiled.invoke({diff, rules,<br/>findings: {}, report: ''})"]
-    F --> G["START fans out to<br/>6 check nodes (section 6)"]
-    G --> H["each node: _run_check() -><br/>get_chat_model().invoke(...)<br/>(section 5)"]
+    F --> G["START fans out to<br/>9 check nodes (section 6)"]
+    G --> H["each node: _run_check() -><br/>path gate, then<br/>get_chat_model().invoke(...)<br/>(section 5)"]
     H --> I["findings merged via<br/>_merge_findings reducer<br/>(section 4)"]
     I --> J["compile_report fan-in node<br/>formats markdown (section 5)"]
     J --> K["END — result['report']<br/>returned to __main__.py"]
     K --> L["printed to terminal,<br/>optionally written to --out file"]
+    L --> M["exit 0, or exit 2 if any check<br/>failed to run (findings never<br/>change the exit code)"]
 ```
 
 ---
 
 ## 10. Current limitations, in LangGraph-specific terms
 
-- **No conditional routing.** All six checks run on every diff, even when clearly irrelevant
-  (e.g. `database_gate` on a diff that touches no persistence code). Adding
-  `add_conditional_edges()` keyed off a quick diff-content classification is the natural next
-  step (see section 6).
+- **Path gating is partial.** Only the three domain checks declare an `applies-to` scope. The
+  original six still call the model on every diff, even when clearly irrelevant (e.g.
+  `database_gate` on a diff that touches no persistence code). Adding an `applies-to` line to
+  their prompt files is the natural next step, and needs no code change (see section 5).
+- **The scopes are path regexes, not understanding.** A check is skipped only when no changed
+  file *path* matches, so a relevant change in an oddly named file will not trigger it.
 - **No checkpointing.** Each run is fully isolated; there is no way to resume, compare against a
   prior run's findings, or accumulate history across multiple `check` invocations without adding
   a checkpointer and a thread/session id.

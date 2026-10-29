@@ -15,10 +15,14 @@ branch protection), so a red run blocks the merge. Don't merge until both have f
 
 Semgrep runs too but is informational (JSON is published as a build artifact).
 
-`harness/dev-harness.yml` (draft) is a separate, **non-required** PR pipeline that runs the dev
-harness (`harness/dev_harness`, a LangGraph review against `review-rules.md`) over the PR diff and
-publishes its report as a build artifact. It never fails the build and skips itself if there is no
-`ANTHROPIC_API_KEY` in the `ai-review-secrets` group. Register it in Azure DevOps before it runs.
+`harness/dev-harness.yml` (ADO pipeline `gh-dev-harness`) is a separate, **non-required** PR pipeline
+that runs the dev harness (`harness/dev_harness`, a LangGraph review against `review-rules.md`, nine
+checks) over the PR diff. It publishes the report as a build artifact and posts it on the PR as one
+comment that is updated in place on every push (`scripts/dev-harness/post.sh`). Findings never fail
+the build, but a check that fails to run (API error, timeout, bad key) does, so the PR shows a red
+`gh-dev-harness` and the report is marked incomplete. It skips itself with a warning if there is no
+`ANTHROPIC_API_KEY` in the `ai-review-secrets` group. It also runs manually from the Run pipeline
+button; a manual run reviews the changes since the `since` parameter (default `HEAD^1`).
 
 ## Image build, scan, and deploy to dev
 
@@ -53,7 +57,7 @@ variables in each component's `templates/variables.yml`.
     environments/dev.yml
     templates/deploy.yml  templates/variables.yml
   harness/
-    dev-harness.yml                      # informational dev-harness report on PRs (draft, not required)
+    dev-harness.yml                      # informational dev-harness report on PRs (not required)
   templates/ai-review.yml                # the 2 AI-review steps, shared (PR pipelines only)
   scripts/dotnet-vuln-check.sh           # fails on vulnerable NuGet packages
   scripts/ai-review/
